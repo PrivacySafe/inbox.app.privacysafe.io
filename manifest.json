@@ -1,0 +1,24 @@
+{
+  "name": "Mail",
+  "appDomain": "mail.app.privacysafe.io",
+  "version": "0.1.1",
+  "components": {
+    "/index.html": {
+      "startedBy": "user",
+      "runtime": "web-gui",
+      "capsRequested": {
+        "device": {
+          "fileDialog": "all"
+        },
+        "mail": {
+          "sendingTo": "all",
+          "receivingFrom": "all"
+        },
+        "storage": {
+          "appFS": "default"
+        }
+      }
+    }
+  }
+
+}

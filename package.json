@@ -1,0 +1,50 @@
+{
+  "name": "mail.app.privacysafe.io",
+  "version": "0.1.0",
+  "description": "Mail is a long form messaging in PrivacySafe (3NWeb app)",
+  "main": "index.js",
+  "author": "3NSoft Inc.",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "@uirouter/angularjs": "1.0.18",
+    "angular": "1.7.0",
+    "angular-animate": "1.7.0",
+    "angular-aria": "1.7.0",
+    "angular-material": "1.1.24",
+    "angular-messages": "1.7.0",
+    "angular-sanitize": "1.7.0",
+    "angular-squire": "^2.5.6",
+    "angular-ui-notification": "^0.3.6",
+    "ng-embed": "^2.2.0",
+    "rxjs": "^6.2.0",
+    "svg-morpheus": "^0.3.0"
+  },
+  "devDependencies": {
+    "@types/angular": "^1.7.0",
+    "@types/angular-material": "^1.1.72",
+    "@types/jasmine": "^2.8.8",
+    "browserify": "17.0.0",
+    "del": "6.0.0",
+    "gulp": "4.0.2",
+    "gulp-concat-css": "^3.1.0",
+    "gulp-if": "3.0.0",
+    "gulp-rename": "2.0.0",
+    "gulp-sass": "4.1.0",
+    "gulp-shell": "0.8.0",
+    "gulp-sourcemaps": "2.6.5",
+    "gulp-strip-debug": "^3.0.0",
+    "gulp-typescript": "5.0.1",
+    "gulp-uglify": "3.0.2",
+    "gulp-uglifycss": "^1.1.0",
+    "node-sass": "5.0.0",
+    "rxjs-compat": "^6.2.0",
+    "tslint": "^5.10.0",
+    "typescript": "4.0.2",
+    "uglify-es": "^3.3.9",
+    "vinyl-buffer": "^1.0.1",
+    "vinyl-source-stream": "^2.0.0"
+  },
+  "scripts": {
+    "gulp": "./node_modules/.bin/gulp"
+  }
+}

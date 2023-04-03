@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+		"target": "es2017",
+		"lib": [
+			"es2017",
+			"dom"
+    ],
+    "removeComments": true,
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "esModuleInterop": true,
+    "noEmitOnError": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "baseUrl": ".",
+    "paths": {
+      "@src/*": ["src/*"],
+      "@common/*": ["src/common/*"],
+      "@apps/*": ["src/apps/*"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "@types"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
