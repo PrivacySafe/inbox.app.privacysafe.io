@@ -66,7 +66,7 @@ class AppMailMessagesComponent {
       .messageList
       .pipe(takeUntil(this.ngUnsubscribe))
       .subscribe(list => {
-        console.log('App Mail:', list);
+        console.log('App Inbox:', list);
         this.$timeout(() => {
           this.messageList = getMessageListByFolder(
             messageListToArray(list),

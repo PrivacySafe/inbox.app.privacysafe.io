@@ -1,1 +1,1 @@
-Mail app for PrivacySafe platform.
+Inbox app for PrivacySafe platform.

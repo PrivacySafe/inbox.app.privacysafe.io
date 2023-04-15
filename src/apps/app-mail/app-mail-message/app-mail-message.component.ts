@@ -203,7 +203,7 @@ class AppMailMessageComponent {
         this.attachSrv.saveAttachments(this.message.msgKey);
         break;
       case MailMessageToolbarAction.MoveMsg:
-        console.log('Move message to mail folder ...');
+        console.log('Move message to folder ...');
         this.msgMoveSrv.openMessageMoveManager([this.message.msgKey]);
         break;
       case MailMessageToolbarAction.UnreadMsg:

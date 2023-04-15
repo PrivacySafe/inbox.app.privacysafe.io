@@ -1,7 +1,7 @@
 {
-  "name": "mail.app.privacysafe.io",
+  "name": "inbox.app.privacysafe.io",
   "version": "0.1.0",
-  "description": "Mail is a long form messaging in PrivacySafe (3NWeb app)",
+  "description": "Inbox is a long form email-like messaging in PrivacySafe (3NWeb app)",
   "main": "index.js",
   "author": "3NSoft Inc.",
   "license": "GPL-3.0",

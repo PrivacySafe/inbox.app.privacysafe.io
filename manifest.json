@@ -1,6 +1,6 @@
 {
-  "name": "Mail",
-  "appDomain": "mail.app.privacysafe.io",
+  "name": "Inbox",
+  "appDomain": "inbox.app.privacysafe.io",
   "version": "0.1.1",
   "components": {
     "/index.html": {
