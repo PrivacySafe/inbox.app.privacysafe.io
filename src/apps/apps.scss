@@ -111,7 +111,7 @@
 
 .apps__content {
   width: 100%;
-  height: calc(100% - #{$size-9x});
+  height: 100%;
   background-color: $grey-a54;
   overflow-x: hidden;
   overflow-y: auto;

@@ -9,7 +9,10 @@
   align-items: flex-start;
   font-size: $font-18;
   color: $grey-a54;
-  background: url('/assets/images/3n.png') no-repeat 50% 50%;
+  background-image: url('/assets/images/logo.png');
+  background-size: 50%;
+  background-repeat: no-repeat;
+  background-position: center;
   background-color: $white;
   padding-top: 50px;
 

@@ -25,12 +25,12 @@
 }
 
 .app-mail__messages {
-  width: calc(#{$size-column} * 4);
+  width: calc(#{$size-column} * 2.5);
   height: 100%;
 }
 
 .app-mail__message {
-  width: calc(100% - #{$size-column} * 6);
+  width: calc(100% - #{$size-column} * 4.5);
   height: 100%;
   background-color: $azure-a24;
   padding: 8px;
