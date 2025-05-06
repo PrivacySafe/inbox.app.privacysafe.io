@@ -109,16 +109,29 @@
         isOverflowing && $style.overflowing
       ]"
     >
-      <div ref="bodyEl" :class="$style.body">
-        <template v-for="address in message.recipients" :key="address">
+      <div
+        ref="bodyEl"
+        :class="$style.body"
+      >
+        <template
+          v-for="address in message.recipients"
+          :key="address"
+        >
           <ui3n-tooltip
             :content="address"
             position-strategy="fixed"
             placement="top-start"
           >
-            <ui3n-chip height="32" max-width="100%">
+            <ui3n-chip
+              height="32"
+              max-width="100%"
+            >
               <template #left>
-                <contact-icon :size="24" :name="getContactDisplayName(address)" readonly />
+                <contact-icon
+                  :size="24"
+                  :name="getContactDisplayName(address)"
+                  readonly
+                />
               </template>
 
               <span :class="$style.contact">

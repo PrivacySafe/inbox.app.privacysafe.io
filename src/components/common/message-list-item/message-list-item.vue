@@ -64,9 +64,17 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     :class="[$style.messageListItem, selectedItemId === item.msgId && $style.selected]"
     @click.stop.prevent="emits('select', item)"
   >
-    <div v-if="isUnread" :class="$style.unreadIcon" />
+    <div
+      v-if="isUnread"
+      :class="$style.unreadIcon"
+    />
 
-    <contact-icon :size="36" :name="sender" readonly :class="$style.senderIcon" />
+    <contact-icon
+      :size="36"
+      :name="sender"
+      readonly
+      :class="$style.senderIcon"
+    />
 
     <div :class="$style.title">
       <span :class="[$style.sender, isUnread && $style.accented]">
@@ -78,26 +86,48 @@ this program. If not, see <http://www.gnu.org/licenses/>.
       </span>
     </div>
 
-    <div v-if="item.subject" :class="$style.subject">
+    <div
+      v-if="item.subject"
+      :class="$style.subject"
+    >
       <span>{{ item.subject }}</span>
     </div>
 
-    <div v-if="plainTxtBody" :class="$style.body">
+    <div
+      v-if="plainTxtBody"
+      :class="$style.body"
+    >
       {{ plainTxtBody }}
     </div>
 
-    <div v-if="!isEmpty(item.attachmentsInfo)" :class="$style.attachmentsInfo">
+    <div
+      v-if="!isEmpty(item.attachmentsInfo)"
+      :class="$style.attachmentsInfo"
+    >
       <div :class="$style.attachmentInfo">
-        <Ui3nIcon icon="round-subject" width="12" height="12" color="var(--files-word-primary)" />
+        <Ui3nIcon
+          icon="round-subject"
+          width="12"
+          height="12"
+          color="var(--files-word-primary)"
+        />
+
         <span>{{ item.attachmentsInfo![0].fileName }}</span>
       </div>
 
-      <div v-if="size(item.attachmentsInfo) > 1" :class="$style.attachmentInfoExtra">
+      <div
+        v-if="size(item.attachmentsInfo) > 1"
+        :class="$style.attachmentInfoExtra"
+      >
         +{{ size(item.attachmentsInfo) - 1 }}
       </div>
     </div>
 
-    <div v-if="status" :class="$style.status" :style="{ color: status.color }">
+    <div
+      v-if="status"
+      :class="$style.status"
+      :style="{ color: status.color }"
+    >
       {{ status.text }}
     </div>
   </div>

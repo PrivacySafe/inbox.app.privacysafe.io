@@ -7,8 +7,14 @@ export interface DBProvider {
   addFolder(folderData: MailFolder, noDiskWrite?: boolean): Promise<MailFolder[]>
   deleteFolder(folderData: MailFolder, noDiskWrite?: boolean): Promise<MailFolder[]>
   getFolderList(): MailFolder[];
-  addMessage(msgData: IncomingMessageView | OutgoingMessageView, noDiskWrite?: boolean): Promise<Array<IncomingMessageView | OutgoingMessageView>>;
-  updateMessage(msgData: IncomingMessageView | OutgoingMessageView, noDiskWrite?: boolean): Promise<Array<IncomingMessageView | OutgoingMessageView>>
+  addMessage(
+    msgData: IncomingMessageView | OutgoingMessageView,
+    noDiskWrite?: boolean,
+  ): Promise<Array<IncomingMessageView | OutgoingMessageView>>;
+  updateMessage(
+    msgData: IncomingMessageView | OutgoingMessageView,
+    noDiskWrite?: boolean,
+  ): Promise<Array<IncomingMessageView | OutgoingMessageView>>
   deleteMessageById(msgId: string, noDiskWrite?: boolean): Promise<Array<IncomingMessageView | OutgoingMessageView>>
   getMessageById(msgId: string): Nullable<IncomingMessageView | OutgoingMessageView>
   getMessages(): Array<IncomingMessageView | OutgoingMessageView>;

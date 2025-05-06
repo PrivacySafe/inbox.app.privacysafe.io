@@ -1,5 +1,5 @@
 <!--
- Copyright (C) 2024 - 2025 3NSoft Inc.
+ Copyright (C) 2025 3NSoft Inc.
 
  This program is free software: you can redistribute it and/or modify it under
  the terms of the GNU General Public License as published by the Free Software
@@ -90,7 +90,10 @@
     $bus.$emitter.emit('resize-app', void 0);
   }
 
-  function openCreateMsgDialog({ data, isThisReplyOrForward }: { data?: Partial<PreparedMessageData>, isThisReplyOrForward?: boolean }) {
+  function openCreateMsgDialog({ data, isThisReplyOrForward }: {
+    data?: Partial<PreparedMessageData>,
+    isThisReplyOrForward?: boolean
+  }) {
     $dialogs.$openDialog<typeof CreateMsgDialog>({
       component: CreateMsgDialog,
       componentProps: {

@@ -22,7 +22,9 @@ import {
   folderValueToSqlInsertParams,
   folderDbValueToFolderValue,
   msgDbValueToMsgValue,
-  msgValueToSqlInsertParams, appStateDbValueToAppState, appStateValueToSqlInsertParams,
+  msgValueToSqlInsertParams,
+  appStateDbValueToAppState,
+  appStateValueToSqlInsertParams,
 } from './utils';
 
 export async function dbProvider(): Promise<DBProvider> {
@@ -153,7 +155,10 @@ export async function dbProvider(): Promise<DBProvider> {
     return msg[0];
   }
 
-  async function addMessage(msgData: IncomingMessageView | OutgoingMessageView, noDiskWrite?: boolean): Promise<Array<IncomingMessageView | OutgoingMessageView>> {
+  async function addMessage(
+    msgData: IncomingMessageView | OutgoingMessageView,
+    noDiskWrite?: boolean,
+  ): Promise<Array<IncomingMessageView | OutgoingMessageView>> {
     if (!msgData.msgId) {
       throw new Error('[addMessage method]: The message ID is missing.');
     }
@@ -168,7 +173,10 @@ export async function dbProvider(): Promise<DBProvider> {
     return getMessages();
   }
 
-  async function updateMessage(msgData: IncomingMessageView | OutgoingMessageView, noDiskWrite?: boolean): Promise<Array<IncomingMessageView | OutgoingMessageView>> {
+  async function updateMessage(
+    msgData: IncomingMessageView | OutgoingMessageView,
+    noDiskWrite?: boolean,
+  ): Promise<Array<IncomingMessageView | OutgoingMessageView>> {
     if (!msgData.msgId) {
       throw new Error('[updateMessage method]: The message ID is missing.');
     }
@@ -183,7 +191,10 @@ export async function dbProvider(): Promise<DBProvider> {
     return getMessages();
   }
 
-  async function deleteMessageById(msgId: string, noDiskWrite?: boolean): Promise<Array<IncomingMessageView | OutgoingMessageView>> {
+  async function deleteMessageById(
+    msgId: string,
+    noDiskWrite?: boolean,
+  ): Promise<Array<IncomingMessageView | OutgoingMessageView>> {
     if (!msgId) {
       throw new Error('[deleteMessage method]: The message ID is missing.');
     }

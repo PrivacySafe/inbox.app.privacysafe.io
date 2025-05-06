@@ -52,7 +52,7 @@ export const useMessagesStore = defineStore('messages', () => {
 
         return res;
       },
-      {} as {} as Record<string, Record<string, IncomingMessageView | OutgoingMessageView>>,
+      {} as Record<string, Record<string, IncomingMessageView | OutgoingMessageView>>,
     );
   });
 
@@ -109,7 +109,7 @@ export const useMessagesStore = defineStore('messages', () => {
       mailFolder: SYSTEM_FOLDERS.trash,
     };
     await upsertMessage(updatedMessage);
-    getMessages();
+    await getMessages();
   }
 
   async function deleteMessages(messageIds: string[] = [], withReload?: boolean) {

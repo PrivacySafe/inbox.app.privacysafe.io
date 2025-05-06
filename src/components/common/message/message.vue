@@ -13,8 +13,15 @@
 
 <template>
   <div :class="$style.messageWrap">
-    <div v-if="!message" :class="$style.empty">
-      <img :src="messageBgImg" alt="bgImg" />
+    <div
+      v-if="!message"
+      :class="$style.empty"
+    >
+      <img
+        :src="messageBgImg"
+        alt="bgImg"
+      >
+
       <div :class="$style.emptyText">
         <p>{{ $tr('msg.no.selected.part1') }}</p>
         <p>{{ $tr('msg.no.selected.part2') }}</p>
@@ -22,7 +29,10 @@
     </div>
 
     <template v-else>
-      <message-content :message="message" @action="emits('action', $event)" />
+      <message-content
+        :message="message"
+        @action="emits('action', $event)"
+      />
     </template>
   </div>
 </template>

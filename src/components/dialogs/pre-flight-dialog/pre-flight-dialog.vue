@@ -1,5 +1,5 @@
 <!--
- Copyright (C) 2024 - 2025 3NSoft Inc.
+ Copyright (C) 2025 3NSoft Inc.
 
  This program is free software: you can redistribute it and/or modify it under
  the terms of the GNU General Public License as published by the Free Software
@@ -87,10 +87,20 @@
           :key="recipient"
           :class="$style.recipient"
         >
-          <contact-icon :size="36" :name="recipient" readonly />
+          <contact-icon
+            :size="36"
+            :name="recipient"
+            readonly
+          />
 
-          <ui3n-tooltip :content="getVerificationResult(recipient)" placement="top-start" position-strategy="fixed">
-            <div :class="$style.mail">{{ recipient }}</div>
+          <ui3n-tooltip
+            :content="getVerificationResult(recipient)"
+            placement="top-start"
+            position-strategy="fixed"
+          >
+            <div :class="$style.mail">
+              {{ recipient }}
+            </div>
           </ui3n-tooltip>
         </div>
       </div>

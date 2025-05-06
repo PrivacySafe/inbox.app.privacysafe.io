@@ -37,11 +37,17 @@
 
 <template>
   <div :class="$style.messageList">
-    <div v-if="isEmpty(messages)" :class="$style.empty">
+    <div
+      v-if="isEmpty(messages)"
+      :class="$style.empty"
+    >
       <div :class="$style.emptyTitle">
         {{ $tr('folder.empty.title') }}
       </div>
-      <div v-if="folderEmptyText" :class="$style.emptyText">
+      <div
+        v-if="folderEmptyText"
+        :class="$style.emptyText"
+      >
         {{ folderEmptyText }}
       </div>
     </div>

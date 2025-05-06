@@ -87,8 +87,15 @@
       />
 
       <div :class="$style.headerAction">
-        <ui3n-menu position-strategy="fixed" :offset-y="4">
-          <ui3n-tooltip :content="$tr('msg.content.tooltip.delete')" placement="top-end" position-strategy="fixed">
+        <ui3n-menu
+          position-strategy="fixed"
+          :offset-y="4"
+        >
+          <ui3n-tooltip
+            :content="$tr('msg.content.tooltip.delete')"
+            placement="top-end"
+            position-strategy="fixed"
+          >
             <ui3n-button
               type="icon"
               icon="outline-delete"
@@ -111,7 +118,11 @@
                 :class="[$style.menuItem, $style.accent]"
                 @click="emits('action', { action: 'delete', message: props.message })"
               >
-                <ui3n-icon icon="outline-delete" color="var(--warning-content-default)" />
+                <ui3n-icon
+                  icon="outline-delete"
+                  color="var(--warning-content-default)"
+                />
+
                 <span>{{ $tr('msg.content.btn.deleteForever') }}</span>
               </div>
             </div>
@@ -123,13 +134,25 @@
     <message-content-subject :message="message" />
 
     <div :class="$style.contacts">
-      <message-content-from :message="message" :contact-list="contactList" />
+      <message-content-from
+        :message="message"
+        :contact-list="contactList"
+      />
 
-      <message-content-to :message="message" :contactList="contactList" />
+      <message-content-to
+        :message="message"
+        :contact-list="contactList"
+      />
     </div>
 
-    <div v-if="size(message.attachmentsInfo)" :class="$style.attachments">
-      <message-content-attachments :message="message" :readonly="message?.mailFolder === SYSTEM_FOLDERS.outbox" />
+    <div
+      v-if="size(message.attachmentsInfo)"
+      :class="$style.attachments"
+    >
+      <message-content-attachments
+        :message="message"
+        :readonly="message?.mailFolder === SYSTEM_FOLDERS.outbox"
+      />
     </div>
 
     <div :class="$style.messageBody">

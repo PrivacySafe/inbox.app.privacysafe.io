@@ -36,8 +36,7 @@
   import Message from '@/components/common/message/message.vue';
   import { SYSTEM_FOLDERS } from '@/constants';
 
-  const props = defineProps<MailFolderContentProps>();
-  const emits = defineEmits();
+  defineProps<MailFolderContentProps>();
 
   const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
   const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
@@ -53,7 +52,10 @@
     selectedMessage.value = !msgId ? null : getMessage(msgId);
   }
 
-  async function handleMessageAction({ action, message }: { action: MessageAction, message: IncomingMessageView | OutgoingMessageView }) {
+  async function handleMessageAction({ action, message }: {
+    action: MessageAction,
+    message: IncomingMessageView | OutgoingMessageView
+  }) {
     switch (action) {
       case 'edit':
         selectedMessage.value = null;
@@ -65,7 +67,7 @@
             subject: get(message, 'subject', ''),
             attachmentsInfo: get(message, 'attachmentsInfo', []),
             htmlTxtBody: get(message, ['htmlTxtBody']),
-          }
+          },
         });
         break;
       case 'move-to-trash':
@@ -102,15 +104,17 @@
         await runMessageSending(sendingMessageData);
         break;
       }
-      case 'reply':
+      case 'reply': {
         const replyMsgData = prepareReplyMsgBody(message as IncomingMessageView, $tr);
         $bus.$emitter.emit('run-create-message', { data: replyMsgData, isThisReplyOrForward: true });
         break;
-      case 'forward':
+      }
+      case 'forward': {
         const forwardMsgData = prepareForwardMsgBody(message, $tr);
         $bus.$emitter.emit('run-create-message', { data: forwardMsgData, isThisReplyOrForward: true });
         break;
-      case 'restore':
+      }
+      case 'restore': {
         const isMessageIncoming = !!(message as IncomingMessageView).sender;
         const isMessageDraft = !isMessageIncoming && message.status === 'draft';
 
@@ -122,6 +126,7 @@
         };
         await upsertMessage(updatedMessage);
         break;
+      }
     }
   }
 
@@ -141,7 +146,10 @@
     </div>
 
     <div :class="$style.message">
-      <message :message="selectedMessage" @action="handleMessageAction" />
+      <message
+        :message="selectedMessage"
+        @action="handleMessageAction"
+      />
     </div>
   </div>
 </template>
