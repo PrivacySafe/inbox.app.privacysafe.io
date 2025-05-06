@@ -1,12 +1,32 @@
-/.idea
-/.vscode
-/.history
-/public
-/node_modules
-/temp
-/tests
-/3NWeb-mock
-/app
 .DS_Store
+node_modules
+/dist
+/app
 /test-user-creds.json
 /test-runner
+/test-data
+/temp
+
+# local env files
+.env.local
+.env.*.local
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.idea
+.vscode
+.history
+.zed
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Tmp files
+.~*
+/setup-w3n.bundle.js

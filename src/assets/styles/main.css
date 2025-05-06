@@ -1,0 +1,53 @@
+@font-face {
+  font-family: Manrope, sans-serif;
+  src: url("../fonts/Manrope-Light.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+}
+@font-face {
+  font-family: Manrope, sans-serif;
+  src: url("../fonts/Manrope-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: Manrope, sans-serif;
+  src: url("../fonts/Manrope-SemiBold.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: Manrope, sans-serif;
+  src: url("../fonts/Manrope-Bold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: Manrope, sans-serif;
+  src: url("../fonts/Manrope-ExtraBold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+}
+
+html {
+  --column-size: 95px;
+  
+  overflow: hidden;
+}
+
+section,
+div {
+  box-sizing: border-box;
+}
+
+#main {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-bg-block-primary-default);
+  font-family: Manrope, sans-serif;
+}
+
+.ui3n-quill--quote {
+  padding-left: var(--spacing-m);
+  border-left: 2px solid var(--color-icon-chat-bubble-user-quote);
+}
