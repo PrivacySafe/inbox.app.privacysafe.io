@@ -29,7 +29,10 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "plugins": [{
+      "name": "@vuedx/typescript-plugin-vue"
+    }]
   },
   "include": [
     "vite.config.ts",
