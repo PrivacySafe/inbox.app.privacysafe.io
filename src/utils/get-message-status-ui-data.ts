@@ -14,14 +14,18 @@
  You should have received a copy of the GNU General Public License along with
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
-import hasIn from 'lodash/hasIn';
 import type { IncomingMessageView, OutgoingMessageView } from '@/types';
 
-export function getMessageStatusUiData(
-  message: IncomingMessageView | OutgoingMessageView,
-  $tr: (key: string, placeholders?: Record<string, string>) => string,
-) {
-  const isIncomingMessage = hasIn(message, 'sender');
+export function getMessageStatusUiData({
+  message,
+  $tr,
+}: {
+  message?: IncomingMessageView | OutgoingMessageView;
+  $tr: (key: string, placeholders?: Record<string, string>) => string;
+}) {
+  if (!message) return null;
+
+  const isIncomingMessage = !!(message as IncomingMessageView).sender;
 
   if (isIncomingMessage || ['draft', 'sent'].includes(message.status)) return null;
 

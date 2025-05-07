@@ -15,7 +15,6 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
 import type { Person, PersonView } from './contacts.types';
-import { IncomingMessage, OutgoingMessage, SendingMessageStatus } from './mail.types';
 
 /**
  * This service comes from contacts app
@@ -26,34 +25,6 @@ export interface AppContacts {
   getContactList(): Promise<PersonView[]>;
 
   upsertContact(value: Person): Promise<void>;
-}
-
-/**
- * This app's service.
- * It is a singleton in "background instance" component.
- * This service does ASMail sending.
- */
-export interface AppDeliverySrv {
-  addMessageToDeliveryList(message: OutgoingMessage, systemMessage?: boolean): Promise<void>;
-
-  removeMessageFromDeliveryList(msgIds: string[]): Promise<void>;
-
-  getMessage(msgId: string): Promise<IncomingMessage | undefined>;
-
-  getDeliveryList(): Promise<SendingMessageStatus[]>;
-
-  removeMessageFromInbox(msgIds: string[]): Promise<void>;
-}
-
-/**
- * This app's service.
- * It is a singleton in "background instance" component.
- * This service does ASMail sending.
- */
-export interface AppDeliveryService {
-  watchIncomingMessages(obs: web3n.Observer<IncomingMessage>): () => void;
-
-  watchOutgoingMessages(obs: web3n.Observer<{ id: string; progress: web3n.asmail.DeliveryProgress }>): () => void;
 }
 
 export interface FileLinkStoreService {

@@ -1,14 +1,36 @@
 <script lang="ts" setup>
-  import { inject } from 'vue';
+  import { computed, inject, ref, watchEffect } from 'vue';
+  import size from 'lodash/size';
   import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
-  import messageBgImg from './message-bg.png';
+  import type { Nullable } from '@v1nt1248/3nclient-lib';
+  import { useMessagesStore } from '@/store';
+  import messageBgImg from '@/assets/images/message-bg.png';
+  import type { IncomingMessageView, OutgoingMessageView } from '@/types';
   import type { MessageProps, MessageEmits } from './types';
+  import MessageBulkActionsToolbar
+    from '@/components/common/message-bulk-actions-boolbar/message-bulk-actions-toolbar.vue';
   import MessageContent from '@/components/common/message-content/message-content.vue';
 
-  defineProps<MessageProps>();
+  const props = withDefaults(defineProps<MessageProps>(), {
+    markedMessages: () => [],
+  });
   const emits = defineEmits<MessageEmits>();
 
   const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const messagesStore = useMessagesStore();
+  const { getMessage } = messagesStore;
+
+  const message = ref<Nullable<IncomingMessageView | OutgoingMessageView>>();
+
+  const isBulkActionsToolbarOpen = computed(() => size(props.markedMessages) >= 2);
+
+  watchEffect(() => {
+    if (props.messageId) {
+      message.value = getMessage(props.messageId);
+    } else {
+      message.value = null;
+    }
+  });
 </script>
 
 <template>
@@ -34,6 +56,16 @@
         @action="emits('action', $event)"
       />
     </template>
+
+    <div
+      v-if="isBulkActionsToolbarOpen"
+      :class="$style.bulkActions"
+    >
+      <message-bulk-actions-toolbar
+        :marked-messages="markedMessages"
+        @bulk-actions="emits('bulk-actions', $event)"
+      />
+    </div>
   </div>
 </template>
 
@@ -73,5 +105,13 @@
       margin: 0;
       text-align: center;
     }
+  }
+
+  .bulkActions {
+    position: absolute;
+    width: 100%;
+    height: var(--spacing-xxl);
+    left: 0;
+    top: 0;
   }
 </style>

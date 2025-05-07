@@ -47,7 +47,7 @@
     ? $tr('msg.content.tooltip.resend')
     : $tr('msg.content.tooltip.cancel-sending'));
 
-  const status = computed(() => getMessageStatusUiData(props.message, $tr));
+  const status = computed(() => getMessageStatusUiData({ message: props.message, $tr }));
 
   const messageProgress = computed(() => get(listOfSendingMessage.value, props.message.msgId!, null));
 
@@ -103,11 +103,7 @@
 
 <template>
   <div :class="$style.headerOutbox">
-    <ui3n-tooltip
-      :content="actionBtnTitle"
-      position-strategy="fixed"
-      placement="top-start"
-    >
+    <ui3n-tooltip :content="actionBtnTitle" position-strategy="fixed" placement="top-start">
       <ui3n-button
         type="secondary"
         :icon="isSendingStopped ? 'round-refresh' : 'cancel'"
@@ -134,10 +130,7 @@
         <span v-else>{{ progressText }}</span>
       </div>
 
-      <div
-        :class="$style.status"
-        :style="{ color: status?.color }"
-      >
+      <div :class="$style.status" :style="{ color: status?.color }">
         <span>{{ status?.text }}</span>
       </div>
     </div>

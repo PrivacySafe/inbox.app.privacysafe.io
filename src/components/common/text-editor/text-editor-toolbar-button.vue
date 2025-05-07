@@ -24,18 +24,8 @@
       :class="[$style.toolbarButton, prependIcon && $style.toolbarButtonDouble, isActive && $style.toolbarButtonActive]"
       @click="emits('click', $event)"
     >
-      <ui3n-icon
-        :icon="icon"
-        width="18"
-        height="18"
-      />
-
-      <ui3n-icon
-        v-if="prependIcon"
-        :icon="prependIcon"
-        width="18"
-        height="18"
-      />
+      <ui3n-icon :icon="icon" width="18" height="18" />
+      <ui3n-icon v-if="prependIcon" :icon="prependIcon" width="18" height="18" />
     </button>
   </ui3n-tooltip>
 </template>

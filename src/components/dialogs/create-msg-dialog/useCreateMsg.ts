@@ -14,9 +14,11 @@
  You should have received a copy of the GNU General Public License along with
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
-import { computed, inject, onBeforeUnmount, onBeforeMount, ref } from 'vue';
+import { computed, inject, onBeforeMount, ref } from 'vue';
+import Squire from 'squire-rte';
 import isEmpty from 'lodash/isEmpty';
 import cloneDeep from 'lodash/cloneDeep';
+import debounce from 'lodash/debounce';
 import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
 import { getRandomId } from '@v1nt1248/3nclient-lib/utils';
 import { useContactsStore } from '@/store';
@@ -24,7 +26,6 @@ import { useCreateMsgActions } from '@/composables/useCreateMsgActions';
 import type { Nullable } from '@v1nt1248/3nclient-lib';
 import type { AttachmentInfo, ContactListItem, PreparedMessageData } from '@/types';
 import type { CreateMsgDialogEmits, CreateMsgDialogProps } from './types';
-import Squire from 'squire-rte';
 
 export function useCreateMsg(props: CreateMsgDialogProps, emits: CreateMsgDialogEmits) {
   const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
@@ -46,8 +47,7 @@ export function useCreateMsg(props: CreateMsgDialogProps, emits: CreateMsgDialog
   });
 
   emits('select', { msgData: msgData.value });
-
-  let timerId: number | undefined;
+  saveDraftMessage();
 
   const showEditorToolbar = ref(false);
   let textEditor: Nullable<Squire> = null;
@@ -64,17 +64,29 @@ export function useCreateMsg(props: CreateMsgDialogProps, emits: CreateMsgDialog
     return name ? `${name} (${mail})` : mail;
   }
 
-  function onMsgDataUpdate() {
-    emits('select', { msgData: msgData.value });
+  async function saveDraftMessage() {
+    const msgId = await saveMsgToDraft(msgData.value);
+    if (msgData.value.id !== msgId) {
+      msgData.value.id = msgId;
+    }
   }
 
-  function removeRecipient(recipient: string) {
+  async function onMsgDataUpdate() {
+    emits('select', { msgData: msgData.value });
+
+    console.log('<- onMsgDataUpdate ->');
+    await saveDraftMessage();
+  }
+
+  const onMsgDataUpdateDebounced = debounce(onMsgDataUpdate, 1000);
+
+  async function removeRecipient(recipient: string) {
     const currentRecipientIndex = msgData.value.recipients.findIndex(r => r === recipient);
 
     if (currentRecipientIndex === -1) return;
 
     msgData.value.recipients.splice(currentRecipientIndex, 1);
-    emits('select', { msgData: msgData.value });
+    await onMsgDataUpdateDebounced();
   }
 
   function onEditorInit(value: Squire) {
@@ -91,15 +103,14 @@ export function useCreateMsg(props: CreateMsgDialogProps, emits: CreateMsgDialog
     showEditorToolbar.value = !showEditorToolbar.value;
   }
 
-  function msgBodyUpdate(value: string) {
+  async function msgBodyUpdate(value: string) {
     msgData.value.htmlTxtBody = value;
-
-    emits('select', { msgData: msgData.value });
+    await onMsgDataUpdateDebounced();
   }
 
-  function updateAttachments(val: AttachmentInfo[]) {
+  async function updateAttachments(val: AttachmentInfo[]) {
     msgData.value.attachmentsInfo = val;
-    emits('select', { msgData: msgData.value });
+    await onMsgDataUpdateDebounced();
   }
 
   async function discardMsg() {
@@ -108,7 +119,6 @@ export function useCreateMsg(props: CreateMsgDialogProps, emits: CreateMsgDialog
   }
 
   async function sendMsg() {
-    timerId && clearTimeout(timerId);
     emits('select', { msgData: msgData.value, withoutSave: true });
     await runMessageSending(msgData.value);
     emits('close');
@@ -128,18 +138,6 @@ export function useCreateMsg(props: CreateMsgDialogProps, emits: CreateMsgDialog
 
   onBeforeMount(async () => {
     contactList.value = (await getContactList()) || [];
-
-    // @ts-ignore
-    timerId = setInterval(async () => {
-      const msgId = await saveMsgToDraft(msgData.value);
-      if (msgData.value.id !== msgId) {
-        msgData.value.id = msgId;
-      }
-    }, 10000);
-  });
-
-  onBeforeUnmount(() => {
-    timerId && clearInterval(timerId);
   });
 
   return {

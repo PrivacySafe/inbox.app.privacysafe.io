@@ -51,10 +51,7 @@
 </script>
 
 <template>
-  <div
-    ref="dialogEl"
-    :class="$style.createMsgDialog"
-  >
+  <div ref="dialogEl" :class="$style.createMsgDialog">
     <div :class="[$style.block, $style.blockStyle2]">
       <span :class="$style.blockTitle">{{ $tr('msg.create.label.subject') }}:</span>
       <div :class="$style.blockContent">
@@ -92,8 +89,8 @@
           <template #item="{ item, query }">
             <div :class="$style.item">
               <span
-                v-ui3n-html="markSearch(getDisplayItem(item), query || '')"
                 :class="$style.itemName"
+                v-ui3n-html="markSearch(getDisplayItem(item), query || '')"
               />
             </div>
           </template>
@@ -107,11 +104,7 @@
               @close="removeRecipient(item as string)"
             >
               <template #left>
-                <contact-icon
-                  :size="24"
-                  :name="item as string"
-                  readonly
-                />
+                <contact-icon :size="24" :name="item as string" readonly />
               </template>
 
               <span :class="$style.chipText">

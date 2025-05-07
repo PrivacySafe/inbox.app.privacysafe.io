@@ -15,14 +15,13 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import { computed, inject, onBeforeMount, ref, watch } from 'vue';
+  import { inject, onBeforeMount, ref, watch } from 'vue';
   import size from 'lodash/size';
-  import hasIn from 'lodash/hasIn';
   import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { Ui3nButton, Ui3nIcon, Ui3nMenu, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
-  import { useContactsStore, useMessagesStore } from '@/store';
+  import { useContactsStore } from '@/store';
   import { SYSTEM_FOLDERS } from '@/constants';
-  import type { ContactListItem } from '@/types';
+  import type { ContactListItem, IncomingMessageView } from '@/types';
   import type { MessageContentProps, MessageContentEmits } from './types';
   import MessageContentHeader from './message-content-header.vue';
   import MessageContentHeaderOutbox from './message-content-header-outbox.vue';
@@ -38,35 +37,36 @@
 
   const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
   const { getContactList } = useContactsStore();
-  const { upsertMessage } = useMessagesStore();
 
   const contactList = ref<ContactListItem[]>([]);
-
-  const isMessageIncoming = computed(() => hasIn(props.message, 'sender'));
 
   onBeforeMount(async () => {
     contactList.value = (await getContactList()) || [];
   });
 
   watch(
-    () => props.message.msgId,
-    async (val, oVal) => {
-      if (isMessageIncoming.value && val && val !== oVal && props.message.status !== 'read') {
-        setTimeout(async () => {
-          await upsertMessage({
-            ...props.message,
-            status: 'read',
-          })
-        }, 400);
+    () => props.message?.msgId,
+    async (val, oldVal) => {
+      if (val && val !== oldVal) {
+        const isMessageIncoming = !!(props.message as IncomingMessageView)?.sender;
+        if (isMessageIncoming && props.message?.status !== 'read') {
+
+          setTimeout(async () => {
+            emits('action', { action: 'mark-as-read', message: props.message! });
+          }, 400);
+        }
       }
     }, {
       immediate: true,
-    }
+    },
   );
 </script>
 
 <template>
-  <div :class="$style.messageContent">
+  <div
+    v-if="message"
+    :class="$style.messageContent"
+  >
     <div :class="$style.header">
       <message-content-header-outbox
         v-if="message?.mailFolder === SYSTEM_FOLDERS.outbox"
@@ -108,7 +108,7 @@
             <div :class="$style.menu">
               <div
                 :class="[$style.menuItem, message.mailFolder === SYSTEM_FOLDERS.trash && $style.menuItemDisabled]"
-                @click="emits('action', { action: 'move-to-trash', message: props.message })"
+                @click="emits('action', { action: 'move-to-trash', message })"
               >
                 <ui3n-icon icon="trash-can" />
                 <span>{{ $tr('msg.content.btn.moveToTrash') }}</span>
@@ -116,7 +116,7 @@
 
               <div
                 :class="[$style.menuItem, $style.accent]"
-                @click="emits('action', { action: 'delete', message: props.message })"
+                @click="emits('action', { action: 'delete', message })"
               >
                 <ui3n-icon
                   icon="outline-delete"

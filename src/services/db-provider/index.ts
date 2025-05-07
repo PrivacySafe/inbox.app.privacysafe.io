@@ -17,6 +17,8 @@ import {
   INSERT_MESSAGE_QUERY,
   UPSERT_MESSAGE_QUERY,
   DELETE_MESSAGE_BY_ID_QUERY,
+  GET_MESSAGES_QUERY_BY_THREAD_ID,
+  DELETE_THREAD_QUERY,
 } from './queries';
 import {
   folderValueToSqlInsertParams,
@@ -208,6 +210,34 @@ export async function dbProvider(): Promise<DBProvider> {
     return getMessages();
   }
 
+  function getMessagesByThread(threadId: string): Array<IncomingMessageView | OutgoingMessageView> {
+    if (!threadId) {
+      throw new Error('[getMessagesByThread method]: The thread ID is missing.');
+    }
+
+    const [sqlValue] = sqlite.db.exec(GET_MESSAGES_QUERY_BY_THREAD_ID, { $threadId: threadId });
+    if (isEmpty(sqlValue)) return [];
+
+    return msgDbValueToMsgValue(sqlValue);
+  }
+
+  async function deleteThread(
+    threadId: string,
+    noDiskWrite?: boolean,
+  ): Promise<Array<IncomingMessageView | OutgoingMessageView>> {
+    if (!threadId) {
+      throw new Error('[getMessagesByThread method]: The thread ID is missing.');
+    }
+
+    sqlite.db.exec(DELETE_THREAD_QUERY, { $threadId: threadId });
+
+    if (!noDiskWrite) {
+      await saveDbFile();
+    }
+
+    return getMessages();
+  }
+
   await initialization();
 
   return {
@@ -221,5 +251,7 @@ export async function dbProvider(): Promise<DBProvider> {
     deleteMessageById,
     getMessageById,
     getMessages,
+    getMessagesByThread,
+    deleteThread,
   };
 }

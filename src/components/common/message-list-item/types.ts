@@ -1,10 +1,10 @@
-import { IncomingMessageView, OutgoingMessageView } from '@/types';
+import type { IncomingMessageView, OutgoingMessageView } from '@/types';
 
 export interface MessageListItemProps {
   item: IncomingMessageView | OutgoingMessageView;
-  selectedItemId?: string;
+  markedMessages?: string[];
 }
 
 export interface MessageListItemEmits {
-  (event: 'select', value: IncomingMessageView | OutgoingMessageView): void;
+  (event: 'mark', value: string): void;
 }

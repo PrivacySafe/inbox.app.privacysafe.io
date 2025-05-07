@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-  import { computed, type ComputedRef, inject, watch } from 'vue';
+  import { computed, type ComputedRef, inject } from 'vue';
   import { storeToRefs } from 'pinia';
   import get from 'lodash/get';
   import isEmpty from 'lodash/isEmpty';
@@ -10,7 +10,9 @@
   import type { MessageListProps, MessageListEmits } from './types';
   import MessageListItem from '@/components/common/message-list-item/message-list-item.vue';
 
-  const props = defineProps<MessageListProps>();
+  const props = withDefaults(defineProps<MessageListProps>(), {
+    markedMessages: () => [],
+  });
   const emits = defineEmits<MessageListEmits>();
 
   const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
@@ -22,17 +24,8 @@
     return folderKey ? $tr(`folder.empty.text.${folderKey}`) : '';
   });
 
-  const messages = computed(() => get(messagesByFolders.value, props.folder, {})) as ComputedRef<Record<string, IncomingMessageView | OutgoingMessageView>>;
+  const messages = computed(() => get(messagesByFolders.value, [props.folder, 'data'], {})) as ComputedRef<Record<string, IncomingMessageView | OutgoingMessageView>>;
   const messagesList = computed(() => Object.values(messages.value).sort((a, b) => a.deliveryTS - b.deliveryTS));
-
-  watch(
-    messages,
-    () => {
-      if (!get(messages.value, props.selectedMessageId!)) {
-        emits('select', null);
-      }
-    },
-  );
 </script>
 
 <template>
@@ -57,8 +50,8 @@
         v-for="item in messagesList"
         :key="item.msgId!"
         :item="item"
-        :selected-item-id="selectedMessageId"
-        @select="emits('select', $event.msgId!)"
+        :marked-messages="markedMessages"
+        @mark="emits('mark', $event)"
       />
     </template>
   </div>

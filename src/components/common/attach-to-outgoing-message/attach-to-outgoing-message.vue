@@ -153,10 +153,7 @@
 
 <template>
   <div :class="$style.attachments">
-    <template
-      v-for="file in innerValue"
-      :key="file.id"
-    >
+    <template v-for="file in innerValue" :key="file.id">
       <attached-item
         :item-name="file.fileName"
         :disabled="isLoading"

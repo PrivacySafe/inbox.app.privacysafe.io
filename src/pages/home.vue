@@ -1,5 +1,5 @@
 <!--
- Copyright (C) 2025 3NSoft Inc.
+ Copyright (C) 2024 - 2025 3NSoft Inc.
 
  This program is free software: you can redistribute it and/or modify it under
  the terms of the GNU General Public License as published by the Free Software
@@ -18,11 +18,13 @@
   import { inject } from 'vue';
   import { useRouter, useRoute } from 'vue-router';
   import { storeToRefs } from 'pinia';
+  import get from 'lodash/get';
   import size from 'lodash/size';
   import { I18nPlugin, I18N_KEY, VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { Ui3nBadge, Ui3nButton, Ui3nIcon } from '@v1nt1248/3nclient-lib';
   import { useFoldersStore, useMessagesStore } from '@/store';
   import type { AppGlobalEvents, MailFolder } from '@/types';
+  import { SYSTEM_FOLDERS } from '@/constants';
 
   const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
   const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
@@ -33,9 +35,12 @@
   const { systemFolders } = storeToRefs(useFoldersStore());
   const { messagesByFolders } = storeToRefs(useMessagesStore());
 
-  function getBadgeText(folder: MailFolder): string | number {
-    const msgsCount = size(messagesByFolders.value[folder.id]);
-    return msgsCount ? msgsCount : '';
+  function getBadgeText(folder: MailFolder): number {
+    if (folder.id === SYSTEM_FOLDERS.outbox || folder.id === SYSTEM_FOLDERS.draft) {
+      return size(get(messagesByFolders.value, [folder.id, 'data'], []));
+    }
+
+    return get(messagesByFolders.value, [folder.id, 'unread'], 0)
   }
 
   async function goToFolder(path: string) {

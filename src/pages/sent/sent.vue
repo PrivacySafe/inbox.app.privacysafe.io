@@ -16,9 +16,9 @@
 -->
 <script lang="ts" setup>
   import { SYSTEM_FOLDERS } from '@/constants';
-  import MailFolderContent from '@/components/common/mail-folder-content/mail-folder-content.vue'
+  import MailFolder from '@/components/common/mail-folder/mail-folder.vue';
 </script>
 
 <template>
-  <mail-folder-content :folder="SYSTEM_FOLDERS.sent" />
+  <mail-folder :folder="SYSTEM_FOLDERS.sent" />
 </template>

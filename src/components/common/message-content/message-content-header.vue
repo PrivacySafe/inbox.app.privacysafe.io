@@ -17,6 +17,7 @@
 <script lang="ts" setup>
   import { computed, inject } from 'vue';
   import hasIn from 'lodash/hasIn';
+  import size from 'lodash/size';
   import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import type { IncomingMessageView, MessageAction, OutgoingMessageView } from '@/types';
@@ -34,6 +35,7 @@
   const isMessageIncoming = computed(() => hasIn(props.message, 'sender'));
 
   const isReplyBtnShow = computed(() => isMessageIncoming.value);
+  const isReplyAllBtnShow = computed(() => isMessageIncoming.value && size(props.message.recipients) > 1);
   const isRestoreBtnShow = computed(() => props.message?.mailFolder === SYSTEM_FOLDERS.trash);
 </script>
 
@@ -53,6 +55,23 @@
         @click.stop.prevent="emits('action', { action: 'reply', message })"
       >
         {{ $tr('msg.content.tooltip.reply') }}
+      </ui3n-button>
+    </ui3n-tooltip>
+
+    <ui3n-tooltip
+      v-if="isReplyAllBtnShow"
+      :content="$tr('msg.content.tooltip.replyAll')"
+      position-strategy="fixed"
+      placement="top-start"
+    >
+      <ui3n-button
+        type="secondary"
+        icon="reply-all-outline"
+        icon-color="var(--color-icon-button-secondary-default)"
+        icon-position="left"
+        @click.stop.prevent="emits('action', { action: 'reply-all', message })"
+      >
+        {{ $tr('msg.content.tooltip.replyAll') }}
       </ui3n-button>
     </ui3n-tooltip>
 

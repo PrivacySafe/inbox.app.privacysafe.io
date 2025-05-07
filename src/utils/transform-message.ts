@@ -50,6 +50,7 @@ export async function incomingMsgToIncomingMsgView(
   data: IncomingMessage,
   mailFolder = SYSTEM_FOLDERS.inbox,
 ): Promise<IncomingMessageView> {
+  console.log('incomingMsgToIncomingMsgView => ', data);
   const result: IncomingMessageView = {
     mailFolder,
     status: 'received',
@@ -86,6 +87,7 @@ export async function outgoingMsgViewToOutgoingMsg(data: OutgoingMessageView): P
       threadId: data.threadId,
     },
   };
+  console.log('OutgoingMessage => ', result);
 
   if (data.attachmentsInfo) {
     const attachments: web3n.asmail.AttachmentsContainer = {
@@ -111,12 +113,11 @@ export function preparedMsgDataToOutgoingMsgView(
   status: MessageDeliveryStatus = 'draft',
 ): OutgoingMessageView {
   const now = Date.now();
-  const threadId = data.threadId || getRandomId(32);
   return {
     mailFolder,
     status,
-    msgId: getRandomId(32),
-    threadId,
+    msgId: data.id,
+    threadId: data.threadId,
     cTime: now,
     msgType: 'mail',
     subject: data.subject,
@@ -124,7 +125,7 @@ export function preparedMsgDataToOutgoingMsgView(
     ...(data.htmlTxtBody && { htmlTxtBody: data.htmlTxtBody }),
     ...(data.plainTxtBody && { plainTxtBody: data.plainTxtBody }),
     jsonBody: {
-      threadId,
+      threadId: data.threadId,
       msgKind: 'regular',
     },
     ...(!isEmpty(data.attachmentsInfo) && { attachmentsInfo: data.attachmentsInfo }),

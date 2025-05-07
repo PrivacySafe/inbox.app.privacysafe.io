@@ -37,7 +37,7 @@ export type MailFolderDB = {
 };
 
 export type DbQueryParams<T, K extends string & keyof T> = {
-  [p in `\$${K}`]: T[K];
+  [p in `$${K}`]: T[K];
 };
 
 export type MessageDeliveryStatus = 'draft' | 'sending' | 'sent' | 'error' | 'canceled' | 'received' | 'read';
@@ -103,6 +103,15 @@ export type OutgoingMessageView = Omit<OutgoingMessage, 'attachments'> &
     deliveryTS: number;
   };
 
+export type MessageThread = {
+  threadId: string;
+  isExpanded?: boolean;
+  folders: string[];
+  lastIncomingTS: number;
+  lastOutgoingTS: number;
+  messages: Array<IncomingMessageView | OutgoingMessageView>;
+};
+
 export type MessageViewDB = {
   msgId: string;
   cTime: Nullable<number>;
@@ -121,4 +130,6 @@ export type MessageViewDB = {
   attachmentsInfo: Nullable<string>;
 };
 
-export type MessageAction = 'move-to-trash' | 'delete' | 'edit' | 'send' | 'reply' | 'forward' | 'restore';
+export type MessageAction = 'move-to-trash' | 'delete' | 'edit' | 'send' | 'mark-as-read' | 'reply' | 'reply-all' | 'forward' | 'restore';
+
+export type MessageBulkActions = 'cancel';

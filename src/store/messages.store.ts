@@ -20,15 +20,15 @@ import hasIn from 'lodash/hasIn';
 import get from 'lodash/get';
 import isEmpty from 'lodash/isEmpty';
 import uniq from 'lodash/uniq';
+import size from 'lodash/size';
 import { NamedProcs } from '@v1nt1248/3nclient-lib/utils';
 import { dbSrv, fileStoreSrv } from '@/services/services-provider';
 import { useAppStore } from '@/store/app.store';
 import { SYSTEM_FOLDERS } from '@/constants';
 import type { Nullable } from '@v1nt1248/3nclient-lib';
-import type { AttachmentInfo, IncomingMessageView, OutgoingMessageView } from '@/types';
+import type { AttachmentInfo, IncomingMessageView, MessageThread, OutgoingMessageView } from '@/types';
+import type { FileInfo } from '@/services/labelled-file-store';
 import ConfirmationDialog from '@/components/dialogs/confirmation-dialog/confirmation-dialog.vue';
-import { FileInfo } from '@/services/labelled-file-store';
-import size from 'lodash/size';
 
 const SUBJECT_TEXT_LENGTH = 50;
 
@@ -39,20 +39,77 @@ export const useMessagesStore = defineStore('messages', () => {
 
   const messageList = ref<Record<string, IncomingMessageView | OutgoingMessageView>>({});
 
+  const messagesByThreads = computed(() => {
+    const data = Object.values(messageList.value).reduce((res, msg) => {
+      const { threadId, mailFolder, deliveryTS = 0, cTime = 0 } = msg;
+      const isIncomingMessage = !!(msg as IncomingMessageView).sender;
+      const ts = deliveryTS || cTime;
+
+      if (!res[threadId]) {
+        res[threadId] = {
+          threadId,
+          folders: [mailFolder],
+          lastIncomingTS: isIncomingMessage ? ts : 0,
+          lastOutgoingTS: !isIncomingMessage ? 0 : ts,
+          messages: [msg],
+        };
+      } else {
+        const hasFolder = res[threadId].folders.includes(mailFolder);
+        if (!hasFolder) {
+          res[threadId].folders.push(mailFolder);
+        }
+
+        if (isIncomingMessage && res[threadId].lastIncomingTS < ts) {
+          res[threadId].lastIncomingTS = ts;
+        } else if (!isIncomingMessage && res[threadId].lastOutgoingTS < ts) {
+          res[threadId].lastOutgoingTS = ts;
+        }
+
+        res[threadId].messages.push(msg);
+      }
+
+      return res;
+    }, {} as Record<string, MessageThread>);
+
+    return Object.values(data).reduce((res, thread) => {
+      const { threadId } = thread;
+      res[threadId] = thread;
+      return res;
+    }, {} as Record<string, MessageThread>)
+  });
+
+  const messageThreadsByFolder = computed(() => {
+    return Object.values(messagesByThreads.value).reduce((res, thread) => {
+      const { folders } = thread;
+      for (const folder of folders) {
+        if (!res[folder]) {
+          res[folder] = [];
+        }
+
+        res[folder].push(thread);
+      }
+
+      return res;
+    }, {} as Record<string, MessageThread[]>);
+  });
+
   const messagesByFolders = computed(() => {
     return Object.values(messageList.value).reduce(
       (res, msg) => {
-        const { mailFolder, msgId } = msg;
+        const { mailFolder, msgId, status } = msg;
 
         if (!res[mailFolder]) {
-          res[mailFolder] = {};
+          res[mailFolder] = { unread: 0, data: {} };
         }
 
-        res[mailFolder][msgId!] = msg;
+        res[mailFolder].data[msgId!] = msg;
+        if (status === 'received') {
+          res[mailFolder].unread += 1;
+        }
 
         return res;
       },
-      {} as Record<string, Record<string, IncomingMessageView | OutgoingMessageView>>,
+      {} as Record<string, { unread: number; data: Record<string, IncomingMessageView | OutgoingMessageView> }>,
     );
   });
 
@@ -201,6 +258,10 @@ export const useMessagesStore = defineStore('messages', () => {
     });
   }
 
+  function getMessagesByThread(threadId: string) {
+    return dbSrv.getMessagesByThread(threadId);
+  }
+
   async function downloadFileFromOutgoingMessage(attachment: AttachmentInfo) {
     if (!attachment?.id) {
       throw new Error(`This attachment has not id [${JSON.stringify(attachment)}]`);
@@ -243,13 +304,16 @@ export const useMessagesStore = defineStore('messages', () => {
 
   return {
     messageList,
+    messagesByThreads,
     messagesByFolders,
+    messageThreadsByFolder,
     getMessages,
     getMessage,
     upsertMessage,
     moveToTrash,
     deleteMessagesUi,
     deleteMessages,
+    getMessagesByThread,
     downloadFileFromOutgoingMessage,
     downloadFilesFromOutgoingMessage,
   };

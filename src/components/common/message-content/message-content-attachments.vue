@@ -183,19 +183,9 @@
       />
     </ui3n-tooltip>
 
-    <div
-      ref="bodyEl"
-      :class="$style.attachmentsBody"
-    >
-      <template
-        v-for="attachment in attachments"
-        :key="attachment.id"
-      >
-        <ui3n-tooltip
-          :content="attachment.fileName"
-          placement="top-start"
-          position-strategy="fixed"
-        >
+    <div ref="bodyEl" :class="$style.attachmentsBody">
+      <template v-for="attachment in attachments" :key="attachment.id">
+        <ui3n-tooltip :content="attachment.fileName" placement="top-start" position-strategy="fixed">
           <div :class="[$style.attachment, readonly && $style.attachmentReadonly]">
             <ui3n-icon
               icon="round-subject"
@@ -211,8 +201,8 @@
 
             <div
               v-if="!readonly"
-              v-ui3n-ripple
               :class="$style.btn"
+              v-ui3n-ripple
               @click.stop.prevent="downloadAttachment(attachment)"
             >
               <ui3n-icon

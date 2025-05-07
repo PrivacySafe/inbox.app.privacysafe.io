@@ -1,7 +1,8 @@
+import type { Nullable } from '@v1nt1248/3nclient-lib';
 import type { IncomingMessageView, OutgoingMessageView, MessageAction } from '@/types';
 
 export interface MessageContentProps {
-  message: IncomingMessageView | OutgoingMessageView;
+  message?: Nullable<IncomingMessageView | OutgoingMessageView>;
 }
 
 export interface MessageContentEmits {

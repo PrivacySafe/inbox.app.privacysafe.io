@@ -67,6 +67,7 @@ export async function makeLabelledFileStoreIn(pathInAppFSs: string): Promise<Lab
 }
 
 export function makeLabelledFileStore(syncedFS: WritableFS, localFS: WritableFS): Promise<LabelledFileStore> {
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define
   return LabelledStore.makeSynced(syncedFS, localFS);
 }
 
@@ -429,6 +430,7 @@ function infoToAttrChanges(info: ItemAttrs): XAttrsChanges {
   return { set, remove };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 function noop() {}
 
 async function newBucketTree(dataFS: WritableFS): Promise<string> {

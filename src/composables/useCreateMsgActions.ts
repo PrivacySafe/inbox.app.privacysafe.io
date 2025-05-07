@@ -105,6 +105,7 @@ export function useCreateMsgActions() {
   function prepareReplyMsgBody(
     message: IncomingMessageView,
     $tr: (key: string, placeholders?: Record<string, string>) => string,
+    replayForAll?: boolean,
   ) {
     const replyMsgBody = `
       <br/><br/>
@@ -116,10 +117,15 @@ export function useCreateMsgActions() {
       <blockquote>${message.htmlTxtBody || ''}</blockquote>
     `;
 
+    const initialRecipients = (message.recipients || []).filter(address => address !== appStore.user);
+    const recipients = replayForAll
+      ? [message.sender, ...initialRecipients]
+      : [message.sender];
+
     return {
       id: getRandomId(32),
-      initialMsgId: message.threadId,
-      recipients: [message.sender],
+      threadId: message.threadId,
+      recipients,
       subject: `Re: ${message.subject}`,
       attachmentsInfo: [],
       htmlTxtBody: replyMsgBody,
@@ -142,7 +148,7 @@ export function useCreateMsgActions() {
 
     return {
       id: getRandomId(32),
-      initialMsgId: message.threadId,
+      threadId: message.threadId,
       recipients: [],
       subject: `Fwd: ${message.subject}`,
       attachmentsInfo: message.attachmentsInfo || [],

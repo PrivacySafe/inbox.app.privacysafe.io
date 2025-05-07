@@ -15,38 +15,42 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import type { MailFolderContentProps } from './types';
   import { useFolderContent } from '@/composables/useFolderContent';
-  import MessageList from '@/components/common/message-list/message-list.vue';
-  import Message from '@/components/common/message/message.vue';
+  import ThreadList from '@/components/common/thread-list/thread-list.vue';
+  import Thread from '@/components/common/thread/thread.vue';
 
-  defineProps<MailFolderContentProps>();
+  defineProps<{
+    folder: string;
+  }>();
 
   const {
-    markedMessages,
     selectedMessageId,
+    markedMessages,
     markMessage,
     handleMessageAction,
-    handleMessageBulkActions,
   } = useFolderContent();
 </script>
 
 <template>
   <div :class="$style.folder">
     <div :class="$style.list">
-      <message-list
+      <thread-list
         :folder="folder"
+        :selected-thread-id="selectedThreadId"
+        :selected-message-id="selectedMessageId"
         :marked-messages="markedMessages"
+        @select:thread="selectThread"
+        @select:message="selectMessage"
         @mark="markMessage"
       />
     </div>
 
     <div :class="$style.message">
-      <message
-        :message-id="selectedMessageId"
-        :marked-messages="markedMessages"
+      <thread
+        :selected-thread-id="selectedThreadId"
+        :selected-message-id="selectedMessageId"
+        :is-bulk-actions-toolbar-open="isBulkActionsToolbarOpen"
         @action="handleMessageAction"
-        @bulk-actions="handleMessageBulkActions"
       />
     </div>
   </div>

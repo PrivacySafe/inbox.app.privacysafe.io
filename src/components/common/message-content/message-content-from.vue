@@ -61,16 +61,9 @@
       position-strategy="fixed"
       placement="top-start"
     >
-      <ui3n-chip
-        height="32"
-        max-width="100%"
-      >
+      <ui3n-chip height="32" max-width="100%">
         <template #left>
-          <contact-icon
-            :size="24"
-            :name="sender"
-            readonly
-          />
+          <contact-icon :size="24" :name="sender" readonly />
         </template>
 
         <span :class="$style.contact">
@@ -78,6 +71,7 @@
         </span>
       </ui3n-chip>
     </ui3n-tooltip>
+
   </div>
 </template>
 

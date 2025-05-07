@@ -22,14 +22,16 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   import size from 'lodash/size';
   import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { prepareDateAsSting } from '@v1nt1248/3nclient-lib/utils';
-  import { Ui3nIcon } from '@v1nt1248/3nclient-lib';
+  import { Ui3nCheckbox, Ui3nIcon } from '@v1nt1248/3nclient-lib';
   import { useContactsStore } from '@/store';
   import { getMessageStatusUiData, htmlToText } from '@/utils';
   import type { IncomingMessageView } from '@/types';
   import type { MessageListItemProps, MessageListItemEmits } from './types';
   import ContactIcon from '@/components/common/contact-icon.vue';
 
-  const props = defineProps<MessageListItemProps>();
+  const props = withDefaults(defineProps<MessageListItemProps>(), {
+    markedMessages: () => [],
+  });
   const emits = defineEmits<MessageListItemEmits>();
 
   const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
@@ -37,6 +39,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 
   const isIncomingMessage = computed(() => hasIn(props.item, 'sender'));
   const isUnread = computed(() => isIncomingMessage.value && props.item?.status === 'received');
+  const isMessageMarked = computed(() => props.markedMessages.includes(props.item.msgId));
 
   const sender = computed(() => {
     if (!hasIn(props.item, 'sender') || !(props.item as IncomingMessageView).sender) {
@@ -52,29 +55,37 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     return sender;
   });
 
-  const time = computed(() => isIncomingMessage.value ? props.item.deliveryTS : props.item.cTime);
+  const time = computed(() => props.item.deliveryTS || props.item.cTime);
 
-  const status = computed(() => getMessageStatusUiData(props.item, $tr));
+  const status = computed(() => getMessageStatusUiData({ message: props.item, $tr }));
 
-  const plainTxtBody = computed(() => htmlToText({ value: props.item.htmlTxtBody }))
+  const plainTxtBody = computed(() => htmlToText({ value: props.item.htmlTxtBody }));
 </script>
 
 <template>
-  <div
-    :class="[$style.messageListItem, selectedItemId === item.msgId && $style.selected]"
-    @click.stop.prevent="emits('select', item)"
+  <div :class="[$style.messageListItem, isMessageMarked && $style.marked]"
   >
     <div
       v-if="isUnread"
       :class="$style.unreadIcon"
     />
 
-    <contact-icon
-      :size="36"
-      :name="sender"
-      readonly
-      :class="$style.senderIcon"
-    />
+    <div :class="$style.senderIcon">
+      <contact-icon
+        :size="36"
+        :name="sender"
+        readonly
+        :selected="isMessageMarked"
+        :class="$style.contactIcon"
+      />
+
+      <div
+        :class="$style.senderIconCheckbox"
+        @click.stop.prevent="emits('mark', item.msgId)"
+      >
+        <ui3n-checkbox :model-value="isMessageMarked" />
+      </div>
+    </div>
 
     <div :class="$style.title">
       <span :class="[$style.sender, isUnread && $style.accented]">
@@ -111,7 +122,6 @@ this program. If not, see <http://www.gnu.org/licenses/>.
           height="12"
           color="var(--files-word-primary)"
         />
-
         <span>{{ item.attachmentsInfo![0].fileName }}</span>
       </div>
 
@@ -144,8 +154,11 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     background-color: var(--color-bg-block-primary-default);
     cursor: pointer;
 
-    &:hover,
-    &.selected {
+    &.marked {
+      background-color: var(--color-bg-control-primary-hover);
+    }
+
+    &:hover {
       background-color: var(--color-bg-chat-bubble-general-bg);
 
       .time {
@@ -154,6 +167,16 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 
       .attachmentInfo {
         background-color: var(--color-bg-control-primary-default);
+      }
+
+      .contactIcon {
+        display: none;
+      }
+
+      .senderIconCheckbox {
+        display: flex;
+        justify-content: center;
+        align-items: center;
       }
     }
   }
@@ -168,8 +191,22 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     background-color: var(--color-icon-block-secondary-default);
   }
 
+  .senderIconCheckbox {
+    position: absolute;
+    display: none;
+    width: 36px;
+    height: 36px;
+    top: 0;
+    left: 0;
+    border-radius: 50%;
+    border: 1px solid var(--color-border-control-secondary-default);
+    cursor: pointer;
+  }
+
   .senderIcon {
     position: absolute;
+    width: 36px;
+    height: 36px;
     left: var(--spacing-m);
     top: 12px;
   }

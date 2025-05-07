@@ -36,11 +36,7 @@
       :class="$style.icon"
     />
 
-    <ui3n-tooltip
-      :content="itemName"
-      placement="top-start"
-      position-strategy="fixed"
-    >
+    <ui3n-tooltip :content="itemName" placement="top-start" position-strategy="fixed">
       <div :class="$style.text">
         {{ itemName }}
       </div>

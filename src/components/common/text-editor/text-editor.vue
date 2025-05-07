@@ -47,49 +47,22 @@
 
             <template #menu>
               <div :class="$style.fontSizeMenu">
-                <div
-                  :class="$style.menuItem"
-                  @click="setFormat('h1')"
-                >
-                  <ui3n-icon
-                    icon="heading-h1"
-                    width="18"
-                    height="18"
-                  />
-
+                <div :class="$style.menuItem" @click="setFormat('h1')">
+                  <ui3n-icon icon="heading-h1" width="18" height="18" />
                   <span>{{ $tr('msg.content.editor.fontSize.header') }} 1</span>
                 </div>
 
-                <div
-                  :class="$style.menuItem"
-                  @click="setFormat('h2')"
-                >
-                  <ui3n-icon
-                    icon="heading-h2"
-                    width="18"
-                    height="18"
-                  />
-
+                <div :class="$style.menuItem" @click="setFormat('h2')">
+                  <ui3n-icon icon="heading-h2" width="18" height="18" />
                   <span>{{ $tr('msg.content.editor.fontSize.header') }} 2</span>
                 </div>
 
-                <div
-                  :class="$style.menuItem"
-                  @click="setFormat('h3')"
-                >
-                  <ui3n-icon
-                    icon="heading-h3"
-                    width="18"
-                    height="18"
-                  />
-
+                <div :class="$style.menuItem" @click="setFormat('h3')">
+                  <ui3n-icon icon="heading-h3" width="18" height="18" />
                   <span>{{ $tr('msg.content.editor.fontSize.header') }} 3</span>
                 </div>
 
-                <div
-                  :class="$style.menuItem"
-                  @click="setFormat('paragraph')"
-                >
+                <div :class="$style.menuItem" @click="setFormat('paragraph')">
                   <span>{{ $tr('msg.content.editor.fontSize.normal') }}</span>
                 </div>
               </div>
@@ -208,10 +181,7 @@
       :class="[$style.editorBody, isFocused && $style.editorBodyFocused, disabled && $style.editorBodyDisabled]"
       @focus.stop.prevent="focusEditor"
     >
-      <div
-        ref="editorEl"
-        :class="$style.editorContent"
-      />
+      <div ref="editorEl" :class="$style.editorContent" />
     </div>
   </div>
 </template>
