@@ -5,7 +5,7 @@
   import { Ui3nButton, Ui3nTooltip  } from '@v1nt1248/3nclient-lib';
   import type { MessageBulkActions } from '@/types';
 
-  const props = withDefaults(defineProps<{
+  withDefaults(defineProps<{
     markedMessages?: string[];
   }>(), {
     markedMessages: () => [],
