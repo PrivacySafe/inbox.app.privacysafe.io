@@ -18,10 +18,12 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   import { computed, ComputedRef, inject, ref } from 'vue';
   import size from 'lodash/size';
   import isEmpty from 'lodash/isEmpty';
+  import cloneDeep from 'lodash/cloneDeep';
+  import difference from 'lodash/difference';
+  import uniq from 'lodash/uniq';
   import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { prepareDateAsSting } from '@v1nt1248/3nclient-lib/utils';
-  import { Ui3nBadge, Ui3nIcon } from '@v1nt1248/3nclient-lib';
-  import type { Nullable } from '@v1nt1248/3nclient-lib';
+  import { Ui3nBadge, Ui3nCheckbox, Ui3nIcon } from '@v1nt1248/3nclient-lib';
   import { getMessageStatusUiData, htmlToText } from '@/utils';
   import { SYSTEM_FOLDERS } from '@/constants';
   import type { IncomingMessageView, MessageThread, OutgoingMessageView } from '@/types';
@@ -31,18 +33,13 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   const props = withDefaults(defineProps<{
     item: MessageThread;
     folder: string;
-    selectedThreadId: Nullable<string>;
-    selectedMessageId: Nullable<string>;
     markedMessages?: string[];
   }>(), {
-    selectedThreadId: null,
-    selectedMessageId: null,
     markedMessages: () => [],
   });
   const emits = defineEmits<{
-    (event: 'select:thread', value: Nullable<string>): void;
-    (event: 'select:message', value: Nullable<string>): void;
     (event: 'mark', value: string): void;
+    (event: 'set-marks', value: string[]): void;
   }>();
 
   const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
@@ -138,31 +135,25 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   });
 
   const messages = computed(() => props.item.messages) as ComputedRef<Array<IncomingMessageView | OutgoingMessageView>>;
+  const messagesIds = computed(() => (messages.value || []).map((msg) => msg.msgId));
 
   const isThreadMarked = computed(() => (messages.value || []).some(msg => props.markedMessages.includes(msg.msgId)));
-
+  const isThreadMarkedCompletely = computed(() => messagesIds.value.every(msgId => props.markedMessages.includes(msgId)));
 
   function isMessageUnread(msg: IncomingMessageView | OutgoingMessageView): boolean {
     const isIncomingMessage = !!(msg as IncomingMessageView).sender;
     return isIncomingMessage && msg.status === 'received';
   }
 
-  function selectThread() {
-    emits('select:thread', props.item.threadId);
-    emits('select:message', null);
-  }
-
-  function selectMessage(msgId: string) {
-    emits('select:thread', props.item.threadId);
-    emits('select:message', msgId);
-  }
-
   function toggleExpandedMode() {
     isExpanded.value = !isExpanded.value;
-    if (!isExpanded.value) {
-      emits('select:thread', props.item.threadId);
-      emits('select:message', null);
-    }
+  }
+
+  function markThread() {
+    const updatedMarkedMessages = isThreadMarkedCompletely.value
+      ? difference(props.markedMessages, messagesIds.value)
+      : uniq([...cloneDeep(props.markedMessages), ...messagesIds.value])
+    emits('set-marks', updatedMarkedMessages);
   }
 </script>
 
@@ -170,22 +161,34 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   <div
     :class="[
       $style.threadListItemMultiple,
-      item.threadId === selectedThreadId && $style.selected,
       isThreadMarked && $style.marked
     ]"
-    @click.stop.prevent="selectThread"
   >
     <div
       v-if="isUnread"
       :class="$style.unreadIcon"
     />
 
-    <contact-icon
-      :size="36"
-      :name="sender"
-      readonly
-      :class="$style.senderIcon"
-    />
+    <div :class="$style.senderIcon">
+      <contact-icon
+        :size="36"
+        :name="sender"
+        readonly
+        :selected="isThreadMarked"
+        :class="$style.contactIcon"
+      />
+
+      <div
+        :class="$style.senderIconCheckbox"
+        @click.stop.prevent="markThread"
+      >
+        <ui3n-checkbox
+          :model-value="isThreadMarkedCompletely"
+          :indeterminate="isThreadMarked && !isThreadMarkedCompletely"
+        />
+      </div>
+    </div>
+
 
     <div :class="$style.title">
       <span :class="[$style.sender, isUnread && $style.accented]">
@@ -257,7 +260,6 @@ this program. If not, see <http://www.gnu.org/licenses/>.
       :key="message.msgId"
       :class="[
         $style.threadItem,
-        message.msgId === selectedMessageId && $style.threadItemSelected,
         markedMessages.includes(message.msgId) && $style.threadItemMarked,
       ]"
     >
@@ -271,9 +273,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 
       <message-list-item
         :item="message"
-        :selected-item-id="selectedMessageId"
         :marked-messages="markedMessages"
-        @select="selectMessage(message.msgId)"
         @mark="emits('mark', $event)"
       />
     </div>
@@ -295,8 +295,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
       background-color: var(--color-bg-control-primary-hover);
     }
 
-    &:hover,
-    &.selected {
+    &:hover {
       background-color: var(--color-bg-chat-bubble-general-bg);
 
       .time {
@@ -305,6 +304,16 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 
       .attachmentInfo {
         background-color: var(--color-bg-control-primary-default);
+      }
+
+      .contactIcon {
+        display: none;
+      }
+
+      .senderIconCheckbox {
+        display: flex;
+        justify-content: center;
+        align-items: center;
       }
     }
   }
@@ -319,8 +328,22 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     background-color: var(--color-icon-block-secondary-default);
   }
 
+  .senderIconCheckbox {
+    position: absolute;
+    display: none;
+    width: 36px;
+    height: 36px;
+    top: 0;
+    left: 0;
+    border-radius: 50%;
+    border: 1px solid var(--color-border-control-secondary-default);
+    cursor: pointer;
+  }
+
   .senderIcon {
     position: absolute;
+    width: 36px;
+    height: 36px;
     left: var(--spacing-m);
     top: 12px;
   }

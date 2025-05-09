@@ -1,34 +1,44 @@
 <script lang="ts" setup>
-  import { computed, inject, ref, watchEffect, watch } from 'vue';
+  import { computed, inject, ref, watchEffect } from 'vue';
   import isEmpty from 'lodash/isEmpty';
+  import size from 'lodash/size';
   import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
-  import type { Nullable } from '@v1nt1248/3nclient-lib';
+  import { Ui3nProgressCircular } from '@v1nt1248/3nclient-lib';
   import { useMessagesStore } from '@/store/messages.store';
-  import type { IncomingMessageView, MessageAction, OutgoingMessageView } from '@/types';
+  import type { IncomingMessageView, MessageAction, MessageBulkActions, OutgoingMessageView } from '@/types';
   import messageBgImg from '@/assets/images/message-bg.png';
   import MessageContent from '@/components/common/message-content/message-content.vue';
+  import MessageBulkActionsToolbar
+    from '@/components/common/message-bulk-actions-boolbar/message-bulk-actions-toolbar.vue';
 
   const props = withDefaults(defineProps<{
-    selectedThreadId?: Nullable<string>;
-    selectedMessageId?: Nullable<string>;
+    folder: string;
     markedMessages?: string[];
-    isBulkActionsToolbarOpen?: boolean;
   }>(), {
-    selectedThreadId: null,
-    selectedMessageId: null,
     markedMessages: () => [],
   });
   const emits = defineEmits<{
     (event: 'action', value: { action: MessageAction; message: IncomingMessageView | OutgoingMessageView }): void;
+    (event: 'bulk-actions', value: { action: MessageBulkActions; messageIds: string[] }): void;
   }>();
 
   const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
   const messagesStore = useMessagesStore();
-  const { getMessagesByThread, getMessage } = messagesStore;
+  const { getMessage } = messagesStore;
 
+  const isLoading = ref(false);
   const messages = ref<(IncomingMessageView | OutgoingMessageView)[]>([]);
 
   const isThreadEmpty = computed(() => isEmpty(messages.value!));
+
+  const isBulkActionsToolbarOpen = computed(() => size(props.markedMessages) >= 2);
+
+  const threads = computed(() => (messages.value || []).reduce((acc, message) => {
+    if (!acc.includes(message.threadId)) {
+      acc.push(message.threadId);
+    }
+    return acc;
+  }, [] as string[]));
 
   function messageSort(
     a: IncomingMessageView | OutgoingMessageView,
@@ -40,23 +50,35 @@
   }
 
   watchEffect(() => {
-    if (props.selectedMessageId) {
-      const msg = getMessage(props.selectedMessageId);
-      messages.value = msg ? [msg] : [];
-    } else if (props.selectedThreadId) {
-      messages.value = getMessagesByThread(props.selectedThreadId);
-    } else {
-      messages.value = [];
-    }
+    try {
+      isLoading.value = true;
 
-    messages.value.sort(messageSort);
+      if (isEmpty(props.markedMessages)) {
+        messages.value = [];
+      } else if (size(props.markedMessages) === 1) {
+        const msg = getMessage(props.markedMessages[0]);
+        if (msg) {
+          messages.value = [msg];
+        }
+      } else if (size(props.markedMessages) > 1) {
+        messages.value = [];
+        for (const msgId of props.markedMessages) {
+          const msg = getMessage(msgId);
+          msg && messages.value.push(msg);
+        }
+      }
+
+      messages.value.sort(messageSort);
+    } finally {
+      isLoading.value = false;
+    }
   });
 </script>
 
 <template>
   <div :class="$style.thread">
     <div
-      v-if="isThreadEmpty"
+      v-if="isThreadEmpty || size(threads) > 1"
       :class="$style.empty"
     >
       <img
@@ -72,7 +94,7 @@
 
     <div
       v-else
-      :class="$style.threadBody"
+      :class="[$style.threadBody, isBulkActionsToolbarOpen && $style.threadBodyWithActions]"
     >
       <template
         v-for="message in messages"
@@ -85,6 +107,27 @@
           @action="emits('action', $event)"
         />
       </template>
+    </div>
+
+    <div
+      v-if="isBulkActionsToolbarOpen"
+      :class="$style.bulkActions"
+    >
+      <message-bulk-actions-toolbar
+        :folder="folder"
+        :marked-messages="markedMessages"
+        @bulk-actions="emits('bulk-actions', $event)"
+      />
+    </div>
+
+    <div
+      v-if="isLoading"
+      :class="$style.loader"
+    >
+      <ui3n-progress-circular
+        indeterminate
+        size="80"
+      />
     </div>
   </div>
 </template>
@@ -134,5 +177,29 @@
   .threadBody {
     position: relative;
     width: 100%;
+
+    &.threadBodyWithActions {
+      padding-top: var(--spacing-xxl);
+    }
+  }
+
+  .bulkActions {
+    position: fixed;
+    left: 570px;
+    right: 0;
+    top: 72px;
+    height: var(--spacing-xxl);
+  }
+
+  .loader {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    top: 0;
+    height: 100%;
+    z-index: 5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 </style>

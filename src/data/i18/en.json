@@ -76,7 +76,7 @@
   "msg.bulk.actions.btn.cancel": "Cancel",
   "msg.bulk.actions.btn.cancel.tooltip": "Reset marked messages",
   "msg.delete.permanently.title": "Confirm Permanent Deletion",
-  "msg.delete.permanently.string1": "Are you sure you want to permanently delete selected message?",
+  "msg.delete.permanently.string1": "Are you sure you want to permanently delete selected message(s)?",
   "msg.delete.permanently.string2": "This action cannot be undone.",
   "msg.delete.permanently.confirm.button": "Delete Completely",
   "msg.download.title": "Select a folder for downloading",

@@ -132,4 +132,4 @@ export type MessageViewDB = {
 
 export type MessageAction = 'move-to-trash' | 'delete' | 'edit' | 'send' | 'mark-as-read' | 'reply' | 'reply-all' | 'forward' | 'restore';
 
-export type MessageBulkActions = 'cancel';
+export type MessageBulkActions = 'cancel' | 'move-to-trash' | 'delete' | 'restore';

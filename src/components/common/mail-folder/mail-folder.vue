@@ -24,10 +24,11 @@
   }>();
 
   const {
-    selectedMessageId,
     markedMessages,
     markMessage,
+    setMarkedMessages,
     handleMessageAction,
+    handleMessageBulkActions,
   } = useFolderContent();
 </script>
 
@@ -36,21 +37,18 @@
     <div :class="$style.list">
       <thread-list
         :folder="folder"
-        :selected-thread-id="selectedThreadId"
-        :selected-message-id="selectedMessageId"
         :marked-messages="markedMessages"
-        @select:thread="selectThread"
-        @select:message="selectMessage"
         @mark="markMessage"
+        @set-marks="setMarkedMessages"
       />
     </div>
 
     <div :class="$style.message">
       <thread
-        :selected-thread-id="selectedThreadId"
-        :selected-message-id="selectedMessageId"
-        :is-bulk-actions-toolbar-open="isBulkActionsToolbarOpen"
+        :folder="folder"
+        :marked-messages="markedMessages"
         @action="handleMessageAction"
+        @bulk-actions="handleMessageBulkActions"
       />
     </div>
   </div>

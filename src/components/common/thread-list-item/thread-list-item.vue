@@ -16,7 +16,6 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
   import size from 'lodash/size';
-  import type { Nullable } from '@v1nt1248/3nclient-lib';
   import type { MessageThread } from '@/types';
   import ThreadListItemSingle from './thread-list-item-single.vue';
   import ThreadListItemMultiple from './thread-list-item-multiple.vue';
@@ -24,18 +23,13 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   withDefaults(defineProps<{
     item: MessageThread;
     folder: string;
-    selectedThreadId: Nullable<string>;
-    selectedMessageId: Nullable<string>;
     markedMessages?: string[];
   }>(), {
-    selectedThreadId: null,
-    selectedMessageId: null,
     markedMessages: () => [],
   });
   const emits = defineEmits<{
-    (event: 'select:thread', value: Nullable<string>): void;
-    (event: 'select:message', value: Nullable<string>): void;
     (event: 'mark', value: string): void;
+    (event: 'set-marks', value: string[]): void;
   }>();
 </script>
 
@@ -44,11 +38,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     <thread-list-item-single
       v-if="size(item.messages) === 1"
       :item="item"
-      :selected-thread-id="selectedThreadId"
-      :selected-message-id="selectedMessageId"
       :marked-messages="markedMessages"
-      @select:thread="emits('select:thread', $event)"
-      @select:message="emits('select:message', $event)"
       @mark="emits('mark', $event)"
     />
 
@@ -56,12 +46,9 @@ this program. If not, see <http://www.gnu.org/licenses/>.
       v-else
       :item="item"
       :folder="folder"
-      :selected-thread-id="selectedThreadId"
-      :selected-message-id="selectedMessageId"
       :marked-messages="markedMessages"
-      @select:thread="emits('select:thread', $event)"
-      @select:message="emits('select:message', $event)"
       @mark="emits('mark', $event)"
+      @set-marks="emits('set-marks', $event)"
     />
   </div>
 </template>

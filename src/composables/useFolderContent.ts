@@ -29,7 +29,7 @@ export function useFolderContent() {
 
   const { getContactList } = useContactsStore();
   const messagesStore = useMessagesStore();
-  const { moveToTrash, deleteMessagesUi, upsertMessage } = messagesStore;
+  const { moveToTrash, deleteMessagesUi, bulkMoveToTrash, bulkRestore, upsertMessage } = messagesStore;
   const { openSendMessageUI, runMessageSending, prepareReplyMsgBody, prepareForwardMsgBody } = useCreateMsgActions();
 
   const markedMessages = ref<string[]>([]);
@@ -44,6 +44,10 @@ export function useFolderContent() {
     } else {
       markedMessages.value.splice(index, 1);
     }
+  }
+
+  function setMarkedMessages(value: string[]) {
+    markedMessages.value = value;
   }
 
   function resetMarkMessages() {
@@ -156,6 +160,23 @@ export function useFolderContent() {
       case 'cancel':
         resetMarkMessages();
         break;
+      case 'move-to-trash': {
+        resetMarkMessages();
+        await bulkMoveToTrash(messageIds);
+        break;
+      }
+      case 'delete': {
+        const res = await deleteMessagesUi(messageIds, true);
+        if (res) {
+          resetMarkMessages();
+        }
+        break;
+      }
+      case 'restore': {
+        resetMarkMessages();
+        await bulkRestore(messageIds);
+        break;
+      }
     }
   }
 
@@ -167,6 +188,7 @@ export function useFolderContent() {
     markedMessages,
     selectedMessageId,
     markMessage,
+    setMarkedMessages,
     resetMarkMessages,
     handleMessageAction,
     handleMessageBulkActions,

@@ -43,6 +43,7 @@
 
     <div :class="$style.message">
       <message
+        :folder="folder"
         :message-id="selectedMessageId"
         :marked-messages="markedMessages"
         @action="handleMessageAction"

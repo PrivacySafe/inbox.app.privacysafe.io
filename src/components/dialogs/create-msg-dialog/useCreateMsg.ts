@@ -74,7 +74,6 @@ export function useCreateMsg(props: CreateMsgDialogProps, emits: CreateMsgDialog
   async function onMsgDataUpdate() {
     emits('select', { msgData: msgData.value });
 
-    console.log('<- onMsgDataUpdate ->');
     await saveDraftMessage();
   }
 
@@ -153,6 +152,7 @@ export function useCreateMsg(props: CreateMsgDialogProps, emits: CreateMsgDialog
     getDisplayItem,
     onEditorInit,
     onMsgDataUpdate,
+    onMsgDataUpdateDebounced,
     removeRecipient,
     toggleEditorToolbarDisplaying,
     msgBodyUpdate,

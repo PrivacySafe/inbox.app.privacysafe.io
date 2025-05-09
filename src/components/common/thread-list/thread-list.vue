@@ -15,34 +15,29 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import { computed, type ComputedRef, inject, watch } from 'vue';
+  import { computed, inject } from 'vue';
   import { storeToRefs } from 'pinia';
   import get from 'lodash/get';
   import isEmpty from 'lodash/isEmpty';
   import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
-  import type { Nullable } from '@v1nt1248/3nclient-lib';
   import { useMessagesStore } from '@/store/messages.store';
   import type { MessageThread } from '@/types';
   import { FOLDER_KEY_BY_ID } from '@/components/common/message-list/constants';
   import ThreadListItem from '@/components/common/thread-list-item/thread-list-item.vue';
+  import { SYSTEM_FOLDERS } from '@/constants';
 
   const messagesStore = useMessagesStore();
-  const { messageThreadsByFolder } = storeToRefs(messagesStore);
+  const { messageThreadsByFolder, messageThreadsFromTrash } = storeToRefs(messagesStore);
 
   const props = withDefaults(defineProps<{
     folder: string;
-    selectedThreadId?: Nullable<string>;
-    selectedMessageId?: Nullable<string>;
     markedMessages?: string[];
   }>(), {
-    selectedThreadId: null,
-    selectedMessageId: null,
     markedMessages: () => [],
   });
   const emits = defineEmits<{
-    (event: 'select:thread', value: Nullable<string>): void;
-    (event: 'select:message', value: Nullable<string>): void;
     (event: 'mark', value: string): void;
+    (event: 'set-marks', value: string[]): void;
   }>();
 
   const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
@@ -52,19 +47,13 @@
     return folderKey ? $tr(`folder.empty.text.${folderKey}`) : '';
   });
 
-  const threads = computed(() => get(messageThreadsByFolder.value, props.folder, [])) as ComputedRef<MessageThread[]>;
+  const threads = computed(() => {
+    if (props.folder === SYSTEM_FOLDERS.trash) {
+      return Object.values(messageThreadsFromTrash.value);
+    }
 
-  watch(
-    threads,
-    () => {
-      const currentThreadIndex = threads.value.findIndex(tr => tr.threadId === props.selectedThreadId);
-
-      if (!props.selectedThreadId || currentThreadIndex === -1) {
-        emits('select:message', null);
-        emits('select:thread', null);
-      }
-    },
-  );
+    return get(messageThreadsByFolder.value, props.folder, []) as MessageThread[];
+  });
 </script>
 
 <template>
@@ -90,12 +79,9 @@
         :key="thread.threadId"
         :item="thread"
         :folder="folder"
-        :selected-thread-id="selectedThreadId || null"
-        :selected-message-id="selectedMessageId || null"
         :marked-messages="markedMessages"
-        @select:thread="emits('select:thread', $event)"
-        @select:message="emits('select:message', $event)"
         @mark="emits('mark', $event)"
+        @set-marks="emits('set-marks', $event)"
       />
     </template>
   </div>

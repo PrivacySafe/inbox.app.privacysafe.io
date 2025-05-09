@@ -62,6 +62,7 @@
       :class="$style.bulkActions"
     >
       <message-bulk-actions-toolbar
+        :folder="folder"
         :marked-messages="markedMessages"
         @bulk-actions="emits('bulk-actions', $event)"
       />

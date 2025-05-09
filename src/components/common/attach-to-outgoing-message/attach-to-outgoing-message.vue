@@ -40,10 +40,8 @@
 
   const isLoading = ref(false);
   const innerValue = ref<AttachmentInfo[]>([]);
-  console.log('INNER => ', innerValue.value);
 
   async function openUploadDialog() {
-    console.log('openUploadDialog !!!');
     // @ts-ignore
     const res = await w3n.shell?.fileDialogs?.openFileDialog(
       $tr('msg.create.attach.button'),
@@ -124,7 +122,6 @@
   }
 
   onBeforeMount(async () => {
-    console.log('# beforeMount => ', props.msgId);
     innerValue.value = cloneDeep(props.value!);
     if (size(innerValue.value) <= 1) return;
 
@@ -145,7 +142,6 @@
     (val) => {
       if (!isEmpty(val) && !isEqual(val!, innerValue.value)) {
         innerValue.value = cloneDeep(props.value || []);
-        console.log('WATCH => ', innerValue.value);
       }
     },
   );
@@ -153,7 +149,10 @@
 
 <template>
   <div :class="$style.attachments">
-    <template v-for="file in innerValue" :key="file.id">
+    <template
+      v-for="file in innerValue"
+      :key="file.id"
+    >
       <attached-item
         :item-name="file.fileName"
         :disabled="isLoading"

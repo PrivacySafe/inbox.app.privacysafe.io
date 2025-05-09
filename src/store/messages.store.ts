@@ -32,18 +32,19 @@ import ConfirmationDialog from '@/components/dialogs/confirmation-dialog/confirm
 
 const SUBJECT_TEXT_LENGTH = 50;
 
-export const useMessagesStore = defineStore('messages', () => {
-  const procs = new NamedProcs();
-  const appStore = useAppStore();
-  const { $dialogs, $i18n, setAppState } = appStore;
-
-  const messageList = ref<Record<string, IncomingMessageView | OutgoingMessageView>>({});
-
-  const messagesByThreads = computed(() => {
-    const data = Object.values(messageList.value).reduce((res, msg) => {
+function getMessagesByThreads(
+  messages: Record<string, IncomingMessageView | OutgoingMessageView>,
+  excludeTrash?: boolean,
+): Record<string, MessageThread> {
+  return Object.values(messages).reduce(
+    (res, msg) => {
       const { threadId, mailFolder, deliveryTS = 0, cTime = 0 } = msg;
       const isIncomingMessage = !!(msg as IncomingMessageView).sender;
       const ts = deliveryTS || cTime;
+
+      if (excludeTrash && mailFolder === SYSTEM_FOLDERS.trash) {
+        return res;
+      }
 
       if (!res[threadId]) {
         res[threadId] = {
@@ -69,28 +70,36 @@ export const useMessagesStore = defineStore('messages', () => {
       }
 
       return res;
-    }, {} as Record<string, MessageThread>);
+    },
+    {} as Record<string, MessageThread>,
+  );
+}
 
-    return Object.values(data).reduce((res, thread) => {
-      const { threadId } = thread;
-      res[threadId] = thread;
-      return res;
-    }, {} as Record<string, MessageThread>)
-  });
+export const useMessagesStore = defineStore('messages', () => {
+  const procs = new NamedProcs();
+  const appStore = useAppStore();
+  const { $dialogs, $i18n, setAppState } = appStore;
+
+  const messageList = ref<Record<string, IncomingMessageView | OutgoingMessageView>>({});
+
+  const messagesByThreads = computed(() => getMessagesByThreads(messageList.value, true));
 
   const messageThreadsByFolder = computed(() => {
-    return Object.values(messagesByThreads.value).reduce((res, thread) => {
-      const { folders } = thread;
-      for (const folder of folders) {
-        if (!res[folder]) {
-          res[folder] = [];
+    return Object.values(messagesByThreads.value).reduce(
+      (res, thread) => {
+        const { folders } = thread;
+        for (const folder of folders) {
+          if (!res[folder]) {
+            res[folder] = [];
+          }
+
+          res[folder].push(thread);
         }
 
-        res[folder].push(thread);
-      }
-
-      return res;
-    }, {} as Record<string, MessageThread[]>);
+        return res;
+      },
+      {} as Record<string, MessageThread[]>,
+    );
   });
 
   const messagesByFolders = computed(() => {
@@ -112,6 +121,10 @@ export const useMessagesStore = defineStore('messages', () => {
       {} as Record<string, { unread: number; data: Record<string, IncomingMessageView | OutgoingMessageView> }>,
     );
   });
+
+  const messageThreadsFromTrash = computed(() =>
+    getMessagesByThreads(messagesByFolders.value[SYSTEM_FOLDERS.trash]?.data || {}),
+  );
 
   async function getMessages() {
     const messages = dbSrv.getMessages();
@@ -169,6 +182,46 @@ export const useMessagesStore = defineStore('messages', () => {
     await getMessages();
   }
 
+  async function bulkMoveToTrash(messageIds: string[]) {
+    const pr = [] as Array<Promise<void>>;
+    for (const msgId of messageIds) {
+      const msg = getMessage(msgId);
+      if (msg) {
+        const updatedMsg = {
+          ...msg,
+          mailFolder: SYSTEM_FOLDERS.trash,
+        };
+        pr.push(upsertMessage(updatedMsg));
+      }
+    }
+
+    await Promise.allSettled(pr);
+    await getMessages();
+  }
+
+  async function bulkRestore(messageIds: string[]) {
+    const pr = [] as Array<Promise<void>>;
+    for (const msgId of messageIds) {
+      const msg = getMessage(msgId);
+      if (msg) {
+        const isMessageIncoming = !!(msg as IncomingMessageView).sender;
+        const isMessageDraft = !isMessageIncoming && msg.status === 'draft';
+        const updatedMsg = {
+          ...msg,
+          mailFolder: isMessageIncoming
+            ? SYSTEM_FOLDERS.inbox
+            : isMessageDraft
+              ? SYSTEM_FOLDERS.draft
+              : SYSTEM_FOLDERS.sent,
+        };
+        pr.push(upsertMessage(updatedMsg));
+      }
+    }
+
+    await Promise.allSettled(pr);
+    await getMessages();
+  }
+
   async function deleteMessages(messageIds: string[] = [], withReload?: boolean) {
     const countOfMessagesToDelete = messageIds.length;
     const incomingMessages: string[] = [];
@@ -195,7 +248,7 @@ export const useMessagesStore = defineStore('messages', () => {
       delete messageList.value[msgId];
     }
 
-    withReload && await getMessages();
+    withReload && (await getMessages());
 
     if (!isEmpty(uniq(filesIds))) {
       // The file attached to a deleted message can be used as an attachment in other, non-deleted, messages
@@ -307,10 +360,13 @@ export const useMessagesStore = defineStore('messages', () => {
     messagesByThreads,
     messagesByFolders,
     messageThreadsByFolder,
+    messageThreadsFromTrash,
     getMessages,
     getMessage,
     upsertMessage,
     moveToTrash,
+    bulkMoveToTrash,
+    bulkRestore,
     deleteMessagesUi,
     deleteMessages,
     getMessagesByThread,
