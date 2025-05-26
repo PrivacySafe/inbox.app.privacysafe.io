@@ -38,7 +38,23 @@ export default defineConfig(config => {
   }
 
   const build = {
-    outDir: 'app',
+    // reference: https://rollupjs.org/configuration-options/
+    rollupOptions: {
+      input: {
+        main: _resolve('./index.html'),
+        'main-mobile': _resolve('./index-mobile.html'),
+      },
+      output: [
+        {
+          name: 'main',
+          dir: 'app',
+        },
+        {
+          name: 'main-mobile',
+          dir: 'app',
+        },
+      ],
+    },
   };
 
   return {
@@ -52,6 +68,9 @@ export default defineConfig(config => {
       alias: {
         vue: 'vue/dist/vue.esm-bundler.js',
         '@': _resolve('./src'),
+        '@common': _resolve('./src/common'),
+        '@desktop': _resolve('./src/desktop'),
+        '@mobile': _resolve('./src/mobile'),
       },
     },
   };

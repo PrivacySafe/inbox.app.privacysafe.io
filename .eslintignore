@@ -1,4 +1,4 @@
-src/libs/**/*.js
-src/libs/**/*.d.ts
+src/common/libs/**/*.js
+src/common/libs/**/*.d.ts
 /doc/**/*.*
 /app/**/*.*

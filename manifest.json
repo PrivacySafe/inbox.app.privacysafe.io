@@ -1,7 +1,7 @@
 {
   "name": "Inbox",
   "appDomain": "inbox.app.privacysafe.io",
-  "version": "0.3.1",
+  "version": "0.3.7",
   "description": "Mail app",
   "icon": "logo.png",
   "components": {
@@ -51,7 +51,83 @@
         "minWidth": 1024,
         "minHeight": 600,
         "maxWidth": 1680
+      },
+      "startCmds": {
+        "open-inbox-with": {
+          "otherApps": "*"
+        }
+      }
+    },
+
+    "/index-mobile.html": {
+      "startedBy": "user",
+      "runtime": "web-gui",
+      "capsRequested": {
+        "apps": "opener",
+        "logout": "all",
+        "log": "all",
+        "mailerid": true,
+        "mail": {
+          "sendingTo": "all",
+          "receivingFrom": "all",
+          "config": "all"
+        },
+        "connectivity": "check",
+        "shell": {
+          "fileDialog": "all",
+          "userNotifications": true,
+          "fsResource": {
+            "otherApps": {
+              "launcher.app.privacysafe.io": "ui-settings"
+            }
+          }
+        },
+        "storage": {
+          "appFS": [
+            {
+              "domain": "inbox.app.privacysafe.io",
+              "storage": "synced-n-local"
+            }
+          ],
+          "userFS": "all",
+          "sysFS": "all"
+        },
+        "otherAppsRPC": [
+          {
+            "app": "contacts.app.privacysafe.io",
+            "service": "AppContacts"
+          }
+        ]
+      },
+      "windowOpts": {
+        "width": 360,
+        "height": 768,
+        "minWidth": 360,
+        "minHeight": 768,
+        "maxWidth": 360,
+        "maxHeight": 768
+      },
+      "startCmds": {
+        "open-inbox-with": {
+          "otherApps": "*"
+        }
       }
     }
-  }
+  },
+  "launchers": [
+    {
+      "name": "Inbox",
+      "icon": "logo.png",
+      "description": "Mail app",
+      "component": "/index.html",
+      "formFactor": [ "desktop", "tablet" ]
+    },
+    {
+      "name": "Inbox",
+      "icon": "logo.png",
+      "description": "Mail app",
+      "component": "/index-mobile.html",
+      "formFactor": "phone"
+    }
+  ]
 }

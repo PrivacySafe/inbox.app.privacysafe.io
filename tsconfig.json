@@ -28,7 +28,10 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@common/*": ["src/common/*"],
+      "@desktop/*": ["src/desktop/*"],
+      "@mobile/*": ["src/mobile/*"]
     },
     "plugins": [{
       "name": "@vuedx/typescript-plugin-vue"
