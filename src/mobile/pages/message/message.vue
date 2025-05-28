@@ -127,12 +127,12 @@
   <div :class="$style.message">
     <div :class="$style.messageToolbar">
       <ui3n-button
-        v-touch="() => goBack()"
         type="icon"
         color="var(--color-bg-block-primary-default)"
         icon="round-arrow-back"
         icon-color="var(--color-icon-block-primary-default)"
         icon-size="20"
+        @click="goBack()"
       />
 
       <div :class="$style.messageToolbarBlock">

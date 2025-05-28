@@ -23,60 +23,60 @@
   <div :class="$style.toolbarMain">
     <ui3n-button
       v-if="isReplyBtnShow"
-      v-touch="() => emits('action', 'reply')"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       icon="reply-outline"
       icon-color="var(--color-icon-block-primary-default)"
       icon-size="20"
+      @click="emits('action', 'reply')"
     />
 
     <ui3n-button
       v-if="isReplyAllBtnShow"
-      v-touch="() => emits('action', 'reply-all')"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       icon="reply-all-outline"
       icon-color="var(--color-icon-block-primary-default)"
       icon-size="20"
+      @click="emits('action', 'reply-all')"
     />
 
     <ui3n-button
-      v-touch="() => emits('action', 'forward')"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       icon="forward-outline"
       icon-color="var(--color-icon-block-primary-default)"
       icon-size="20"
+      @click="emits('action', 'forward')"
     />
 
     <ui3n-button
       v-if="isRestoreBtnShow"
-      v-touch="() => emits('action', 'restore')"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       icon="round-refresh"
       icon-color="var(--color-icon-block-primary-default)"
       icon-size="20"
+      @click="emits('action', 'restore')"
     />
 
     <ui3n-button
       v-if="isMoveToTrashBtnShow"
-      v-touch="() => emits('action', 'move-to-trash')"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       icon="trash-can"
       icon-color="var(--color-icon-block-primary-default)"
       icon-size="20"
+      @click="emits('action', 'move-to-trash')"
     />
 
     <ui3n-button
-      v-touch="() => emits('action', 'delete')"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       icon="outline-delete"
       icon-color="var(--warning-content-default)"
       icon-size="20"
+      @click="emits('action', 'delete')"
     />
   </div>
 </template>

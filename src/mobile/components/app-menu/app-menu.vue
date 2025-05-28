@@ -66,9 +66,9 @@
         :key="systemFolder.id"
       >
         <div
-          v-touch="() => goToFolder(systemFolder)"
           tabindex="1"
           :class="[$style.systemFolder, systemFolder.id === currentFolderId && $style.systemFolderSelected]"
+          @click="goToFolder(systemFolder)"
         >
           <ui3n-icon
             :class="$style.folderIcon"

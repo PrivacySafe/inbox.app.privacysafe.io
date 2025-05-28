@@ -61,12 +61,12 @@
 <template>
   <div :class="$style.toolbarOutbox">
     <ui3n-button
-      v-touch="() => emits('action', isSendingStopped ? 'send' : 'cancel')"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       :icon="isSendingStopped ? 'round-refresh' : 'cancel'"
       icon-color="var(--color-icon-block-primary-default)"
       icon-size="20"
+      @click="emits('action', isSendingStopped ? 'send' : 'cancel')"
     />
 
     <div :class="$style.info">
@@ -83,21 +83,21 @@
     </div>
 
     <ui3n-button
-      v-touch="() => emits('action', 'move-to-trash')"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       icon="trash-can"
       icon-color="var(--color-icon-block-primary-default)"
       icon-size="20"
+      @click="emits('action', 'move-to-trash')"
     />
 
     <ui3n-button
-      v-touch="() => emits('action', 'delete')"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       icon="outline-delete"
       icon-color="var(--warning-content-default)"
       icon-size="20"
+      @click="emits('action', 'delete')"
     />
   </div>
 </template>

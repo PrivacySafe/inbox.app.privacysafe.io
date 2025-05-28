@@ -27,11 +27,10 @@
   >
     <ui3n-chip
       :id="address"
-      v-touch:longtap="() => select()"
       height="32"
       max-width="100%"
       :class="allowAdding && $style.pointer"
-      @click.stop.prevent.right="select"
+      @click.stop.prevent="select"
     >
       <template #left>
         <contact-icon

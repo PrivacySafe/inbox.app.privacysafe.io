@@ -26,7 +26,7 @@
       return size(get(messagesByFolders.value, [props.folder, 'data'], {}));
     }
 
-    const treads = SYSTEM_FOLDERS.trash
+    const treads = props.folder === SYSTEM_FOLDERS.trash
       ? Object.values(messageThreadsFromTrash.value)
       : get(messageThreadsByFolder.value, props.folder, []);
 
@@ -45,12 +45,12 @@
     <div :class="$style.row">
       <div :class="$style.block">
         <ui3n-button
-          v-touch="() => emits('bulk-actions', 'cancel')"
           type="icon"
           color="var(--color-bg-block-primary-default)"
           icon="round-arrow-back"
           icon-color="var(--color-icon-block-primary-default)"
           icon-size="20"
+          @click="emits('bulk-actions', 'cancel')"
         />
 
         <span :class="$style.info">{{ size(markedMessages) }}</span>
@@ -59,28 +59,28 @@
       <div :class="$style.block">
         <ui3n-button
           v-if="folder === SYSTEM_FOLDERS.trash"
-          v-touch="() => emits('bulk-actions', 'restore')"
           type="icon"
           color="var(--color-bg-block-primary-default)"
           icon="round-refresh"
           icon-color="var(--color-icon-table-primary-default)"
+          @click="emits('bulk-actions', 'restore')"
         />
 
         <ui3n-button
           v-if="folder !== SYSTEM_FOLDERS.trash"
-          v-touch="() => emits('bulk-actions', 'move-to-trash')"
           type="icon"
           color="var(--color-bg-block-primary-default)"
           icon="outline-delete"
           icon-color="var(--color-icon-table-primary-default)"
+          @click="emits('bulk-actions', 'move-to-trash')"
         />
 
         <ui3n-button
-          v-touch="() => emits('bulk-actions', 'delete')"
           type="icon"
           color="var(--color-bg-block-primary-default)"
           icon="trash-can"
           icon-color="var(--warning-content-default)"
+          @click="emits('bulk-actions', 'delete')"
         />
       </div>
     </div>

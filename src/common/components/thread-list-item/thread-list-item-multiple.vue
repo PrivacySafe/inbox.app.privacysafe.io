@@ -147,6 +147,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   }
 
   function markThread() {
+    console.log('# mark thread');
     const updatedMarkedMessages = isThreadMarkedCompletely.value
       ? difference(markedMessages.value, messagesIds.value)
       : uniq([...cloneDeep(markedMessages.value), ...messagesIds.value]);
@@ -169,12 +170,11 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     <div :class="$style.senderIcon">
       <contact-icon
         v-if="isMobileMode"
-        v-touch="() => markThread()"
         :size="36"
         :name="sender"
-        readonly
         :selected="isThreadMarked"
         :class="[$style.contactIcon, isMobileMode && $style.contactIconMobile]"
+        @click.stop.prevent="markThread"
       />
 
       <template v-else>
@@ -198,68 +198,75 @@ this program. If not, see <http://www.gnu.org/licenses/>.
       </template>
     </div>
 
+    <div
+      :class="$style.content"
+      @click.stop.prevent="toggleExpandedMode"
+    >
+      <div :class="$style.title">
+        <span :class="[$style.sender, isUnread && $style.accented]">
+          {{ sender }}
+        </span>
 
-    <div :class="$style.title">
-      <span :class="[$style.sender, isUnread && $style.accented]">
-        {{ sender }}
-      </span>
-
-      <span :class="$style.time">
-        {{ prepareDateAsSting(time || Date.now()) }}
-      </span>
-    </div>
-
-    <div :class="$style.title">
-      <div :class="$style.subject">
-        <span>{{ subject }}</span>
+        <span :class="$style.time">
+          {{ prepareDateAsSting(time || Date.now()) }}
+        </span>
       </div>
 
-      <ui3n-badge :value="size(item.messages)" />
+      <div :class="$style.title">
+        <div :class="$style.subject">
+          <span>{{ subject }}</span>
+        </div>
 
-      <ui3n-icon
-        :icon="isExpanded ? 'round-keyboard-arrow-up' : 'round-keyboard-arrow-down'"
-        :width="18"
-        :height="18"
-        color="var(--color-icon-button-secondary-default)"
-        @click.stop.prevent="toggleExpandedMode"
-      />
-    </div>
-
-    <div
-      v-if="plainTxtBody"
-      :class="$style.body"
-    >
-      {{ plainTxtBody }}
-    </div>
-
-    <div
-      v-if="!isEmpty(attachmentsInfo)"
-      :class="$style.attachmentsInfo"
-    >
-      <div :class="$style.attachmentInfo">
-        <Ui3nIcon
-          icon="round-subject"
-          width="12"
-          height="12"
-          color="var(--files-word-primary)"
+        <ui3n-badge
+          :value="size(item.messages)"
+          color="var(--color-icon-control-secondary-default)"
+          text-color="var(--color-text-block-primary-default)"
         />
-        <span>{{ attachmentsInfo![0].fileName }}</span>
+
+        <ui3n-icon
+          :icon="isExpanded ? 'round-keyboard-arrow-up' : 'round-keyboard-arrow-down'"
+          :width="18"
+          :height="18"
+          color="var(--color-icon-button-secondary-default)"
+        />
       </div>
 
       <div
-        v-if="size(attachmentsInfo) > 1"
-        :class="$style.attachmentInfoExtra"
+        v-if="plainTxtBody"
+        :class="$style.body"
       >
-        +{{ size(attachmentsInfo) - 1 }}
+        {{ plainTxtBody }}
       </div>
-    </div>
 
-    <div
-      v-if="status"
-      :class="$style.status"
-      :style="{ color: status.color }"
-    >
-      {{ status.text }}
+      <div
+        v-if="!isEmpty(attachmentsInfo)"
+        :class="$style.attachmentsInfo"
+      >
+        <div :class="$style.attachmentInfo">
+          <Ui3nIcon
+            icon="round-subject"
+            width="12"
+            height="12"
+            color="var(--files-word-primary)"
+          />
+          <span>{{ attachmentsInfo![0].fileName }}</span>
+        </div>
+
+        <div
+          v-if="size(attachmentsInfo) > 1"
+          :class="$style.attachmentInfoExtra"
+        >
+          +{{ size(attachmentsInfo) - 1 }}
+        </div>
+      </div>
+
+      <div
+        v-if="status"
+        :class="$style.status"
+        :style="{ color: status.color }"
+      >
+        {{ status.text }}
+      </div>
     </div>
   </div>
 
@@ -353,6 +360,11 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     height: 36px;
     left: var(--spacing-m);
     top: 12px;
+  }
+
+  .content {
+    position: relative;
+    width: 100%;
   }
 
   .title {

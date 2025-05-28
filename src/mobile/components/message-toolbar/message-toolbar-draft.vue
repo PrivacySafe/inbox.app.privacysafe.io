@@ -14,40 +14,40 @@
 <template>
   <div :class="$style.toolbarDraft">
     <ui3n-button
-      v-touch="() => emits('action', 'edit')"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       icon="round-edit"
       icon-color="var(--color-icon-block-primary-default)"
       icon-size="20"
+      @click="emits('action', 'edit')"
     />
 
     <ui3n-button
       v-if="!isEmpty(message.recipients)"
-      v-touch="() => emits('action', 'send')"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       icon="send-variant-outline"
       icon-color="var(--color-icon-block-primary-default)"
       icon-size="20"
+      @click="emits('action', 'send')"
     />
 
     <ui3n-button
-      v-touch="() => emits('action', 'move-to-trash')"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       icon="trash-can"
       icon-color="var(--color-icon-block-primary-default)"
       icon-size="20"
+      @click="emits('action', 'move-to-trash')"
     />
 
     <ui3n-button
-      v-touch="() => emits('action', 'delete')"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       icon="outline-delete"
       icon-color="var(--warning-content-default)"
       icon-size="20"
+      @click="emits('action', 'delete')"
     />
   </div>
 </template>

@@ -20,21 +20,21 @@
   <div :class="$style.toolbar">
     <template v-if="editMode">
       <ui3n-button
-        v-touch="() => emits('action', 'send')"
         type="icon"
         color="var(--color-bg-block-primary-default)"
         icon="send-variant-outline"
         icon-color="var(--color-icon-block-primary-default)"
         icon-size="20"
+        @click="emits('action', 'send')"
       />
 
       <ui3n-button
-        v-touch="() => emits('action', 'discard')"
         type="icon"
         color="var(--color-bg-block-primary-default)"
         icon="round-close"
         icon-color="var(--color-icon-block-primary-default)"
         icon-size="20"
+        @click="emits('action', 'discard')"
       />
     </template>
 

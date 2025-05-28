@@ -67,18 +67,21 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   const plainTxtBody = computed(() => htmlToText({ value: props.item.htmlTxtBody }));
 
   async function openMessage() {
-    if (!isMobileMode.value) return;
-
     resetMarkMessages();
-    const folder = route.params.folderId as string | undefined;
-    await router.push({
-      name: 'message',
-      params: { msgId: props.item.msgId },
-      query: {
-        readonly: 'yes',
-        ...(folder && { sourceFolder: folder }),
-      },
-    });
+    if (isMobileMode.value) {
+      // resetMarkMessages();
+      const folder = route.params.folderId as string | undefined;
+      router.push({
+        name: 'message',
+        params: { msgId: props.item.msgId },
+        query: {
+          readonly: 'yes',
+          ...(folder && { sourceFolder: folder }),
+        },
+      });
+    } else {
+      markMessage(props.item.msgId);
+    }
   }
 </script>
 
@@ -92,11 +95,11 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     <div :class="$style.senderIcon">
       <contact-icon
         v-if="isMobileMode"
-        v-touch="() => markMessage(item.msgId)"
         :size="36"
         :name="sender"
         :selected="isMessageMarked"
         :class="[$style.contactIcon, isMobileMode && $style.contactIconMobile]"
+        @click="markMessage(item.msgId)"
       />
 
       <template v-else>
@@ -118,8 +121,8 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     </div>
 
     <div
-      v-touch="openMessage"
       :class="$style.content"
+      @click="openMessage"
     >
       <div :class="$style.title">
         <span :class="[$style.sender, isUnread && $style.accented]">

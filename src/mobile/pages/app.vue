@@ -61,6 +61,8 @@
     return get(messagesByFolders.value, [currentFolder.value.id, 'unread'], 0)
   });
 
+  const isCreateBtnShow = computed(() => route.name !== 'message');
+
   function toggleMenu() {
     isMenuOpen.value = !isMenuOpen.value;
   }
@@ -98,13 +100,13 @@
       <div :class="$style.toolbar">
         <transition>
           <ui3n-button
-            v-touch="toggleMenu"
             type="icon"
             :color="isMenuOpen ? 'transparent' : 'var(--color-bg-block-primary-default)'"
             :icon="isMenuOpen ? 'round-close' : 'round-menu'"
             icon-color="var(--color-icon-block-primary-default)"
             icon-size="20"
             :disabled="commonLoading"
+            @click="toggleMenu"
           />
         </transition>
 
@@ -128,7 +130,7 @@
         </router-view>
 
         <ui3n-button
-          v-touch="createNewMessage"
+          v-if="isCreateBtnShow"
           type="icon"
           color="var(--color-bg-button-primary-default)"
           icon="round-plus"
@@ -136,6 +138,7 @@
           icon-size="20"
           :disabled="commonLoading"
           :class="$style.createBtn"
+          @click="createNewMessage"
         />
 
         <div
