@@ -312,6 +312,7 @@
   }
 
   .editorContent {
+    min-height: var(--spacing-l);
     outline: none;
     line-height: 1.3;
 

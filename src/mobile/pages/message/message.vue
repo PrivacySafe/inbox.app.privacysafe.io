@@ -190,7 +190,7 @@
   .messageBody {
     position: relative;
     width: 100%;
-    height: calc(100% - var(--message-toolbar-height) - 1px);
+    height: calc(100% - var(--message-toolbar-height) - var(--spacing-ml));
     overflow-x: hidden;
     overflow-y: auto;
   }
