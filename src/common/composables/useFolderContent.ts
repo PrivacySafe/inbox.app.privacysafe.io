@@ -94,9 +94,11 @@ export function useFolderContent() {
           ...msgViewToPreparedMsgData(message),
           status: 'sending',
         };
-        const res = await openSendMessageUI(sendingMessageData, $tr);
+        const unavailableRecipients = await openSendMessageUI(sendingMessageData, $tr);
         const availableRecipients =
-          res === null ? [] : sendingMessageData.recipients.filter(address => !(res as string[]).includes(address));
+          unavailableRecipients === null
+            ? []
+            : sendingMessageData.recipients.filter(address => !unavailableRecipients[address]);
 
         if (isEmpty(availableRecipients)) {
           $notifications.$createNotice({

@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2020 3NSoft Inc.
+ Copyright (C) 2021 - 2022, 2024 - 2025 3NSoft Inc.
 
  This program is free software: you can redistribute it and/or modify it under
  the terms of the GNU General Public License as published by the Free Software
@@ -15,23 +15,19 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+/// <reference path="../manifest.d.ts" />
 
-declare namespace web3n.mailerid {
+declare namespace web3n.system {
 
-	interface Service {
-
-		getUserId(): Promise<string>;
-
-		login(serviceUrl: string): Promise<string>;
-
+	interface RequestedCAPs extends caps.RequestedCAPs {
+		system?: {
+			apps?: AppsCAPSetting;
+			platform?: 'all';
+			monitor?: 'all';
+			logout?: true;
+		};
 	}
 
-	interface MailerIdAssertionLoad {
-		user: string;
-		rpDomain: string;
-		sessionId: string;
-		issuedAt: number;
-		expiresAt: number;
-	}
+	type AppsCAPSetting = 'all' | (keyof apps.Apps)[];
 
 }

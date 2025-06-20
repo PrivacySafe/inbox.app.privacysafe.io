@@ -1,7 +1,6 @@
 import { computed, inject, onBeforeMount, onBeforeUnmount, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import get from 'lodash/get';
-import hasIn from 'lodash/hasIn';
 import size from 'lodash/size';
 import {
   DIALOGS_KEY,
@@ -219,13 +218,13 @@ export function useAppPage(mobileMode?: boolean) {
           } else if (allDoneValue === 'with-errors') {
             const statusDescription = Object.keys(progress.recipients || []).reduce((res, address) => {
               const recipientInfo = get(progress, ['recipients', address]);
-              if (hasIn(recipientInfo, 'err')) {
-                const info = handleSendingError({ $tr, address, errorInfo: recipientInfo });
-                info && res.push(info);
+              if (recipientInfo.err) {
+                const errorFlag = handleSendingError(recipientInfo);
+                errorFlag !== null && (res[address] = errorFlag || '');
               }
 
               return res;
-            }, [] as string[]);
+            }, {} as Record<string, string>);
 
             await upsertMessage({
               ...message!,

@@ -23,9 +23,9 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   import size from 'lodash/size';
   import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { prepareDateAsSting } from '@v1nt1248/3nclient-lib/utils';
-  import { Ui3nCheckbox, Ui3nIcon } from '@v1nt1248/3nclient-lib';
+  import { Ui3nCheckbox, Ui3nIcon, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { useAppStore, useContactsStore } from '@common/store';
-  import { getMessageStatusUiData, htmlToText } from '@common/utils';
+  import { getMessageStatusUiData, getStatusDescriptionText, htmlToText } from '@common/utils';
   import { MARKED_MESSAGES_INJECTION_KEY } from '@common/constants';
   import type { IncomingMessageView, OutgoingMessageView } from '@common/types';
   import ContactIcon from '@common/components/contact-icon/contact-icon.vue';
@@ -63,6 +63,12 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   const time = computed(() => props.item.deliveryTS || props.item.cTime);
 
   const status = computed(() => getMessageStatusUiData({ message: props.item, $tr }));
+
+  const statusDescription = computed(() => {
+    if (isEmpty(props.item.statusDescription)) return '';
+
+    return getStatusDescriptionText({ $tr, statusDescription: props.item.statusDescription! });
+  });
 
   const plainTxtBody = computed(() => htmlToText({ value: props.item.htmlTxtBody }));
 
@@ -175,7 +181,14 @@ this program. If not, see <http://www.gnu.org/licenses/>.
         :class="$style.status"
         :style="{ color: status.color }"
       >
-        {{ status.text }}
+        <ui3n-tooltip
+          :content="statusDescription"
+          position-strategy="fixed"
+          placement="top-start"
+          :disabled="!statusDescription"
+        >
+          <span>{{ status.text }}</span>
+        </ui3n-tooltip>
       </div>
     </div>
   </div>

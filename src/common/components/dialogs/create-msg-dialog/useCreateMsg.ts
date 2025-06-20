@@ -134,9 +134,11 @@ export function useCreateMsg({
   }
 
   async function send() {
-    const res = await openSendMessageUI(msgData.value, $tr);
+    const unavailableRecipients = await openSendMessageUI(msgData.value, $tr);
     const availableRecipients =
-      res === null ? [] : msgData.value.recipients.filter(address => !(res as string[]).includes(address));
+      unavailableRecipients === null
+        ? []
+        : msgData.value.recipients.filter(address => !unavailableRecipients[address]);
 
     if (isEmpty(availableRecipients)) return;
 

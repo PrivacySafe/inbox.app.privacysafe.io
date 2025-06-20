@@ -1,7 +1,7 @@
 {
   "name": "Inbox",
   "appDomain": "inbox.app.privacysafe.io",
-  "version": "0.3.10",
+  "version": "0.3.12",
   "description": "Mail app",
   "icon": "logo.png",
   "components": {

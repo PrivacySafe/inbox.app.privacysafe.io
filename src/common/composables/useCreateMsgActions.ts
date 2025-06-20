@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import { DialogsPlugin, DIALOGS_KEY } from '@v1nt1248/3nclient-lib/plugins';
 import { getRandomId } from '@v1nt1248/3nclient-lib/utils';
 import { useAppStore, useMessagesStore, useSendingStore } from '@common/store';
-import { preparedMsgDataToOutgoingMsgView, prepareErrorText } from '@common/utils';
+import { handleSendingError, preparedMsgDataToOutgoingMsgView } from '@common/utils';
 import { SYSTEM_FOLDERS } from '@common/constants';
 import type { IncomingMessageView, OutgoingMessageView, PreparedMessageData } from '@common/types';
 import PreFlightDialog from '@common/components/dialogs/pre-flight-dialog/pre-flight-dialog.vue';
@@ -21,12 +21,9 @@ export function useCreateMsgActions() {
     return preparedMsgData.msgId!;
   }
 
-  async function runPreFlightProcess(
-    msgData: PreparedMessageData,
-    $tr: (key: string, placeholders?: Record<string, string>) => string,
-  ): Promise<{
+  async function runPreFlightProcess(msgData: PreparedMessageData): Promise<{
     recipientsVerificationResult: Record<string, number | string | null>;
-    unavailableRecipients: string[];
+    unavailableRecipients: Record<string, string>;
   }> {
     const attachmentsSize = (msgData.attachmentsInfo || []).reduce((acc, item) => {
       acc += item.size;
@@ -38,11 +35,7 @@ export function useCreateMsgActions() {
       try {
         recipientsVerificationResult[recipient] = await w3n.mail!.delivery.preFlight(recipient);
       } catch (err) {
-        recipientsVerificationResult[recipient] = prepareErrorText({
-          $tr,
-          address: recipient,
-          error: err as web3n.asmail.DeliveryException,
-        });
+        recipientsVerificationResult[recipient] = handleSendingError<string>({ err } as web3n.asmail.DeliveryProgress['recipients'][string]);
       }
     }
 
@@ -52,9 +45,9 @@ export function useCreateMsgActions() {
         return res;
       }
 
-      res.push(address);
+      res[address] = (verificationResult || '') as string;
       return res;
-    }, [] as string[]);
+    }, {} as Record<string, string>);
 
     return {
       recipientsVerificationResult,
@@ -72,7 +65,7 @@ export function useCreateMsgActions() {
   async function openSendMessageUI(
     msgData: PreparedMessageData,
     $tr: (key: string, placeholders?: Record<string, string>) => string,
-  ): Promise<string[] | null> {
+  ): Promise<Record<string, string> | null> {
     return new Promise(resolve => {
       $dialogs.$openDialog<typeof PreFlightDialog>({
         component: PreFlightDialog,
@@ -88,8 +81,8 @@ export function useCreateMsgActions() {
           closeOnClickOverlay: false,
           closeOnEsc: false,
           confirmButtonText: $tr('msg.preflight.dialog.confirm.button'),
-          onConfirm: async (unavailableRecipients = []) => {
-            resolve(unavailableRecipients as string[]);
+          onConfirm: async unavailableRecipients => {
+            resolve(unavailableRecipients as Record<string, string>);
           },
           onClose: () => {
             resolve(null);

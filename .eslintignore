@@ -1,4 +1,0 @@
-src/common/libs/**/*.js
-src/common/libs/**/*.d.ts
-/doc/**/*.*
-/app/**/*.*

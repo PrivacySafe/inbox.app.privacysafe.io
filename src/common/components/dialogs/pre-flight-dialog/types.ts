@@ -6,6 +6,6 @@ export interface PreFlightDialogProps {
 
 export interface PreFlightDialogEmits {
   (event: 'validate', value: boolean): void;
-  (event: 'select', value: string[]): void;
+  (event: 'select', value: Record<string, string>): void;
   (event: 'confirm'): void;
 }

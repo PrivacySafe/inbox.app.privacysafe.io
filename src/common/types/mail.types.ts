@@ -90,7 +90,7 @@ export type MessageExtraInfo = {
   threadId: string;
   cTime?: number;
   status: MessageDeliveryStatus;
-  statusDescription?: string[];
+  statusDescription?: Record<string, string>;
   mailFolder: string;
   attachmentsInfo?: AttachmentInfo[];
 };

@@ -45,7 +45,7 @@ export const useContactsStore = defineStore('contacts', () => {
     }
 
     const newContact: Person = {
-      id: getRandomId(6),
+      id: 'new',
       name: '',
       mail,
       notice: '',

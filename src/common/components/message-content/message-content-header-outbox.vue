@@ -24,7 +24,7 @@
   import { formatFileSize } from '@v1nt1248/3nclient-lib/utils';
   import { Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { useMessagesStore, useSendingStore } from '@common/store';
-  import { getMessageStatusUiData } from '@common/utils';
+  import { getMessageStatusUiData, getStatusDescriptionText } from '@common/utils';
   import type { IncomingMessageView, MessageAction, OutgoingMessageView } from '@common/types';
 
   const props = defineProps<{
@@ -53,7 +53,7 @@
 
   const errorStateDescription = computed(() => {
     if (!isEmpty(props.message.statusDescription)) {
-      return props.message.statusDescription?.join('. ');
+      return getStatusDescriptionText({ $tr, statusDescription: props.message.statusDescription! });
     }
 
     return $tr('msg.sending.error.noDescription');

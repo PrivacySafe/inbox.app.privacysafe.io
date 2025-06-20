@@ -33,6 +33,7 @@
   "msg.sending.error.inboxIsFull": "mailbox of this recipient is full",
   "msg.sending.error.domainNotFound": "this domain is not found",
   "msg.sending.error.noServiceRecord": "this domain does not support 3N",
+  "msg.sending.error.recipientPubKeyFailsValidation": "the public key is not valid",
   "msg.sending.error.noDescription": "No description",
   "msg.sending.process.text": "Complete {percent} ({currentValue} of {totalValue})",
   "msg.content.address.add": "Add address to the Contacts",

@@ -147,7 +147,6 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   }
 
   function markThread() {
-    console.log('# mark thread');
     const updatedMarkedMessages = isThreadMarkedCompletely.value
       ? difference(markedMessages.value, messagesIds.value)
       : uniq([...cloneDeep(markedMessages.value), ...messagesIds.value]);

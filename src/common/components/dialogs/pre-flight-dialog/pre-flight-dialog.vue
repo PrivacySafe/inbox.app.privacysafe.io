@@ -20,6 +20,7 @@
   import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { useCreateMsgActions } from '@common/composables/useCreateMsgActions';
+  import { prepareErrorText } from '@/common/utils';
   import type { PreFlightDialogProps, PreFlightDialogEmits } from './types';
   import ContactIcon from '@common/components/contact-icon/contact-icon.vue';
 
@@ -31,22 +32,22 @@
 
   const isLoading = ref(false);
   const _recipientsVerificationResult = ref<Record<string, number | string | null>>({});
-  const _unavailableRecipients = ref<string[]>([]);
+  const _unavailableRecipients = ref<Record<string, string>>({});
 
-  function getVerificationResult(recipient: string): string {
-    return (_recipientsVerificationResult.value[recipient] as string) || '';
+  function getVerificationResult(recipient: string, errorFlag: string): string {
+    return prepareErrorText({ $tr, address: recipient, errorFlag });
   }
 
   onMounted(async () => {
     try {
       isLoading.value = true;
 
-      const { recipientsVerificationResult, unavailableRecipients } = await runPreFlightProcess(props.msgData, $tr);
+      const { recipientsVerificationResult, unavailableRecipients } = await runPreFlightProcess(props.msgData);
       _recipientsVerificationResult.value = recipientsVerificationResult;
       _unavailableRecipients.value = unavailableRecipients;
       isLoading.value = false;
 
-      emits('select', _unavailableRecipients.value || []);
+      emits('select', _unavailableRecipients.value || {});
 
       if (isEmpty(_unavailableRecipients.value)) {
         emits('confirm')
@@ -83,7 +84,7 @@
 
       <div :class="$style.content">
         <div
-          v-for="recipient in _unavailableRecipients"
+          v-for="(errorFlag, recipient) in _unavailableRecipients"
           :key="recipient"
           :class="$style.recipient"
         >
@@ -94,7 +95,7 @@
           />
 
           <ui3n-tooltip
-            :content="getVerificationResult(recipient)"
+            :content="getVerificationResult(recipient, errorFlag)"
             placement="top-start"
             position-strategy="fixed"
           >

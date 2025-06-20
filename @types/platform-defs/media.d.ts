@@ -19,9 +19,41 @@
 declare namespace web3n.media {
 
 	interface MediaDevices {
-		provideAppOwnDisplayMediaSelectionHandler?: (
-			handler: () => void
-		) => void;
+		/**
+		 * Sets handler for choosing "display media": screens and windows.
+		 */
+		setSelectDisplayMediaForCaptureHandler?: SetSelectDisplayMediaForCaptureHandler;
 	}
 
+	/**
+	 * Selector should return an id of desired choice, or undefined, when
+	 * nothing is selected.
+	 */
+	type SelectDisplayMediaForCapture = (
+		choices: DisplaySourceInfo
+	) => Promise<string|undefined>;
+
+	type SetSelectDisplayMediaForCaptureHandler = (
+		handler: SelectDisplayMediaForCapture
+	) => Promise<void>;
+
+	interface DisplaySourceInfo {
+		screens?: ScreenSrcInfo[];
+		windows?: WindowSrcInfo[];
+	}
+	
+	interface ScreenSrcInfo {
+		id: string;
+		name: string;
+		display_id: string;
+		thumbnail: Uint8Array;
+	}
+	
+	interface WindowSrcInfo {
+		id: string;
+		name: string;
+		thumbnail: Uint8Array;
+		appIcon?: Uint8Array;
+	}
+	
 }
