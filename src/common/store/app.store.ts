@@ -17,8 +17,9 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
 import { dbSrv } from '@common/services/services-provider';
-import { UISettings } from '@common/utils/ui-settings';
-import type { AvailableLanguage, AvailableColorTheme, ConnectivityStatus, AppConfigs, AppState } from 'src/common/types';
+import { SystemSettings } from '@common/utils/ui-settings';
+import type { AvailableLanguage, AvailableColorTheme, ConnectivityStatus, AppConfigs, AppState, AppConfig } from '@common/types';
+import { blobFromDataURL } from '../utils/image-files';
 
 export const useAppStore = defineStore('app', () => {
   const appVersion = ref<string>('');
@@ -26,6 +27,7 @@ export const useAppStore = defineStore('app', () => {
   const user = ref<string>('');
   const lang = ref<AvailableLanguage>('en');
   const colorTheme = ref<AvailableColorTheme>('default');
+  const customLogoSrc = ref<string>();
   const appWindowSize = ref<{ width: number; height: number }>({
     width: 0,
     height: 0,
@@ -90,13 +92,26 @@ export const useAppStore = defineStore('app', () => {
     htmlEl.classList.add(curColorThemeCssClass);
   }
 
+  async function setCustomLogo(dataURL: AppConfig['customLogo']): Promise<void> {
+    if (dataURL) {
+      try {
+        const imgBlob = blobFromDataURL(dataURL);
+        customLogoSrc.value = URL.createObjectURL(imgBlob);
+      } catch (err) {
+        console.error(`Parsing dataURL with customLogo throws error:`, err);
+      }
+    } else {
+      customLogoSrc.value = undefined;
+    }
+  }
+
   async function getAppConfig(): Promise<AppConfigs | undefined> {
     try {
-      const config = await UISettings.makeResourceReader();
-      const langVal = await config.getCurrentLanguage();
-      const colorTheme = await config.getCurrentColorTheme();
-      setLang(langVal);
+      const config = await SystemSettings.makeResourceReader();
+      const { lang, colorTheme, customLogo } = await config.getAll();
+      setLang(lang);
       setColorTheme(colorTheme);
+      setCustomLogo(customLogo);
 
       return config;
     } catch (e) {
@@ -118,6 +133,7 @@ export const useAppStore = defineStore('app', () => {
     colorTheme,
     appWindowSize,
     commonLoading,
+    customLogoSrc,
     appState,
     getAppVersion,
     getConnectivityStatus,
@@ -128,6 +144,7 @@ export const useAppStore = defineStore('app', () => {
     setMobileMode,
     setLang,
     setColorTheme,
+    setCustomLogo,
     getAppConfig,
     setAppState,
   };

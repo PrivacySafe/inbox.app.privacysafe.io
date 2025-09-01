@@ -30,3 +30,5 @@ yarn-error.log*
 # Tmp files
 .~*
 /setup-w3n.bundle.js
+
+pnpm-workspace.yaml

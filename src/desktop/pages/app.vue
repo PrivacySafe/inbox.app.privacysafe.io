@@ -28,6 +28,7 @@
     $bus,
     appVersion,
     me,
+    customLogoSrc,
     commonLoading,
     connectivityStatusText,
     appExit,
@@ -39,6 +40,10 @@
   function onResize(value: Ui3nResizeCbArg) {
     setAppWindowSize({ width: value.width, height: value.contentHeight });
     $bus.$emitter.emit('resize-app', void 0);
+  }
+
+  async function openDashboard() {
+    await w3n.shell!.openDashboard!();
   }
 
   onMounted(() => {
@@ -58,9 +63,10 @@
     <div :class="$style.toolbar">
       <div :class="$style.toolbarTitle">
         <img
-          :src="prLogo"
+          :src="customLogoSrc ? customLogoSrc : prLogo"
           alt="logo"
           :class="$style.toolbarLogo"
+          @click="openDashboard"
         >
         <div :class="$style.delimiter">
           /
@@ -168,6 +174,8 @@
   .toolbarLogo {
     position: relative;
     top: -2px;
+    height: var(--spacing-l);
+    cursor: pointer;
   }
 
   .delimiter {

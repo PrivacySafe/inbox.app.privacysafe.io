@@ -1,6 +1,6 @@
 {
   "name": "inbox.app.privacysafe.io",
-  "version": "0.3.12",
+  "version": "0.3.17",
   "description": "Inbox App",
   "author": "3NSoft, Inc.",
   "license": "GPL-3.0",
@@ -20,7 +20,7 @@
     "test:watch": "pnpm run clean:coverage && jest --watch"
   },
   "dependencies": {
-    "@v1nt1248/3nclient-lib": "0.2.14",
+    "@v1nt1248/3nclient-lib": "0.2.28",
     "dayjs": "1.11.13",
     "lodash": "4.17.21",
     "pinia": "3.0.3",

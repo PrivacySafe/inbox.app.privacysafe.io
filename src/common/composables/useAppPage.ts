@@ -22,7 +22,7 @@ import {
 } from '@common/store';
 import { storeToRefs } from 'pinia';
 import { useCreateMsgActions } from '@common/composables/useCreateMsgActions';
-import { handleSendingError, UISettings } from '@common/utils';
+import { handleSendingError, SystemSettings } from '@common/utils';
 import { SYSTEM_FOLDERS } from '@common/constants';
 import CreateMsgDialog from '@common/components/dialogs/create-msg-dialog/create-msg-dialog.vue';
 
@@ -36,7 +36,7 @@ export function useAppPage(mobileMode?: boolean) {
   const router = useRouter();
 
   const appStore = useAppStore();
-  const { appVersion, user: me, connectivityStatus, isMobileMode, commonLoading } = storeToRefs(appStore);
+  const { appVersion, user: me, connectivityStatus, isMobileMode, commonLoading, customLogoSrc } = storeToRefs(appStore);
   const {
     getAppState,
     getAppConfig,
@@ -45,6 +45,7 @@ export function useAppPage(mobileMode?: boolean) {
     getConnectivityStatus,
     setLang,
     setColorTheme,
+    setCustomLogo,
     setAppWindowSize,
     setMobileMode,
   } = appStore;
@@ -164,12 +165,13 @@ export function useAppPage(mobileMode?: boolean) {
 
       $bus.$emitter.on('run-create-message', openCreateMsgDialog);
 
-      const config = await UISettings.makeResourceReader();
+      const config = await SystemSettings.makeResourceReader();
       config.watchConfig({
         next: appConfig => {
-          const { lang, colorTheme } = appConfig;
+          const { lang, colorTheme, customLogo } = appConfig;
           setLang(lang);
           setColorTheme(colorTheme);
+          setCustomLogo(customLogo);
         },
       });
 
@@ -247,6 +249,7 @@ export function useAppPage(mobileMode?: boolean) {
     $bus,
     appVersion,
     me,
+    customLogoSrc,
     commonLoading,
     connectivityStatusText,
     appExit,

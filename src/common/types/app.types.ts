@@ -9,6 +9,7 @@ export type ConnectivityStatus = 'offline' | 'online';
 export type AppConfig = {
   lang: AvailableLanguage;
   colorTheme: AvailableColorTheme;
+  customLogo?: string;
 };
 
 export interface AppConfigsInternal {
