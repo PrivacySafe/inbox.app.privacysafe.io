@@ -36,7 +36,14 @@ export function useAppPage(mobileMode?: boolean) {
   const router = useRouter();
 
   const appStore = useAppStore();
-  const { appVersion, user: me, connectivityStatus, isMobileMode, commonLoading, customLogoSrc } = storeToRefs(appStore);
+  const {
+    appVersion,
+    user: me,
+    connectivityStatus,
+    isMobileMode,
+    commonLoading,
+    customLogoSrc,
+  } = storeToRefs(appStore);
   const {
     getAppState,
     getAppConfig,
@@ -204,11 +211,22 @@ export function useAppPage(mobileMode?: boolean) {
   sendingStore.$subscribe(
     async (mutation, state) => {
       for (const msgId of Object.keys(state.listOfSendingMessage)) {
+        if (!msgId) {
+          continue;
+        }
+
         const progress = state.listOfSendingMessage[msgId];
+        if (progress.localMeta?.chatId) {
+          continue;
+        }
 
         if (progress.allDone) {
           const allDoneValue = progress.allDone;
           const message = getMessage(msgId);
+          if (!message) {
+            await removeMessageFromDeliveryList(msgId, true);
+            continue;
+          }
 
           if (allDoneValue === 'all-ok') {
             await upsertMessage({

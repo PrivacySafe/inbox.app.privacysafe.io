@@ -1,9 +1,7 @@
 import eslintJs from '@eslint/js';
 import tsEslint from 'typescript-eslint';
-import tsParser from '@typescript-eslint/parser';
 import vueParser from 'vue-eslint-parser';
 import pluginVue from 'eslint-plugin-vue';
-import pluginTsEslint from '@typescript-eslint/eslint-plugin';
 import pluginPrettier from 'eslint-plugin-prettier';
 import globals from 'globals';
 
@@ -13,15 +11,16 @@ export default [
   },
 
   eslintJs.configs['recommended'],
-  ...tsEslint.configs['recommended'],
+  ...tsEslint.configs.strict,
+  ...tsEslint.configs.stylistic,
   {
     files: ['**/*.{js,ts,jsx,tsx}'],
     plugins: {
-      '@typescript-eslint': pluginTsEslint,
+      '@typescript-eslint': tsEslint.plugin,
       prettier: pluginPrettier,
     },
     languageOptions: {
-      parser: tsParser,
+      parser: tsEslint.parser,
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
@@ -87,13 +86,13 @@ export default [
   {
     files: ['*.vue', '**/*.vue'],
     plugins: {
-      '@typescript-eslint': pluginTsEslint,
+      '@typescript-eslint': tsEslint.plugin,
       prettier: pluginPrettier,
     },
     languageOptions: {
       parser: vueParser,
       parserOptions: {
-        parser: tsParser,
+        parser: tsEslint.parser,
         ecmaVersion: 'latest',
         ecmaFeatures: {
           jsx: true,

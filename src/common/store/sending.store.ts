@@ -40,7 +40,12 @@ export const useSendingStore = defineStore('sending', () => {
     if (!isEmpty(sendingList)) {
       listOfSendingMessage.value = (sendingList || []).reduce(
         (res, item) => {
-          res[item.id] = item.info;
+          const { info } = item;
+          const { localMeta } = info;
+          if (!localMeta?.chatId) {
+            res[item.id] = item.info;
+          }
+
           return res;
         },
         {} as Record<string, web3n.asmail.DeliveryProgress>,

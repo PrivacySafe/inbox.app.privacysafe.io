@@ -1,7 +1,7 @@
 {
   "name": "Inbox",
   "appDomain": "inbox.app.privacysafe.io",
-  "version": "0.3.17",
+  "version": "0.3.19",
   "description": "Send and receive encrypted messages with an improved version of email.",
   "icon": "logo.png",
   "components": {
@@ -88,6 +88,14 @@
             "service": "AppContacts"
           }
         ]
+      },
+      "windowOpts": {
+        "width": 360,
+        "height": 768,
+        "minWidth": 360,
+        "minHeight": 768,
+        "maxWidth": 360,
+        "maxHeight": 768
       },
       "startCmds": {
         "open-inbox-with": {

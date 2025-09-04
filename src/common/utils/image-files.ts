@@ -46,7 +46,7 @@ export async function blobFromImageFile(imgFile: ReadonlyFile): Promise<Blob> {
   if (!imgBytes) {
     throw new Error(`Expected image file ${imgFile.name} is empty`);
   }
-  return new Blob([imgBytes], { type: mimeTypeOfImageFile(imgFile) });
+  return new Blob([imgBytes as BlobPart], { type: mimeTypeOfImageFile(imgFile) });
 }
 
 export function mimeTypeOfImageFile(imgFile: ReadonlyFile): string {
