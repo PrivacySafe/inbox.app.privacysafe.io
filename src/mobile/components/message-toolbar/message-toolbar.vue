@@ -45,19 +45,19 @@
       >
         <message-toolbar-draft
           v-if="folder === SYSTEM_FOLDERS.draft"
-          :message="message!"
+          :message="message as OutgoingMessageView"
           @action="emits('action', $event)"
         />
 
         <message-toolbar-outbox
           v-else-if="folder === SYSTEM_FOLDERS.outbox"
-          :message="message!"
+          :message="message as OutgoingMessageView"
           @action="emits('action', $event)"
         />
 
         <message-toolbar-main
           v-else
-          :message="message!"
+          :message="message as OutgoingMessageView"
           @action="emits('action', $event)"
         />
       </div>

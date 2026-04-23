@@ -131,7 +131,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     return getMessageStatusUiData({ message: lastOutgoingMessage.value, $tr });
   });
 
-  const messages = computed(() => props.item.messages) as ComputedRef<Array<IncomingMessageView | OutgoingMessageView>>;
+  const messages = computed(() => props.item.messages) as ComputedRef<(IncomingMessageView | OutgoingMessageView)[]>;
   const messagesIds = computed(() => (messages.value || []).map((msg) => msg.msgId));
 
   const isThreadMarked = computed(() => (messages.value || []).some(msg => markedMessages.value.includes(msg.msgId)));
@@ -161,11 +161,6 @@ this program. If not, see <http://www.gnu.org/licenses/>.
       isThreadMarked && $style.marked
     ]"
   >
-    <div
-      v-if="isUnread"
-      :class="$style.unreadIcon"
-    />
-
     <div :class="$style.senderIcon">
       <contact-icon
         v-if="isMobileMode"
@@ -202,9 +197,14 @@ this program. If not, see <http://www.gnu.org/licenses/>.
       @click.stop.prevent="toggleExpandedMode"
     >
       <div :class="$style.title">
-        <span :class="[$style.sender, isUnread && $style.accented]">
+        <div :class="[$style.sender, isUnread && $style.accented]">
+          <div
+            v-if="isUnread"
+            :class="$style.unreadIcon"
+          />
+
           {{ sender }}
-        </span>
+        </div>
 
         <span :class="$style.time">
           {{ prepareDateAsSting(time || Date.now()) }}
@@ -298,7 +298,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     position: relative;
     width: 100%;
     min-height: 60px;
-    padding: var(--spacing-s) var(--spacing-m) var(--spacing-s) 60px;
+    padding: var(--spacing-s) var(--spacing-m) var(--spacing-s) 52px;
     background-color: var(--color-bg-block-primary-default);
     cursor: pointer;
 
@@ -331,16 +331,6 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     }
   }
 
-  .unreadIcon {
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    top: 25px;
-    left: 3px;
-    background-color: var(--color-icon-block-secondary-default);
-  }
-
   .senderIconCheckbox {
     position: absolute;
     display: none;
@@ -357,7 +347,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     position: absolute;
     width: 36px;
     height: 36px;
-    left: var(--spacing-m);
+    left: var(--spacing-s);
     top: 12px;
   }
 
@@ -382,8 +372,19 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     @include mixins.text-overflow-ellipsis();
 
     &.accented {
+      padding-left: var(--spacing-m);
       font-weight: 700;
     }
+  }
+
+  .unreadIcon {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    top: 5px;
+    left: 0;
+    background-color: var(--color-icon-block-secondary-default);
   }
 
   .time {

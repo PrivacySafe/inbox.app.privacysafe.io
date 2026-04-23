@@ -85,7 +85,7 @@
           item-title="displayName"
           item-value="mail"
           add-new-value
-          :new-value-validator="(v) => v.includes('@')"
+          :new-value-validator="(v: string) => v.includes('@')"
           :disabled="isLoading"
           :class="isEmpty(msgData.recipients) && $style.noRecipients"
           @update:model-value="onMsgDataUpdate"

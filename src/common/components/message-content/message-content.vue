@@ -22,7 +22,7 @@
   import { Ui3nButton, Ui3nIcon, Ui3nMenu, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { useAppStore, useContactsStore } from '@common/store';
   import { SYSTEM_FOLDERS } from '@common/constants';
-  import type { IncomingMessageView } from '@common/types';
+  import type { IncomingMessageView, OutgoingMessageView } from '@common/types';
   import type { MessageContentProps, MessageContentEmits } from './types';
   import MessageContentHeader from './message-content-header.vue';
   import MessageContentHeaderOutbox from './message-content-header-outbox.vue';
@@ -52,7 +52,6 @@
       if (val && val !== oldVal) {
         const isMessageIncoming = !!(props.message as IncomingMessageView)?.sender;
         if (isMessageIncoming && props.message?.status !== 'read') {
-
           setTimeout(async () => {
             emits('action', { action: 'mark-as-read', message: props.message! });
           }, 400);
@@ -75,13 +74,13 @@
     >
       <message-content-header-outbox
         v-if="message?.mailFolder === SYSTEM_FOLDERS.outbox"
-        :message="message"
+        :message="message as OutgoingMessageView"
         @action="emits('action', $event)"
       />
 
       <message-content-header-draft
         v-else-if="message?.mailFolder === SYSTEM_FOLDERS.draft"
-        :message="message"
+        :message="message as OutgoingMessageView"
         @action="emits('action', $event)"
       />
 

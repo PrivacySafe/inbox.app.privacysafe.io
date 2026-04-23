@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import vueDevTools from 'vite-plugin-vue-devtools';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 function _resolve(dir: string) {
   return resolve(__dirname, dir);
@@ -28,7 +29,13 @@ export default defineConfig(config => {
 
   const define = { 'process.env': {} };
 
-  const plugins = [vue(), vueDevTools()];
+  const plugins = [
+    vue(),
+    nodePolyfills({
+      include: ['path', 'url', 'fs'],
+    }),
+    vueDevTools(),
+  ];
 
   let optimizeDeps = {};
   if (isDev) {
@@ -67,6 +74,7 @@ export default defineConfig(config => {
     resolve: {
       alias: {
         vue: 'vue/dist/vue.esm-bundler.js',
+        'source-map-js': 'source-map',
         '@': _resolve('./src'),
         '@common': _resolve('./src/common'),
         '@desktop': _resolve('./src/desktop'),

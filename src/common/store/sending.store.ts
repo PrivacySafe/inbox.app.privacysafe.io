@@ -18,11 +18,17 @@ import { ref } from 'vue';
 import { defineStore } from 'pinia';
 import isEmpty from 'lodash/isEmpty';
 import omit from 'lodash/omit';
+import get from 'lodash/get';
+import size from 'lodash/size';
 import { NamedProcs } from '@v1nt1248/3nclient-lib/utils';
-import { outgoingMsgViewToOutgoingMsg } from '@common/utils';
+import { SYSTEM_FOLDERS } from '@common/constants';
+import { handleSendingError, outgoingMsgViewToOutgoingMsg } from '@common/utils';
+import { useMessagesStore } from '@common/store/messages.store';
 import type { OutgoingMessageView } from '@common/types';
 
 export const useSendingStore = defineStore('sending', () => {
+  const messagesStore = useMessagesStore();
+  const { getMessage, upsertMessage } = messagesStore;
   const process = new NamedProcs();
 
   const listOfSendingMessage = ref<Record<string, web3n.asmail.DeliveryProgress>>({});
@@ -33,6 +39,78 @@ export const useSendingStore = defineStore('sending', () => {
 
   function deleteFromListOfSendingMessage(id: string) {
     delete listOfSendingMessage.value[id];
+  }
+
+  async function sendMessage(msgData: OutgoingMessageView) {
+    const outgoingMessage = await outgoingMsgViewToOutgoingMsg(msgData);
+    const { msgId, recipients = [] } = outgoingMessage;
+    await process.start(msgId!, async () => {
+      await w3n.mail?.delivery.addMsg(recipients, omit(outgoingMessage, 'plainTxtBody'), msgId!);
+    });
+  }
+
+  async function cancelSendMessage(msgId: string): Promise<void> {
+    await removeMessageFromDeliveryList(msgId, true);
+  }
+
+  async function removeMessageFromDeliveryList(msgId: string, cancelSending = false): Promise<void> {
+    await w3n.mail?.delivery.rmMsg(msgId, cancelSending);
+  }
+
+  async function handleDeliveryMessagesProgress(
+    { id, progress }:
+    { id: string; progress: web3n.asmail.DeliveryProgress }
+  ) {
+    if (!progress || progress?.localMeta?.chatId) {
+      return;
+    }
+
+    updateListOfSendingMessage(id, progress);
+
+    if (progress.allDone) {
+      const allDoneValue = progress.allDone;
+      let message = getMessage(id);
+      if (!message) {
+        await removeMessageFromDeliveryList(id, true);
+        return;
+      }
+
+      if (allDoneValue === 'all-ok') {
+        message = {
+          ...message,
+          mailFolder: SYSTEM_FOLDERS.sent,
+          deliveryTS: Date.now(),
+          status: 'sent',
+        };
+      } else if (allDoneValue === 'with-errors') {
+        const statusDescription = Object.keys(progress.recipients || []).reduce((res, address) => {
+          const recipientInfo = get(progress, ['recipients', address]);
+          if (recipientInfo.err) {
+            const errorFlag = handleSendingError(recipientInfo);
+            errorFlag !== null && (res[address] = errorFlag || '');
+          }
+
+          return res;
+        }, {} as Record<string, string>);
+
+        message = {
+          ...message,
+          mailFolder: size(statusDescription) === size(message?.recipients)
+            ? SYSTEM_FOLDERS.outbox
+            : SYSTEM_FOLDERS.sent,
+          status: 'error',
+          statusDescription,
+        };
+      }
+
+      await upsertMessage(message);
+      if (message.mailFolder !== SYSTEM_FOLDERS.outbox) {
+        messagesStore.$emitter.emit('sending-complete', { id, status: message.status === 'sent' ? 'ok' : 'error' });
+      }
+
+      await removeMessageFromDeliveryList(id);
+      deleteFromListOfSendingMessage(id);
+    }
   }
 
   async function initializeDeliveryService() {
@@ -53,8 +131,10 @@ export const useSendingStore = defineStore('sending', () => {
     }
 
     w3n.mail?.delivery.observeAllDeliveries({
-      next: ({ id, progress }) => {
-        updateListOfSendingMessage(id, progress);
+      next: async ({ id, progress }) => {
+        await process.start(id, async () => {
+          await handleDeliveryMessagesProgress({ id, progress });
+        });
       },
 
       error: async (err: web3n.asmail.ASMailSendException) => {
@@ -66,22 +146,6 @@ export const useSendingStore = defineStore('sending', () => {
     });
 
     console.info('# The sending service has initialized #');
-  }
-
-  async function sendMessage(msgData: OutgoingMessageView) {
-    const outgoingMessage = await outgoingMsgViewToOutgoingMsg(msgData);
-    const { msgId, recipients = [] } = outgoingMessage;
-    await process.start(msgId!, async () => {
-      await w3n.mail?.delivery.addMsg(recipients, omit(outgoingMessage, 'plainTxtBody'), msgId!);
-    });
-  }
-
-  async function cancelSendMessage(msgId: string): Promise<void> {
-    await removeMessageFromDeliveryList(msgId, true);
-  }
-
-  async function removeMessageFromDeliveryList(msgId: string, cancelSending = false): Promise<void> {
-    await w3n.mail?.delivery.rmMsg(msgId, cancelSending);
   }
 
   return {

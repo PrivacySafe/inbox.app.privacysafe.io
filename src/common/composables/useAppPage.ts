@@ -1,7 +1,6 @@
 import { computed, inject, onBeforeMount, onBeforeUnmount, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import get from 'lodash/get';
-import size from 'lodash/size';
+import { storeToRefs } from 'pinia';
 import {
   DIALOGS_KEY,
   DialogsPlugin,
@@ -20,10 +19,8 @@ import {
   useReceivingStore,
   useSendingStore,
 } from '@common/store';
-import { storeToRefs } from 'pinia';
 import { useCreateMsgActions } from '@common/composables/useCreateMsgActions';
-import { handleSendingError, SystemSettings } from '@common/utils';
-import { SYSTEM_FOLDERS } from '@common/constants';
+import { SystemSettings } from '@common/utils';
 import CreateMsgDialog from '@common/components/dialogs/create-msg-dialog/create-msg-dialog.vue';
 
 export function useAppPage(mobileMode?: boolean) {
@@ -58,10 +55,10 @@ export function useAppPage(mobileMode?: boolean) {
   } = appStore;
   const { loadFolders } = useFoldersStore();
   const { getContactList } = useContactsStore();
-  const { getMessages, getMessage, upsertMessage, deleteMessages } = useMessagesStore();
+  const { getMessages, deleteMessages } = useMessagesStore();
   const { initializeReceivingService } = useReceivingStore();
   const sendingStore = useSendingStore();
-  const { initializeDeliveryService, deleteFromListOfSendingMessage, removeMessageFromDeliveryList } = sendingStore;
+  const { initializeDeliveryService } = sendingStore;
 
   const { saveMsgToDraft } = useCreateMsgActions();
 
@@ -193,7 +190,7 @@ export function useAppPage(mobileMode?: boolean) {
         complete: () => console.log(`Listening to commands for chat app is closed by platform side.`),
       });
     } catch (e) {
-      console.error('\nERR-MOUNTED: ', e);
+      console.error('# APP MOUNTED ERROR => ', e);
       throw e;
     }
   });
@@ -207,61 +204,6 @@ export function useAppPage(mobileMode?: boolean) {
 
     $bus.$emitter.off('run-create-message', openCreateMsgDialog);
   });
-
-  sendingStore.$subscribe(
-    async (mutation, state) => {
-      for (const msgId of Object.keys(state.listOfSendingMessage)) {
-        if (!msgId) {
-          continue;
-        }
-
-        const progress = state.listOfSendingMessage[msgId];
-        if (progress.localMeta?.chatId) {
-          continue;
-        }
-
-        if (progress.allDone) {
-          const allDoneValue = progress.allDone;
-          const message = getMessage(msgId);
-          if (!message) {
-            await removeMessageFromDeliveryList(msgId, true);
-            continue;
-          }
-
-          if (allDoneValue === 'all-ok') {
-            await upsertMessage({
-              ...message!,
-              mailFolder: SYSTEM_FOLDERS.sent,
-              deliveryTS: Date.now(),
-              status: 'sent',
-            });
-          } else if (allDoneValue === 'with-errors') {
-            const statusDescription = Object.keys(progress.recipients || []).reduce((res, address) => {
-              const recipientInfo = get(progress, ['recipients', address]);
-              if (recipientInfo.err) {
-                const errorFlag = handleSendingError(recipientInfo);
-                errorFlag !== null && (res[address] = errorFlag || '');
-              }
-
-              return res;
-            }, {} as Record<string, string>);
-
-            await upsertMessage({
-              ...message!,
-              mailFolder:
-                size(statusDescription) === size(message?.recipients) ? SYSTEM_FOLDERS.outbox : SYSTEM_FOLDERS.sent,
-              status: 'error',
-              statusDescription,
-            });
-          }
-
-          await removeMessageFromDeliveryList(msgId);
-          deleteFromListOfSendingMessage(msgId);
-        }
-      }
-    },
-    { immediate: true },
-  );
 
   return {
     $bus,

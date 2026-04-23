@@ -1,4 +1,4 @@
-import { computed, inject, onBeforeMount, provide, readonly, ref } from 'vue';
+import { computed, inject, onBeforeMount, onBeforeUnmount, provide, readonly, ref } from 'vue';
 import get from 'lodash/get';
 import isEmpty from 'lodash/isEmpty';
 import size from 'lodash/size';
@@ -184,6 +184,12 @@ export function useFolderContent() {
     }
   }
 
+  function onMsgSendingComplete({ id }: { id: string; status: 'ok' | 'error' }) {
+    if (markedMessages.value.includes(id)) {
+      markMessage(id);
+    }
+  }
+
   provide(MARKED_MESSAGES_INJECTION_KEY, {
     markedMessages: readonly(markedMessages),
     markMessage,
@@ -193,6 +199,12 @@ export function useFolderContent() {
 
   onBeforeMount(async () => {
     await getContactList();
+
+    $bus.$emitter.on('sending-complete', onMsgSendingComplete);
+  });
+
+  onBeforeUnmount(() => {
+    $bus.$emitter.off('sending-complete', onMsgSendingComplete);
   });
 
   return {

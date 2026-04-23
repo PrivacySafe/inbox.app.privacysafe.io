@@ -101,6 +101,7 @@
     font-weight: 400;
     line-height: var(--font-20);
     color: var(--color-text-block-primary-default);
+    user-select: none;
 
     p {
       margin: 0;

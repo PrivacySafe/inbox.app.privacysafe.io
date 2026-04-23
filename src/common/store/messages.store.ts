@@ -38,8 +38,8 @@ function getMessagesByThreads(
 ): Record<string, MessageThread> {
   return Object.values(messages).reduce(
     (res, msg) => {
-      const { threadId, mailFolder, deliveryTS = 0, cTime = 0 } = msg;
-      const isIncomingMessage = !!(msg as IncomingMessageView).sender;
+      const { isIncomingMessage, threadId, mailFolder, deliveryTS = 0, cTime = 0 } = msg;
+
       const ts = deliveryTS || cTime;
 
       if (excludeTrash && mailFolder === SYSTEM_FOLDERS.trash) {
@@ -51,7 +51,7 @@ function getMessagesByThreads(
           threadId,
           folders: [mailFolder],
           lastIncomingTS: isIncomingMessage ? ts : 0,
-          lastOutgoingTS: !isIncomingMessage ? 0 : ts,
+          lastOutgoingTS: !isIncomingMessage ? ts : 0,
           messages: [msg],
         };
       } else {
@@ -144,6 +144,7 @@ export const useMessagesStore = defineStore('messages', () => {
         res[msg.msgId!] = {
           ...msg,
           subject: msg.subject ? msg.subject.slice(0, SUBJECT_TEXT_LENGTH) : '',
+          isIncomingMessage: 'sender' in msg,
         };
 
         return res;
@@ -183,7 +184,7 @@ export const useMessagesStore = defineStore('messages', () => {
   }
 
   async function bulkMoveToTrash(messageIds: string[]) {
-    const pr = [] as Array<Promise<void>>;
+    const pr = [] as Promise<void>[];
     for (const msgId of messageIds) {
       const msg = getMessage(msgId);
       if (msg) {
@@ -200,7 +201,7 @@ export const useMessagesStore = defineStore('messages', () => {
   }
 
   async function bulkRestore(messageIds: string[]) {
-    const pr = [] as Array<Promise<void>>;
+    const pr = [] as Promise<void>[];
     for (const msgId of messageIds) {
       const msg = getMessage(msgId);
       if (msg) {

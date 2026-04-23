@@ -6,11 +6,11 @@ export type AvailableColorTheme = 'default' | 'dark';
 
 export type ConnectivityStatus = 'offline' | 'online';
 
-export type AppConfig = {
+export interface AppConfig {
   lang: AvailableLanguage;
   colorTheme: AvailableColorTheme;
   customLogo?: string;
-};
+}
 
 export interface AppConfigsInternal {
   getSettingsFile: () => Promise<AppSettings>;
@@ -41,5 +41,6 @@ export interface AppState {
 export interface AppGlobalEvents {
   'resize-app': void;
   'run-create-message': { data: PreparedMessageData, isThisReplyOrForward?: boolean, sourceFolder?: string };
+  'sending-complete': { id: string; status: 'ok' | 'error' };
 }
 

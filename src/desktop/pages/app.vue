@@ -17,7 +17,7 @@
 <script lang="ts" setup>
   import { onMounted, ref } from 'vue';
   import { Ui3nMenu, Ui3nProgressCircular, Ui3nResize, type Ui3nResizeCbArg, Ui3nRipple } from '@v1nt1248/3nclient-lib';
-  import prLogo from '@common/assets/images/logo.svg';
+  import prLogo from '@common/assets/images/privacysafe-logo-new.svg';
   import ContactIcon from '@common/components/contact-icon/contact-icon.vue';
   import { useAppPage } from '@common/composables/useAppPage';
 
@@ -173,8 +173,7 @@
 
   .toolbarLogo {
     position: relative;
-    top: -2px;
-    height: var(--spacing-l);
+    height: var(--spacing-m);
     cursor: pointer;
   }
 

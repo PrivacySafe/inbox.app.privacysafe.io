@@ -16,7 +16,7 @@
 */
 import type { Nullable } from '@v1nt1248/3nclient-lib';
 
-export type MailFolder = {
+export interface MailFolder {
   id: string;
   name: string;
   icon?: Nullable<string>;
@@ -24,9 +24,9 @@ export type MailFolder = {
   position: number;
   path: string;
   isSystem: boolean;
-};
+}
 
-export type MailFolderDB = {
+export interface MailFolderDB {
   id: string;
   name: string;
   icon: Nullable<string>;
@@ -34,11 +34,12 @@ export type MailFolderDB = {
   position: number;
   path: string;
   isSystem: number;
-};
+}
 
-export type DbQueryParams<T, K extends string & keyof T> = {
-  [p in `$${K}`]: T[K];
-};
+// export type DbQueryParams<T, K extends string & keyof T> = {
+//   [p in `$${K}`]: T[K];
+// };
+export type DbQueryParams<T, K extends string & keyof T> = Record<`$${K}`, T[K]>;
 
 export type MessageDeliveryStatus = 'draft' | 'sending' | 'sent' | 'error' | 'canceled' | 'received' | 'read';
 
@@ -69,14 +70,14 @@ export interface OutgoingMessage extends web3n.asmail.OutgoingMessage {
   jsonBody: Partial<MessageJsonBody>;
 }
 
-export type AttachmentInfo = {
+export interface AttachmentInfo {
   id: string;
   fileName: string;
   size: number;
   type?: string;
-};
+}
 
-export type PreparedMessageData = {
+export interface PreparedMessageData {
   id: string;
   threadId: string;
   recipients: string[];
@@ -84,35 +85,37 @@ export type PreparedMessageData = {
   attachmentsInfo?: AttachmentInfo[];
   plainTxtBody?: string;
   htmlTxtBody?: string;
-};
+}
 
-export type MessageExtraInfo = {
+export interface MessageExtraInfo {
   threadId: string;
   cTime?: number;
   status: MessageDeliveryStatus;
   statusDescription?: Record<string, string>;
   mailFolder: string;
   attachmentsInfo?: AttachmentInfo[];
-};
+}
 
-export type IncomingMessageView = Omit<IncomingMessage, 'establishedSenderKeyChain' | 'attachments'> & MessageExtraInfo & { msgId: string };
+export type IncomingMessageView = Omit<IncomingMessage, 'establishedSenderKeyChain' | 'attachments'> &
+  MessageExtraInfo & { msgId: string; isIncomingMessage?: boolean };
 
 export type OutgoingMessageView = Omit<OutgoingMessage, 'attachments'> &
   MessageExtraInfo & {
-    msgId: string
+    msgId: string;
     deliveryTS: number;
+    isIncomingMessage?: boolean;
   };
 
-export type MessageThread = {
+export interface MessageThread {
   threadId: string;
   isExpanded?: boolean;
   folders: string[];
   lastIncomingTS: number;
   lastOutgoingTS: number;
-  messages: Array<IncomingMessageView | OutgoingMessageView>;
-};
+  messages: (IncomingMessageView | OutgoingMessageView)[];
+}
 
-export type MessageViewDB = {
+export interface MessageViewDB {
   msgId: string;
   cTime: Nullable<number>;
   msgType: string; // 'chat' | 'mail'
@@ -128,8 +131,19 @@ export type MessageViewDB = {
   status: Nullable<string>; // 'draft' | 'sending' | 'sent' | 'error' | 'canceled'
   statusDescription: Nullable<string>;
   attachmentsInfo: Nullable<string>;
-};
+}
 
-export type MessageAction = 'move-to-trash' | 'delete' | 'edit' | 'send' | 'mark-as-read' | 'reply' | 'reply-all' | 'forward' | 'restore' | 'discard' | 'cancel';
+export type MessageAction =
+  | 'move-to-trash'
+  | 'delete'
+  | 'edit'
+  | 'send'
+  | 'mark-as-read'
+  | 'reply'
+  | 'reply-all'
+  | 'forward'
+  | 'restore'
+  | 'discard'
+  | 'cancel';
 
 export type MessageBulkActions = 'select-all' | 'deselect-all' | 'cancel' | 'move-to-trash' | 'delete' | 'restore';

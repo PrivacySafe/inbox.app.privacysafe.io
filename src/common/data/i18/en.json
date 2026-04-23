@@ -45,6 +45,8 @@
   "msg.content.tooltip.edit": "Edit",
   "msg.content.tooltip.send": "Send",
   "msg.content.tooltip.download-all": "Download all files",
+  "msg.content.tooltip.download": "Download the file",
+  "msg.content.tooltip.view": "View the file",
   "msg.content.tooltip.reply": "Reply",
   "msg.content.tooltip.replyAll": "Reply All",
   "msg.content.tooltip.forward": "Forward",
@@ -91,5 +93,10 @@
   "msg.preflight.dialog.question": "Would you like to send the message anyway?",
   "msg.preflight.dialog.confirm.button": "Send Anyway",
   "msg.reply.title": "Original message",
-  "msg.forward.title": "Forwarded message"
+  "msg.forward.title": "Forwarded message",
+  "msg.writing.attachments.success": "Attachments have saved",
+  "msg.writing.attachments.error": "Error writing attachments",
+  "msg.writing.attachment.success": "The file {fileName} has saved",
+  "msg.writing.attachment.error": "Error writing the file {fileName}",
+  "msg.attachment.view.exit": "Exit viewing"
 }

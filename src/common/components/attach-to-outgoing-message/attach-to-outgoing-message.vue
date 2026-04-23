@@ -103,7 +103,7 @@
       return res;
     }, [] as string[]);
 
-    const pr = [] as Array<Promise<void>>;
+    const pr = [] as Promise<void>[];
     for (const fileId of filesToDelete) {
       const { messages = [] } = await fileStoreSrv.getInfo(fileId) as FileInfo;
       if (size(messages) > 1) {
@@ -125,7 +125,7 @@
     innerValue.value = cloneDeep(props.value!);
     if (size(innerValue.value) <= 1) return;
 
-    const pr = [] as Array<Promise<void>>;
+    const pr = [] as Promise<void>[];
     for (const item of innerValue.value) {
       const { messages = [] } = await fileStoreSrv.getInfo(item.id) as FileInfo;
       if (!messages.includes(props.msgId)) {

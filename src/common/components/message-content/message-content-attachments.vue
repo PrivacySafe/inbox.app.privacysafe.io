@@ -24,12 +24,13 @@
     I18nPlugin,
     VUEBUS_KEY,
     VueBusPlugin,
-    NOTIFICATIONS_KEY,
-    NotificationsPlugin,
   } from '@v1nt1248/3nclient-lib/plugins';
-  import { type Nullable, Ui3nButton, Ui3nIcon, Ui3nTooltip, Ui3nRipple as vUi3nRipple } from '@v1nt1248/3nclient-lib';
-  import { useMessagesStore, useReceivingStore } from '@common/store';
+  import { type Nullable, Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
+  import { useAppStore } from '@/common/store/app.store';
+  import { useDownloadAttachments } from '@/common/composables/useDownloadAttachments';
   import type { AppGlobalEvents, AttachmentInfo, IncomingMessageView, OutgoingMessageView } from '@common/types';
+  import MessageContentAttachment from './message-content-attachment.vue';
+  import MessageViewAttachment from '@common/components/dialogs/view-attachment/view-attachment.vue';
 
   const props = defineProps<{
     message: IncomingMessageView | OutgoingMessageView;
@@ -38,9 +39,16 @@
 
   const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
   const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
-  const $notifications = inject<NotificationsPlugin>(NOTIFICATIONS_KEY)!;
-  const { downloadFileFromOutgoingMessage, downloadFilesFromOutgoingMessage } = useMessagesStore();
-  const { downloadFileFromIncomingMessage, downloadAttachmentsFromIncomingMessage } = useReceivingStore();
+
+  const appStore = useAppStore();
+
+  const isIncomingMessage = computed(() => hasIn(props.message, 'sender'));
+
+  const { downloadAll, downloadAttachment } = useDownloadAttachments({
+    msgId: props.message.msgId,
+    isIncomingMessage: isIncomingMessage.value,
+    $tr,
+  });
 
   const wrapperEl = ref<Nullable<HTMLDivElement>>(null);
   const bodyEl = ref<Nullable<HTMLDivElement>>(null);
@@ -48,8 +56,8 @@
   const isOverflowing = ref(true);
   const firstRowFilesCount = ref(0);
   const widthOfFirstRowFiles = ref(0);
+  const attachmentForView = ref<Nullable<AttachmentInfo>>(null);
 
-  const isIncomingMessage = computed(() => hasIn(props.message, 'sender'));
   const attachments = computed(() => get(props.message, 'attachmentsInfo', [] as AttachmentInfo[]));
   const widthOfFirstRowFilesCss = computed(() => `${widthOfFirstRowFiles.value}px`);
 
@@ -89,53 +97,8 @@
     isBlockOpen.value = value;
   }
 
-  async function downloadAll() {
-    try {
-      let isSuccess;
-      if (isIncomingMessage.value) {
-        isSuccess = await downloadAttachmentsFromIncomingMessage(props.message.msgId!);
-      } else {
-        const ids: string[] = (props.message.attachmentsInfo || []).map(item => item.id!);
-        isSuccess = await downloadFilesFromOutgoingMessage(props.message.msgId, ids);
-      }
-
-      if (isSuccess) {
-        $notifications.$createNotice({
-          type: 'success',
-          content: 'Attachments is saved.',
-        });
-      }
-    } catch (error) {
-      w3n.log('error', `Error downloading attachments of the message with id ${props.message.msgId}`, error);
-
-      $notifications.$createNotice({
-        type: 'error',
-        content: 'Error writing attachments.',
-      });
-    }
-  }
-
-  async function downloadAttachment(attachment: AttachmentInfo) {
-    try {
-      const isSuccess = isIncomingMessage.value
-        ? await downloadFileFromIncomingMessage(props.message.msgId!, attachment.fileName)
-        : await downloadFileFromOutgoingMessage(attachment);
-
-      if (isSuccess) {
-        $notifications.$createNotice({
-          type: 'success',
-          content: `The file ${attachment.fileName} is saved.`,
-        });
-      }
-    } catch (error) {
-      w3n.log('error', `Error downloading the file '${attachment.fileName}' from the message with id ${props.message.msgId}`, error);
-
-      $notifications.$createNotice({
-        type: 'error',
-        content: `Error writing the file ${attachment.fileName}.`,
-      });
-    }
-
+  function viewAttachment(attachment: AttachmentInfo) {
+    attachmentForView.value = attachment;
   }
 
   onMounted(() => {
@@ -163,6 +126,7 @@
     ref="wrapperEl"
     :class="[
       $style.msgAttachments,
+      appStore.isMobileMode && $style.mobileMode,
       isBlockOpen && $style.opened,
       isOverflowing && $style.overflowing
     ]"
@@ -179,7 +143,7 @@
         icon="outline-download-for-offline"
         icon-color="var(--color-icon-button-secondary-default)"
         :class="$style.downloadAll"
-        @click.stop.prevent="downloadAll"
+        @click.stop.prevent="downloadAll(message.attachmentsInfo || [])"
       />
     </ui3n-tooltip>
 
@@ -191,39 +155,13 @@
         v-for="attachment in attachments"
         :key="attachment.id"
       >
-        <ui3n-tooltip
-          :content="attachment.fileName"
-          placement="top-start"
-          position-strategy="fixed"
-        >
-          <div :class="[$style.attachment, readonly && $style.attachmentReadonly]">
-            <ui3n-icon
-              icon="round-subject"
-              color="var(--files-word-primary)"
-              width="16"
-              height="16"
-              :class="$style.prependIcon"
-            />
-
-            <span :class="$style.fileName">
-              {{ attachment.fileName }}
-            </span>
-
-            <div
-              v-if="!readonly"
-              v-ui3n-ripple
-              :class="$style.btn"
-              @click.stop.prevent="downloadAttachment(attachment)"
-            >
-              <ui3n-icon
-                icon="outline-download-for-offline"
-                color="var(--color-icon-control-accent-default)"
-                width="16"
-                height="16"
-              />
-            </div>
-          </div>
-        </ui3n-tooltip>
+        <message-content-attachment
+          :attachment="attachment"
+          :msg-id="message.msgId"
+          :is-incoming-message="isIncomingMessage"
+          @download="downloadAttachment"
+          @view="viewAttachment"
+        />
       </template>
 
       <ui3n-button
@@ -244,6 +182,16 @@
     >
       +{{ size(attachments) - firstRowFilesCount }}
     </ui3n-button>
+
+    <teleport to="body">
+      <message-view-attachment
+        v-if="attachmentForView"
+        :item="attachmentForView"
+        :msg-id="message.msgId"
+        :is-incoming-message="isIncomingMessage"
+        @close="attachmentForView = null"
+      />
+    </teleport>
   </div>
 </template>
 
@@ -251,11 +199,18 @@
   @use '@common/assets/styles/mixins' as mixins;
 
   .msgAttachments {
+    --msg-attachments-min-height: 128px;
+    --msg-attachments-min-mobile-height: 172px;
+
     position: relative;
     width: 100%;
-    height: var(--spacing-ml);
+    height: var(--msg-attachments-min-height);
     padding-right: var(--spacing-xl);
     overflow: hidden;
+
+    &.mobileMode {
+      height: var(--msg-attachments-min-mobile-height);
+    }
 
     &.opened {
       height: auto;
@@ -266,8 +221,8 @@
     --ui3n-button-bg-color-custom: var(--color-bg-block-primary-default) !important;
 
     position: absolute !important;
-    right: 0;
-    top: -4px;
+    right: var(--spacing-xs);
+    top: 0;
   }
 
   .attachmentsBody {
@@ -337,7 +292,12 @@
 
   .moreBtn {
     position: absolute !important;
-    top: 0;
+    width: var(--spacing-xl) !important;
+    top: 52px !important;
     left: v-bind(widthOfFirstRowFilesCss);
+  }
+
+  .lessBtn {
+    align-self: center;
   }
 </style>
