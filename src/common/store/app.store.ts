@@ -26,7 +26,7 @@ export const useAppStore = defineStore('app', () => {
   const connectivityStatus = ref<string>('offline');
   const user = ref<string>('');
   const lang = ref<AvailableLanguage>('en');
-  const colorTheme = ref<AvailableColorTheme>('default');
+  const colorTheme = ref<AvailableColorTheme>('dark2');
   const customLogoSrc = ref<string>();
   const appWindowSize = ref<{ width: number; height: number }>({
     width: 0,
