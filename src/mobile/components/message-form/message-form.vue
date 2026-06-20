@@ -1,20 +1,21 @@
 <script lang="ts" setup>
-  import { Ui3nAutocomplete, Ui3nChip, Ui3nHtml, Ui3nInput } from '@v1nt1248/3nclient-lib';
-  import { useCreateMsg } from '@/common/components/dialogs/create-msg-dialog/useCreateMsg';
-  import { CreateMsgDialogEmits, CreateMsgDialogProps } from '@common/components/dialogs/create-msg-dialog/types';
   import isEmpty from 'lodash/isEmpty';
   import { markSearch } from '@v1nt1248/3nclient-lib/utils';
+  import { Ui3nAutocomplete, Ui3nChip, Ui3nHtml, Ui3nInput } from '@v1nt1248/3nclient-lib';
+  import { useCreateMsg } from '@/common/components/dialogs/create-msg-dialog/useCreateMsg';
+  import type { CreateMsgDialogEmits } from '@common/components/dialogs/create-msg-dialog/types';
+  import type { PreparedMessageData } from '@common/types';
   import ContactIcon from '@common/components/contact-icon/contact-icon.vue';
   import AttachToOutgoingMessage from '@common/components/attach-to-outgoing-message/attach-to-outgoing-message.vue';
   import TextEditor from '@common/components/text-editor/text-editor.vue';
 
   const vUi3nHtml = Ui3nHtml;
 
-  const props = defineProps<Partial<CreateMsgDialogProps>>();
+  const props = defineProps<{ data: PreparedMessageData; isThisReplyOrForward?: boolean }>();
   const emits = defineEmits<CreateMsgDialogEmits>();
 
   const {
-    $tr,
+    t,
     isLoading,
     msgData,
     contactList,
@@ -27,13 +28,13 @@
     showEditorToolbar,
     onEditorInit,
     msgBodyUpdate,
-  } = useCreateMsg({ props, emits });
+  } = useCreateMsg({ props, emits, isMobileMode: true });
 </script>
 
 <template>
   <div :class="$style.messageForm">
     <div :class="[$style.block, $style.blockStyle2]">
-      <span :class="$style.blockTitle">{{ $tr('msg.create.label.subject') }}:</span>
+      <span :class="$style.blockTitle">{{ t('msg.create.label.subject') }}:</span>
       <div :class="$style.blockContent">
         <ui3n-input
           v-model="msgData.subject"
@@ -44,14 +45,12 @@
     </div>
 
     <div :class="[$style.block, $style.blockStyle1]">
-      <span :class="$style.blockTitle">
-        {{ $tr('msg.create.label.to') }}:
-      </span>
+      <span :class="$style.blockTitle"> {{ t('msg.create.label.to') }}: </span>
 
       <div :class="$style.blockContent">
         <ui3n-autocomplete
           v-model="msgData.recipients"
-          :placeholder="$tr('msg.create.contacts.placeholder')"
+          :placeholder="t('msg.create.placeholder.contacts')"
           :items="contactList"
           :custom-filter="filterContactList"
           chips
@@ -112,7 +111,7 @@
     <text-editor
       :autofocus="isThisReplyOrForward"
       :text="data?.htmlTxtBody"
-      :placeholder="$tr('msg.create.editor.placeholder')"
+      :placeholder="t('msg.create.placeholder.editor')"
       :show-toolbar="showEditorToolbar"
       :disabled="isLoading"
       @init="onEditorInit"

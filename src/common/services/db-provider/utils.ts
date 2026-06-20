@@ -22,10 +22,11 @@ import type {
   DbQueryParams,
   IncomingMessageView,
   MailFolder,
-  MailFolderDB, MessageJsonBody,
+  MailFolderDB,
+  MessageJsonBody,
   MessageViewDB,
   OutgoingMessageView,
-} from 'src/common/types';
+} from '@common/types';
 
 type SqlValue = number | string | Uint8Array | Blob | null;
 
@@ -52,7 +53,9 @@ export function appStateDbValueToAppState(sqlResult: QueryExecResult): AppState 
   return { ...data[0] };
 }
 
-export function folderValueToSqlInsertParams(folderData: MailFolder): DbQueryParams<MailFolderDB, keyof MailFolderDB> {
+export function folderValueToSqlInsertParams(
+  folderData: MailFolder,
+): DbQueryParams<MailFolderDB, keyof MailFolderDB> {
   const { id, name, icon, iconColor, position, path, isSystem } = folderData;
   return {
     $id: id,
@@ -101,7 +104,9 @@ export function msgValueToSqlInsertParams(
   };
 }
 
-export function msgDbValueToMsgValue(sqlResult: QueryExecResult): Array<IncomingMessageView | OutgoingMessageView> {
+export function msgDbValueToMsgValue(
+  sqlResult: QueryExecResult,
+): Array<IncomingMessageView | OutgoingMessageView> {
   const data = objectFromQueryExecResult<MessageViewDB>(sqlResult);
   return data.map(item => ({
     msgId: item.msgId,

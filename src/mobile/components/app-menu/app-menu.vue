@@ -1,5 +1,6 @@
 <script lang="ts" setup>
   import { computed, type ComputedRef } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { useRouter, useRoute } from 'vue-router';
   import { storeToRefs } from 'pinia';
   import { useFoldersStore, useMessagesStore } from '@common/store';
@@ -18,6 +19,7 @@
     (event: 'close'): void;
   }>();
 
+  const { t } = useI18n();
   const route = useRoute();
   const router = useRouter();
 
@@ -31,7 +33,7 @@
       return size(get(messagesByFolders.value, [folder.id, 'data'], []));
     }
 
-    return get(messagesByFolders.value, [folder.id, 'unread'], 0)
+    return get(messagesByFolders.value, [folder.id, 'unread'], 0);
   }
 
   async function goToFolder(folder: MailFolder) {
@@ -55,7 +57,10 @@
         </div>
 
         <div :class="$style.status">
-          {{ $tr('app.status') }}: <span :class="connectivityStatusText === 'app.status.connected.online' && $style.ok">{{ $tr(connectivityStatusText) }}</span>
+          {{ t('app.status.label') }}:
+          <span :class="connectivityStatusText === 'app.status.connected.online' && $style.ok">
+            {{ t(connectivityStatusText) }}
+          </span>
         </div>
       </div>
     </div>
@@ -81,6 +86,7 @@
           <ui3n-badge
             v-if="getBadgeText(systemFolder)"
             :value="getBadgeText(systemFolder)"
+            :class="$style.folderBadge"
           />
         </div>
       </template>
@@ -166,6 +172,10 @@
       font-weight: 600;
       line-height: var(--font-16);
       color: var(--color-text-control-primary-default);
+    }
+
+    .folderBadge {
+      min-width: 20px;
     }
 
     &.systemFolderSelected {

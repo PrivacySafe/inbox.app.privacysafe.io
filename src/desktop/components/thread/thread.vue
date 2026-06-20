@@ -1,28 +1,30 @@
 <script lang="ts" setup>
-  import { computed, inject, ref, watchEffect } from 'vue';
+  import { computed, ref, watchEffect } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import isEmpty from 'lodash/isEmpty';
   import size from 'lodash/size';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { Ui3nProgressCircular } from '@v1nt1248/3nclient-lib';
   import { useMessagesStore } from '@common/store/messages.store';
   import type { IncomingMessageView, MessageAction, MessageBulkActions, OutgoingMessageView } from '@common/types';
   import messageBgImg from '@common/assets/images/message-bg.png';
   import MessageContent from '@common/components/message-content/message-content.vue';
-  import MessageBulkActionsToolbar
-    from '@desktop/components/message-bulk-actions-toolbar/message-bulk-actions-toolbar.vue';
+  import MessageBulkActionsToolbar from '@desktop/components/message-bulk-actions-toolbar/message-bulk-actions-toolbar.vue';
 
-  const props = withDefaults(defineProps<{
-    folder: string;
-    markedMessages?: string[];
-  }>(), {
-    markedMessages: () => [],
-  });
+  const props = withDefaults(
+    defineProps<{
+      folder: string;
+      markedMessages?: string[];
+    }>(),
+    {
+      markedMessages: () => [],
+    },
+  );
   const emits = defineEmits<{
     (event: 'action', value: { action: MessageAction; message: IncomingMessageView | OutgoingMessageView }): void;
     (event: 'bulk-actions', value: { action: MessageBulkActions; messageIds: string[] }): void;
   }>();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
   const messagesStore = useMessagesStore();
   const { getMessage } = messagesStore;
 
@@ -33,12 +35,14 @@
 
   const isBulkActionsToolbarOpen = computed(() => size(props.markedMessages) >= 2);
 
-  const threads = computed(() => (messages.value || []).reduce((acc, message) => {
-    if (!acc.includes(message.threadId)) {
-      acc.push(message.threadId);
-    }
-    return acc;
-  }, [] as string[]));
+  const threads = computed(() =>
+    (messages.value || []).reduce((acc, message) => {
+      if (!acc.includes(message.threadId)) {
+        acc.push(message.threadId);
+      }
+      return acc;
+    }, [] as string[]),
+  );
 
   function messageSort(
     a: IncomingMessageView | OutgoingMessageView,
@@ -87,8 +91,8 @@
       >
 
       <div :class="$style.emptyText">
-        <p>{{ $tr('msg.no.selected.part1') }}</p>
-        <p>{{ $tr('msg.no.selected.part2') }}</p>
+        <p>{{ t('msg.text.no_selected.part1') }}</p>
+        <p>{{ t('msg.text.no_selected.part2') }}</p>
       </div>
     </div>
 

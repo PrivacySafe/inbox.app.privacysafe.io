@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2022, 2025 - 2026 3NSoft Inc.
+ Copyright (C) 2025 - 2026 3NSoft Inc.
 
  This program is free software: you can redistribute it and/or modify it under
  the terms of the GNU General Public License as published by the Free Software
@@ -15,27 +15,27 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+declare namespace web3n.caps.startup {
 
-declare namespace web3n.connectivity {
-
-	interface Connectivity {
-		isOnline: () => Promise<OnlineAssesment>;
-		watch: (obs: Observer<ConnectivityEvent>) => (() => void);
+	interface DefaultProviderSite {
+		openInExternal: (url: string) => Promise<void>;
+		openSiteInChildWindow: (url: string) => Promise<void>;
+		closeSite: () => Promise<void>;
+		getSignupToken: () => Promise<string>;
 	}
 
-	interface ConnectivityEvent {
-		isOnline: boolean;
-		wsEvent?: {
-			ping?: number;
-			service: 'inbox' | 'storage';
-			type: 'heartbeat' | 'heartbeat-skip' | 'disconnected' | 'connected';
-			slowSocket?: true;
-			missingPongsFromServer?: number;
-			socketClosed?: true;
-			error?: any;
-		};
+	interface ViewBounds {
+		x: number;
+		y: number;
+		width: number;
+		height: number;
 	}
 
-	type OnlineAssesment = 'offline_99%' | 'online_80%';
+	interface W3N extends web3n.startup.W3N {
+		provider: DefaultProviderSite;
+		enableAutoLogin: SetAutoLogin;
+	}
+
+	type SetAutoLogin = (enable: boolean) => Promise<void>;
 
 }

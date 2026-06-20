@@ -15,6 +15,7 @@
   this program. If not, see <http://www.gnu.org/licenses/>.
 */
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { defineStore, storeToRefs } from 'pinia';
 import get from 'lodash/get';
 import { useAppStore } from './app.store';
@@ -23,9 +24,10 @@ import { incomingMsgToIncomingMsgView } from '@common/utils';
 import type { IncomingMessage } from '@common/types';
 
 export const useReceivingStore = defineStore('receiving', () => {
+  const { t } = useI18n();
   const appStore = useAppStore();
   const { appState } = storeToRefs(appStore);
-  const { $i18n, setAppState } = appStore;
+  const { setAppState } = appStore;
   const messagesStore = useMessagesStore();
   const { upsertMessage } = messagesStore;
 
@@ -82,8 +84,8 @@ export const useReceivingStore = defineStore('receiving', () => {
 
     // @ts-ignore
     const targetFile = await w3n.shell?.fileDialogs?.saveFileDialog(
-      $i18n.tr('msg.download.file.title'),
-      $i18n.tr('app.ok'),
+      t('msg.download.file_title'),
+      t('app.ok'),
       sourceFile.name,
     );
 
@@ -108,8 +110,8 @@ export const useReceivingStore = defineStore('receiving', () => {
 
     // @ts-ignore
     const targetFolder = await w3n.shell?.fileDialogs?.saveFolderDialog(
-      $i18n.tr('msg.download.title'),
-      $i18n.tr('app.ok'),
+      t('msg.download.title'),
+      t('app.ok'),
       msgId,
     );
 

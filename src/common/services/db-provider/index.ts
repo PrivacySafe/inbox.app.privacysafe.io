@@ -4,7 +4,7 @@ import type { Nullable } from '@v1nt1248/3nclient-lib';
 import { SQLiteOn3NStorage } from '@common/libs/sqlite-on-3nstorage';
 import type { ParamsObject } from '@common/libs/sqlite-on-3nstorage/sqljs';
 import { MAIL_FOLDERS_DEFAULT } from '@common/constants/mail-folders-default';
-import type { AppState, IncomingMessageView, MailFolder, OutgoingMessageView } from 'src/common/types';
+import type { AppState, IncomingMessageView, MailFolder, OutgoingMessageView } from '@common/types';
 import type { DBProvider } from './types';
 import {
   GET_STATE_QUERY,
@@ -37,16 +37,18 @@ export async function dbProvider(): Promise<DBProvider> {
     const file = await fs.writableFile('storage-db');
     sqlite = await SQLiteOn3NStorage.makeAndStart(file);
 
-    // language=SQLite format=false
-    sqlite.db.exec(`CREATE TABLE IF NOT EXISTS app (
+    sqlite.db.exec(`
+      --sql
+      CREATE TABLE IF NOT EXISTS app (
       id TEXT PRIMARY KEY UNIQUE,
       state TEXT NOT NULL
     ) STRICT`);
 
     await updateAppState({ lastReceivingTimestamp: 0 }, true);
 
-    // language=SQLite format=false
-    sqlite.db.exec(`CREATE TABLE IF NOT EXISTS folders (
+    sqlite.db.exec(`
+      --sql
+      CREATE TABLE IF NOT EXISTS folders (
       id TEXT PRIMARY KEY UNIQUE,
       name TEXT NOT NULL,
       icon TEXT,
@@ -63,8 +65,9 @@ export async function dbProvider(): Promise<DBProvider> {
       });
     }
 
-    // language=SQLite format=false
-    sqlite.db.exec(`CREATE TABLE IF NOT EXISTS messages (
+    sqlite.db.exec(`
+      --sql
+      CREATE TABLE IF NOT EXISTS messages (
       msgId TEXT PRIMARY KEY UNIQUE,
       threadId TEXT NOT NULL,
       cTime INTEGER,

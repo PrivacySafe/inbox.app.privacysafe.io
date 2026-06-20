@@ -49,19 +49,17 @@
     currentTime,
     currentTimeAsText,
     currentAudioVisualization,
+    t,
     updateVolume,
     updateCurrentTime,
     play,
     pause,
   } = useAudioView({ item: props.item, incomingMsgId: props.incomingMsgId });
 
-  watch(
-    appWindowSize,
-    () => {
-      canvasRef.value!.width = canvasRef.value!.clientWidth;
-      canvasRef.value!.height = canvasRef.value!.clientHeight;
-    },
-  );
+  watch(appWindowSize, () => {
+    canvasRef.value!.width = canvasRef.value!.clientWidth;
+    canvasRef.value!.height = canvasRef.value!.clientHeight;
+  });
 </script>
 
 <template>
@@ -79,9 +77,7 @@
     <div :class="$style.audioPlayer">
       <div :class="$style.audioPlayerBody">
         <div :class="$style.audioPlayerActionsAdditional">
-          <ui3n-icon
-            icon="round-volume-mute"
-          />
+          <ui3n-icon icon="round-volume-mute" />
 
           <div :class="$style.volume">
             <ui3n-slider
@@ -101,7 +97,7 @@
 
         <div :class="$style.audioPlayerActions">
           <ui3n-tooltip
-            :content="$tr('chat.player.play')"
+            :content="t('chat.player.play')"
             placement="top-end"
             position-strategy="fixed"
           >
@@ -115,7 +111,7 @@
           </ui3n-tooltip>
 
           <ui3n-tooltip
-            :content="$tr('chat.player.pause')"
+            :content="t('chat.player.pause')"
             placement="top-end"
             position-strategy="fixed"
           >
@@ -133,7 +129,7 @@
           <span>Mode 2</span>
 
           <ui3n-tooltip
-            :content="$tr('chat.audio.player.visual.setting')"
+            :content="t('chat.audio.player.visual.setting')"
             placement="top"
             position-strategy="fixed"
           >
@@ -141,7 +137,7 @@
               :model-value="currentAudioVisualization === 1"
               size="16"
               :disabled="isPlaying || isProcessing || !audioPlayerRef?.src"
-              @change="(v: boolean) => currentAudioVisualization = v ? 1 : 2"
+              @change="(v: boolean) => (currentAudioVisualization = v ? 1 : 2)"
             />
           </ui3n-tooltip>
 

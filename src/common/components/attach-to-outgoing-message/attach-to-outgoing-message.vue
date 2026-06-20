@@ -15,12 +15,12 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import { inject, onBeforeMount, ref, watch } from 'vue';
+  import { onBeforeMount, ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import cloneDeep from 'lodash/cloneDeep';
   import isEqual from 'lodash/isEqual';
   import isEmpty from 'lodash/isEmpty';
   import size from 'lodash/size';
-  import { I18nPlugin, I18N_KEY } from '@v1nt1248/3nclient-lib/plugins';
   import { Ui3nButton } from '@v1nt1248/3nclient-lib';
   import { fileStoreSrv } from '@common/services/services-provider';
   import { AttachmentInfo } from '@common/types';
@@ -36,18 +36,14 @@
     (event: 'update:loading', value: boolean): void;
   }>();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   const isLoading = ref(false);
   const innerValue = ref<AttachmentInfo[]>([]);
 
   async function openUploadDialog() {
     // @ts-ignore
-    const res = await w3n.shell?.fileDialogs?.openFileDialog(
-      $tr('msg.create.attach.button'),
-      $tr('app.select'),
-      true,
-    );
+    const res = await w3n.shell?.fileDialogs?.openFileDialog(t('msg.create.btn.attach'), t('app.select'), true);
     try {
       isLoading.value = true;
       emits('update:loading', true);
@@ -80,11 +76,11 @@
 
     const { id, type } = innerValue.value[itemIndex];
     if (!type) {
-      const { messages = [] } = await fileStoreSrv.getInfo(id) as FileInfo;
+      const { messages = [] } = (await fileStoreSrv.getInfo(id)) as FileInfo;
       // We check if this file is used as an attachment in any other message
       if (size(messages) > 1) {
         const currentMsgIndex = messages.findIndex(mId => mId === props.msgId);
-        currentMsgIndex > -1 && (messages.splice(currentMsgIndex, 1));
+        currentMsgIndex > -1 && messages.splice(currentMsgIndex, 1);
         await fileStoreSrv.updateInfo(id, { messages });
       } else {
         await fileStoreSrv.delete(id);
@@ -105,10 +101,10 @@
 
     const pr = [] as Promise<void>[];
     for (const fileId of filesToDelete) {
-      const { messages = [] } = await fileStoreSrv.getInfo(fileId) as FileInfo;
+      const { messages = [] } = (await fileStoreSrv.getInfo(fileId)) as FileInfo;
       if (size(messages) > 1) {
         const currentMsgIndex = messages.findIndex(mId => mId === props.msgId);
-        currentMsgIndex > -1 && (messages.splice(currentMsgIndex, 1));
+        currentMsgIndex > -1 && messages.splice(currentMsgIndex, 1);
         pr.push(fileStoreSrv.updateInfo(fileId, { messages }));
       } else {
         pr.push(fileStoreSrv.delete(fileId));
@@ -127,7 +123,7 @@
 
     const pr = [] as Promise<void>[];
     for (const item of innerValue.value) {
-      const { messages = [] } = await fileStoreSrv.getInfo(item.id) as FileInfo;
+      const { messages = [] } = (await fileStoreSrv.getInfo(item.id)) as FileInfo;
       if (!messages.includes(props.msgId)) {
         messages.push(props.msgId);
         pr.push(fileStoreSrv.updateInfo(item.id, { messages }));
@@ -139,7 +135,7 @@
 
   watch(
     () => props.value,
-    (val) => {
+    val => {
       if (!isEmpty(val) && !isEqual(val!, innerValue.value)) {
         innerValue.value = cloneDeep(props.value || []);
       }
@@ -168,9 +164,8 @@
       :disabled="isLoading"
       @click.stop.prevent="openUploadDialog"
     >
-      {{ $tr('msg.create.attach.button') }}
+      {{ t('msg.create.btn.attach') }}
     </ui3n-button>
-
 
     <ui3n-button
       type="icon"

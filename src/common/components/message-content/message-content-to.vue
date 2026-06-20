@@ -16,8 +16,9 @@
 -->
 <script lang="ts" setup>
   import { inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import size from 'lodash/size';
-  import { I18N_KEY, I18nPlugin, VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
+  import { VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { type Nullable, Ui3nButton, Ui3nIcon, Ui3nMenu } from '@v1nt1248/3nclient-lib';
   import { useContactInMessage } from '@common/composables/useContactInMessage';
   import type { AppGlobalEvents, ContactListItem, IncomingMessageView, OutgoingMessageView } from '@common/types';
@@ -30,7 +31,7 @@
   }>();
 
   const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   const wrapperEl = ref<Nullable<HTMLDivElement>>(null);
   const bodyEl = ref<Nullable<HTMLDivElement>>(null);
@@ -106,7 +107,7 @@
 <template>
   <div :class="$style.msgTo">
     <div :class="$style.label">
-      {{ $tr('msg.create.label.to') }}:
+      {{ t('msg.create.label.to') }}:
     </div>
 
     <div
@@ -151,7 +152,7 @@
                 color="var(color-icon-control-primary-default)"
               />
 
-              <span>{{ $tr('msg.content.address.add') }}</span>
+              <span>{{ t('msg.content.add_address') }}</span>
             </div>
           </template>
         </ui3n-menu>

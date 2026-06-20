@@ -15,12 +15,12 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import { computed, inject } from 'vue';
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { storeToRefs } from 'pinia';
   import isEmpty from 'lodash/isEmpty';
   import get from 'lodash/get';
   import size from 'lodash/size';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { formatFileSize } from '@v1nt1248/3nclient-lib/utils';
   import { Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { useMessagesStore, useSendingStore } from '@common/store';
@@ -34,7 +34,7 @@
     (event: 'action', value: { action: MessageAction; message: IncomingMessageView | OutgoingMessageView }): void;
   }>();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   const { upsertMessage } = useMessagesStore();
   const sendingStore = useSendingStore();
@@ -43,20 +43,20 @@
 
   const isSendingStopped = computed(() => ['error', 'canceled'].includes(props.message?.status));
 
-  const actionBtnTitle = computed(() => isSendingStopped.value
-    ? $tr('msg.content.tooltip.resend')
-    : $tr('msg.content.tooltip.cancel-sending'));
+  const actionBtnTitle = computed(() =>
+    isSendingStopped.value ? t('msg.content.tooltip.resend') : t('msg.content.tooltip.cancel_sending'),
+  );
 
-  const status = computed(() => getMessageStatusUiData({ message: props.message, $tr }));
+  const status = computed(() => getMessageStatusUiData({ message: props.message, t }));
 
   const messageProgress = computed(() => get(listOfSendingMessage.value, props.message.msgId!, null));
 
   const errorStateDescription = computed(() => {
     if (!isEmpty(props.message.statusDescription)) {
-      return getStatusDescriptionText({ $tr, statusDescription: props.message.statusDescription! });
+      return getStatusDescriptionText({ t, statusDescription: props.message.statusDescription! });
     }
 
-    return $tr('msg.sending.error.noDescription');
+    return t('msg.sending.error.noDescription');
   });
 
   const totalMsgDataSize = computed(() => {
@@ -78,10 +78,9 @@
   });
 
   const progressText = computed(() => {
-    const current = totalMsgDataSize.value == 0
-      ? '0'
-      : (sentDataSize.value / totalMsgDataSize.value * 100).toFixed(1);
-    return $tr('msg.sending.process.text', {
+    const current =
+      totalMsgDataSize.value == 0 ? '0' : ((sentDataSize.value / totalMsgDataSize.value) * 100).toFixed(1);
+    return t('msg.sending.progress', {
       percent: `${current}%`,
       currentValue: formatFileSize(sentDataSize.value),
       totalValue: formatFileSize(totalMsgDataSize.value),

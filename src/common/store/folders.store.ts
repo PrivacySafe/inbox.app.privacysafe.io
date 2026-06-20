@@ -17,12 +17,12 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { dbSrv } from '@common/services/services-provider';
-import type { MailFolder } from 'src/common/types';
+import type { MailFolder } from '@common/types';
 
 export const useFoldersStore = defineStore('folders', () => {
   const folders = ref<MailFolder[]>([]);
 
-  const allFoldersIds = computed(() => folders.value.map((f => f.id)));
+  const allFoldersIds = computed(() => folders.value.map(f => f.id));
 
   const systemFolders = computed(() => folders.value.filter(folder => folder.isSystem));
 

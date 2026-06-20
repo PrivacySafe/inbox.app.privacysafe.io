@@ -14,12 +14,12 @@
  You should have received a copy of the GNU General Public License along with
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
-import { computed, inject, onBeforeMount, ref } from 'vue';
+import { computed, onBeforeMount, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Squire from 'squire-rte';
 import isEmpty from 'lodash/isEmpty';
 import cloneDeep from 'lodash/cloneDeep';
 import debounce from 'lodash/debounce';
-import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
 import { getRandomId } from '@v1nt1248/3nclient-lib/utils';
 import type { Nullable } from '@v1nt1248/3nclient-lib';
 import { useContactsStore } from '@common/store';
@@ -31,12 +31,14 @@ export function useCreateMsg({
   props,
   emits,
   readonly,
+  isMobileMode,
 }: {
-  props: Partial<CreateMsgDialogProps>;
+  props: Omit<CreateMsgDialogProps, 'dialogProps'>;
   emits?: CreateMsgDialogEmits;
   readonly?: boolean;
+  isMobileMode?: boolean;
 }) {
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   const { getContactList } = useContactsStore();
   const { saveMsgToDraft, openSendMessageUI, runMessageSending } = useCreateMsgActions();
@@ -53,8 +55,8 @@ export function useCreateMsg({
     htmlTxtBody: props.data?.htmlTxtBody || '',
     plainTxtBody: '',
   });
+  const withoutSave = ref(false);
 
-  emits && emits('select', { msgData: msgData.value });
   saveDraftMessage();
 
   const showEditorToolbar = ref(false);
@@ -64,7 +66,9 @@ export function useCreateMsg({
 
   function filterContactList(value: ContactListItem, query: string): boolean {
     const { name, mail } = value;
-    return (name || '').toLowerCase().includes(query.toLowerCase()) || mail.toLowerCase().includes(query.toLowerCase());
+    return (
+      (name || '').toLowerCase().includes(query.toLowerCase()) || mail.toLowerCase().includes(query.toLowerCase())
+    );
   }
 
   function getDisplayItem(item: ContactListItem) {
@@ -82,8 +86,9 @@ export function useCreateMsg({
   }
 
   async function onMsgDataUpdate() {
-    emits && emits('select', { msgData: msgData.value });
-
+    if (isMobileMode && emits) {
+      emits('action', { event: 'update', data: { msgData: msgData.value } });
+    }
     await saveDraftMessage();
   }
 
@@ -123,22 +128,20 @@ export function useCreateMsg({
   }
 
   async function discardMsg() {
-    emits && emits('select', { msgData: msgData.value });
-    emits && emits('cancel');
+    emits &&
+      emits('action', { event: 'cancel', data: { msgData: msgData.value, withoutSave: withoutSave.value } });
   }
 
   async function sendMsg() {
-    emits && emits('select', { msgData: msgData.value, withoutSave: true });
+    emits && emits('action', { event: 'send', data: { msgData: msgData.value, withoutSave: true } });
     await runMessageSending(msgData.value);
-    emits && emits('close');
   }
 
   async function send() {
-    const unavailableRecipients = await openSendMessageUI(msgData.value, $tr);
-    const availableRecipients =
-      unavailableRecipients === null
-        ? []
-        : msgData.value.recipients.filter(address => !unavailableRecipients[address]);
+    const unavailableRecipients = await openSendMessageUI(msgData.value, t);
+    const availableRecipients = !unavailableRecipients
+      ? []
+      : msgData.value.recipients.filter(address => !unavailableRecipients[address]);
 
     if (isEmpty(availableRecipients)) return;
 
@@ -151,12 +154,13 @@ export function useCreateMsg({
   });
 
   return {
-    $tr,
+    t,
     isLoading,
     dialogEl,
     textEditor,
     contactList,
     msgData,
+    withoutSave,
     showEditorToolbar,
     isFormDisabled,
     filterContactList,

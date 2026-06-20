@@ -1,5 +1,5 @@
-import type { AppState, IncomingMessageView, MailFolder, OutgoingMessageView } from 'src/common/types';
 import type { Nullable } from '@v1nt1248/3nclient-lib';
+import type { AppState, IncomingMessageView, MailFolder, OutgoingMessageView } from '@common/types';
 
 export interface DBProvider {
   getAppState(): AppState;
@@ -22,7 +22,10 @@ export interface DBProvider {
     noDiskWrite?: boolean,
   ): Promise<Array<IncomingMessageView | OutgoingMessageView>>;
 
-  deleteMessageById(msgId: string, noDiskWrite?: boolean): Promise<Array<IncomingMessageView | OutgoingMessageView>>;
+  deleteMessageById(
+    msgId: string,
+    noDiskWrite?: boolean,
+  ): Promise<Array<IncomingMessageView | OutgoingMessageView>>;
 
   getMessageById(msgId: string): Nullable<IncomingMessageView | OutgoingMessageView>;
 

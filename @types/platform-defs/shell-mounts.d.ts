@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2022, 2025 - 2026 3NSoft Inc.
+ Copyright (C) 2026 3NSoft Inc.
 
  This program is free software: you can redistribute it and/or modify it under
  the terms of the GNU General Public License as published by the Free Software
@@ -16,26 +16,24 @@
 */
 
 
-declare namespace web3n.connectivity {
+declare namespace web3n.shell.mounts {
 
-	interface Connectivity {
-		isOnline: () => Promise<OnlineAssesment>;
-		watch: (obs: Observer<ConnectivityEvent>) => (() => void);
+	interface MountsIntoOS {
+		mountFolder(path: string[], fs: web3n.files.FS): Promise<void>;
+		mountFile(path: string[], file: web3n.files.File): Promise<void>;
+		unmountPath(path: string[]): Promise<void>;
+		unmountFolder(fs: web3n.files.FS): Promise<void>;
+		unmountFile(file: web3n.files.File): Promise<void>;
 	}
 
-	interface ConnectivityEvent {
-		isOnline: boolean;
-		wsEvent?: {
-			ping?: number;
-			service: 'inbox' | 'storage';
-			type: 'heartbeat' | 'heartbeat-skip' | 'disconnected' | 'connected';
-			slowSocket?: true;
-			missingPongsFromServer?: number;
-			socketClosed?: true;
-			error?: any;
-		};
+	interface MountException extends RuntimeException {
+		type: 'mount';
+		notMounted?: true;
+		cantMount?: true;
+		alreadyMounted?: true;
+		badPath?: true;
+		pathIsUsed?: true;
+		notFound?: true;
 	}
-
-	type OnlineAssesment = 'offline_99%' | 'online_80%';
 
 }

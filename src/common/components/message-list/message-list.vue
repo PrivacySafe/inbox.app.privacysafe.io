@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-  import { computed, type ComputedRef, inject } from 'vue';
+  import { computed, type ComputedRef } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { storeToRefs } from 'pinia';
   import get from 'lodash/get';
   import isEmpty from 'lodash/isEmpty';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { useMessagesStore } from '@common/store';
   import { FOLDER_KEY_BY_ID } from './constants';
   import type { IncomingMessageView, OutgoingMessageView } from '@common/types';
@@ -13,15 +13,17 @@
     folder: string;
   }>();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
   const { messagesByFolders } = storeToRefs(useMessagesStore());
 
   const folderEmptyText = computed(() => {
     const folderKey = FOLDER_KEY_BY_ID[props.folder];
-    return folderKey ? $tr(`folder.empty.text.${folderKey}`) : '';
+    return folderKey ? t(`folder.empty.text.${folderKey}`) : '';
   });
 
-  const messages = computed(() => get(messagesByFolders.value, [props.folder, 'data'], {})) as ComputedRef<Record<string, IncomingMessageView | OutgoingMessageView>>;
+  const messages = computed(() => get(messagesByFolders.value, [props.folder, 'data'], {})) as ComputedRef<
+    Record<string, IncomingMessageView | OutgoingMessageView>
+  >;
   const messagesList = computed(() => Object.values(messages.value).sort((a, b) => a.deliveryTS - b.deliveryTS));
 </script>
 
@@ -32,7 +34,7 @@
       :class="$style.empty"
     >
       <div :class="$style.emptyTitle">
-        {{ $tr('folder.empty.title') }}
+        {{ t('folder.empty.title') }}
       </div>
       <div
         v-if="folderEmptyText"

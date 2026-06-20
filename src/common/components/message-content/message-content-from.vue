@@ -15,10 +15,10 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import { computed, inject } from 'vue';
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { storeToRefs } from 'pinia';
   import get from 'lodash/get';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { Ui3nIcon, Ui3nMenu } from '@v1nt1248/3nclient-lib';
   import { useAppStore } from '@common/store';
   import { useContactInMessage } from '@common/composables/useContactInMessage';
@@ -30,14 +30,16 @@
     contactList: ContactListItem[];
   }>();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
   const { user } = storeToRefs(useAppStore());
 
   const { addressMenuData, openAddressMenu, addNewContact } = useContactInMessage();
 
   const isIncomingMessage = computed(() => !!(props.message as IncomingMessageView).sender);
 
-  const senderAddress = computed(() => isIncomingMessage.value ? (props.message  as IncomingMessageView).sender : user.value);
+  const senderAddress = computed(() =>
+    isIncomingMessage.value ? (props.message as IncomingMessageView).sender : user.value,
+  );
 
   const sender = computed(() => {
     if (!isIncomingMessage.value) {
@@ -50,7 +52,7 @@
       return value;
     }
 
-    const contact = props.contactList.find((c) => c.mail === value);
+    const contact = props.contactList.find(c => c.mail === value);
     return contact?.name || contact?.mail || (props.message as IncomingMessageView).sender;
   });
 
@@ -60,7 +62,7 @@
 <template>
   <div :class="$style.msgFrom">
     <div :class="$style.label">
-      {{ $tr('msg.create.label.from') }}:
+      {{ t('msg.create.label.from') }}:
     </div>
 
     <address-chip
@@ -88,7 +90,7 @@
             color="var(color-icon-control-primary-default)"
           />
 
-          <span>{{ $tr('msg.content.address.add') }}</span>
+          <span>{{ t('msg.content.add_address') }}</span>
         </div>
       </template>
     </ui3n-menu>

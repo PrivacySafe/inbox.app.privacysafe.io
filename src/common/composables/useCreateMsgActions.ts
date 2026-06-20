@@ -35,19 +35,24 @@ export function useCreateMsgActions() {
       try {
         recipientsVerificationResult[recipient] = await w3n.mail!.delivery.preFlight(recipient);
       } catch (err) {
-        recipientsVerificationResult[recipient] = handleSendingError<string>({ err } as web3n.asmail.DeliveryProgress['recipients'][string]);
+        recipientsVerificationResult[recipient] = handleSendingError<string>({
+          err,
+        } as web3n.asmail.DeliveryProgress['recipients'][string]);
       }
     }
 
-    const unavailableRecipients = Object.keys(recipientsVerificationResult).reduce((res, address) => {
-      const verificationResult = recipientsVerificationResult[address];
-      if (typeof verificationResult === 'number' && verificationResult >= attachmentsSize) {
-        return res;
-      }
+    const unavailableRecipients = Object.keys(recipientsVerificationResult).reduce(
+      (res, address) => {
+        const verificationResult = recipientsVerificationResult[address];
+        if (typeof verificationResult === 'number' && verificationResult >= attachmentsSize) {
+          return res;
+        }
 
-      res[address] = (verificationResult || '') as string;
-      return res;
-    }, {} as Record<string, string>);
+        res[address] = (verificationResult || '') as string;
+        return res;
+      },
+      {} as Record<string, string>,
+    );
 
     return {
       recipientsVerificationResult,
@@ -64,56 +69,49 @@ export function useCreateMsgActions() {
 
   async function openSendMessageUI(
     msgData: PreparedMessageData,
-    $tr: (key: string, placeholders?: Record<string, string>) => string,
-  ): Promise<Record<string, string> | null> {
-    return new Promise(resolve => {
-      $dialogs.$openDialog<typeof PreFlightDialog>({
-        component: PreFlightDialog,
-        componentProps: {
-          msgData,
+    t: (key: string, placeholders?: Record<string, string>) => string,
+  ): Promise<Record<string, string> | undefined> {
+    const res = await $dialogs.$openDialog<Record<string, string>>(PreFlightDialog, {
+      msgData,
+      dialogProps: {
+        title: t('msg.preflight_dialog.title'),
+        icon: {
+          icon: 'outline-info',
+          color: 'var(--color-icon-block-accent-default)',
         },
-        dialogProps: {
-          title: $tr('msg.preflight.dialog.title'),
-          icon: {
-            icon: 'outline-info',
-            color: 'var(--color-icon-block-accent-default)',
-          },
-          closeOnClickOverlay: false,
-          closeOnEsc: false,
-          confirmButtonText: $tr('msg.preflight.dialog.confirm.button'),
-          onConfirm: async unavailableRecipients => {
-            resolve(unavailableRecipients as Record<string, string>);
-          },
-          onClose: () => {
-            resolve(null);
-          },
-          onCancel: () => {
-            resolve(null);
-          },
-        }
-      });
+        closeOnClickOverlay: false,
+        closeOnEsc: false,
+        confirmButtonText: t('msg.preflight_dialog.confirm_button'),
+      },
     });
+
+    switch (res.event) {
+      case 'confirm':
+        return res.data;
+
+      case 'close':
+      case 'cancel':
+        return undefined;
+    }
   }
 
   function prepareReplyMsgBody(
     message: IncomingMessageView,
-    $tr: (key: string, placeholders?: Record<string, string>) => string,
+    t: (key: string, placeholders?: Record<string, string>) => string,
     replayForAll?: boolean,
   ) {
     const replyMsgBody = `
       <br/><br/>
-      <div>---------- ${$tr('msg.reply.title')} ----------</div>
+      <div>---------- ${t('msg.reply_title')} ----------</div>
       <div>${dayjs(message.deliveryTS).format('YYYY-MM-DD HH:mm')}</div>
-      <div>${$tr('msg.create.label.from')}: ${message.sender}</div>
-      <div>${$tr('msg.create.label.to')}: ${message.recipients?.join(', ')}</div>
-      <div>${$tr('msg.create.label.subject')}: ${message.subject}</div>
+      <div>${t('msg.create.label.from')}: ${message.sender}</div>
+      <div>${t('msg.create.label.to')}: ${message.recipients?.join(', ')}</div>
+      <div>${t('msg.create.label.subject')}: ${message.subject}</div>
       <blockquote>${message.htmlTxtBody || ''}</blockquote>
     `;
 
     const initialRecipients = (message.recipients || []).filter(address => address !== appStore.user);
-    const recipients = replayForAll
-      ? [message.sender, ...initialRecipients]
-      : [message.sender];
+    const recipients = replayForAll ? [message.sender, ...initialRecipients] : [message.sender];
 
     return {
       id: getRandomId(32),
@@ -122,20 +120,20 @@ export function useCreateMsgActions() {
       subject: `Re: ${message.subject}`,
       attachmentsInfo: [],
       htmlTxtBody: replyMsgBody,
-    }
+    };
   }
 
   function prepareForwardMsgBody(
     message: IncomingMessageView | OutgoingMessageView,
-    $tr: (key: string, placeholders?: Record<string, string>) => string,
+    t: (key: string, placeholders?: Record<string, string>) => string,
   ) {
     const forwardMsgBody = `
       <br/><br/>
-      <div>---------- ${$tr('msg.forward.title')} ----------</div>
+      <div>---------- ${t('msg.forward_title')} ----------</div>
       <div>${message.deliveryTS ? dayjs(message.deliveryTS).format('YYYY-MM-DD HH:mm') : dayjs(message.cTime).format('YYYY-MM-DD HH:mm')}</div>
-      <div>${$tr('msg.create.label.from')}: ${(message as IncomingMessageView).sender || appStore.user}</div>
-      <div>${$tr('msg.create.label.to')}: ${message.recipients?.join(', ')}</div>
-      <div>${$tr('msg.create.label.subject')}: ${message.subject}</div><br/>
+      <div>${t('msg.create.label.from')}: ${(message as IncomingMessageView).sender || appStore.user}</div>
+      <div>${t('msg.create.label.to')}: ${message.recipients?.join(', ')}</div>
+      <div>${t('msg.create.label.subject')}: ${message.subject}</div><br/>
       ${message.htmlTxtBody || ''}
     `;
 
@@ -146,7 +144,7 @@ export function useCreateMsgActions() {
       subject: `Fwd: ${message.subject}`,
       attachmentsInfo: message.attachmentsInfo || [],
       htmlTxtBody: forwardMsgBody,
-    }
+    };
   }
 
   return {

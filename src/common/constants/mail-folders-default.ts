@@ -1,4 +1,4 @@
-import type { MailFolder } from 'src/common/types';
+import type { MailFolder } from '@common/types';
 
 export enum SYSTEM_FOLDERS {
   inbox = '0',

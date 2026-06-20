@@ -15,10 +15,11 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script setup lang="ts">
-  import { computed, inject, nextTick, onMounted, ref, useTemplateRef } from 'vue';
-  import * as pdfjs from 'pdfjs-dist';
+  import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+  import pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs?url';
   import type { PDFDocumentProxy } from 'pdfjs-dist';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { Ui3nButton, Ui3nProgressCircular, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { getFileByInfoFromMsg } from '@common/utils/files';
   import type { AttachmentInfo } from '@common/types';
@@ -29,9 +30,9 @@
     isMobileMode?: boolean;
   }>();
 
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   let pdfDoc: PDFDocumentProxy | undefined = undefined;
 
@@ -41,12 +42,13 @@
 
   const canvasRef = useTemplateRef<HTMLCanvasElement>('canvasEl');
   const canvasStyle = ref({});
-  const ctx = computed(() => canvasRef.value ? canvasRef.value.getContext('2d') : null);
+  const ctx = computed(() => (canvasRef.value ? canvasRef.value.getContext('2d') : null));
 
   function renderPage(num = 1) {
     isProcessing.value = true;
     nextTick(() => {
-      pdfDoc!.getPage(num)
+      pdfDoc!
+        .getPage(num)
         .then(page => {
           const viewport = page.getViewport({ scale: 1 });
 
@@ -55,7 +57,7 @@
           canvasStyle.value = {
             ...(viewport.height >= viewport.width && { height: '100%' }),
             ...(viewport.height < viewport.width && { width: '100%' }),
-          }
+          };
 
           const renderTask = page.render({
             canvasContext: ctx.value!,
@@ -130,7 +132,7 @@
     >
       <div :class="$style.blockBtn">
         <ui3n-tooltip
-          :content="$tr('chat.pdf.view.btn.prev')"
+          :content="t('chat.pdf.view.btn.prev')"
           position-strategy="fixed"
           placement="bottom-start"
         >
@@ -146,7 +148,7 @@
         </ui3n-tooltip>
 
         <ui3n-tooltip
-          :content="$tr('chat.pdf.view.btn.next')"
+          :content="t('chat.pdf.view.btn.next')"
           position-strategy="fixed"
           placement="bottom-start"
         >
@@ -163,7 +165,7 @@
       </div>
 
       <div :class="$style.info">
-        {{ $tr('chat.pdf.view.page') }}
+        {{ t('chat.pdf.view.page') }}
         <span>{{ currentPage }}</span>
         &nbsp;/&nbsp;
         <span>{{ totalPage }}</span>

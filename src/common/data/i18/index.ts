@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2022, 2025 - 2026 3NSoft Inc.
+ Copyright (C) 2026 3NSoft Inc.
 
  This program is free software: you can redistribute it and/or modify it under
  the terms of the GNU General Public License as published by the Free Software
@@ -14,28 +14,20 @@
  You should have received a copy of the GNU General Public License along with
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
+import { createI18n } from 'vue-i18n';
+import { en } from './en';
 
+const messages = {
+  en,
+};
 
-declare namespace web3n.connectivity {
+const i18nInstance = createI18n({
+  legacy: false,
+  locale: 'en',
+  fallbackLocale: 'en',
+  fallbackWarn: false,
+  missingWarn: false,
+  messages,
+});
 
-	interface Connectivity {
-		isOnline: () => Promise<OnlineAssesment>;
-		watch: (obs: Observer<ConnectivityEvent>) => (() => void);
-	}
-
-	interface ConnectivityEvent {
-		isOnline: boolean;
-		wsEvent?: {
-			ping?: number;
-			service: 'inbox' | 'storage';
-			type: 'heartbeat' | 'heartbeat-skip' | 'disconnected' | 'connected';
-			slowSocket?: true;
-			missingPongsFromServer?: number;
-			socketClosed?: true;
-			error?: any;
-		};
-	}
-
-	type OnlineAssesment = 'offline_99%' | 'online_80%';
-
-}
+export default i18nInstance;

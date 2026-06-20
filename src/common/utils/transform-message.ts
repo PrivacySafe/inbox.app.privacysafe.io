@@ -34,7 +34,11 @@ async function attachmentsToAttachmentsInfo(data: web3n.files.ReadonlyFS, msgId:
   const list = await data.listFolder('');
   for (const item of list) {
     if (item.isFile) {
-      const stats = await data.stat(item.name);
+      const stats = await data.stat(item.name).catch(() => ({
+        isFile: true,
+        writable: false,
+        size: 0,
+      }));
       result.push({
         id: `${msgId}__${getRandomId(3)}`,
         fileName: item.name,

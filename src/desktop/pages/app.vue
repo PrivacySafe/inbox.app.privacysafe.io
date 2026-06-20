@@ -16,7 +16,14 @@
 -->
 <script lang="ts" setup>
   import { onMounted, ref } from 'vue';
-  import { Ui3nMenu, Ui3nProgressCircular, Ui3nResize, type Ui3nResizeCbArg, Ui3nRipple } from '@v1nt1248/3nclient-lib';
+  import {
+    Ui3nDialogProvider,
+    Ui3nMenu,
+    Ui3nProgressCircular,
+    Ui3nResize,
+    type Ui3nResizeCbArg,
+    Ui3nRipple,
+  } from '@v1nt1248/3nclient-lib';
   import prLogo from '@common/assets/images/privacysafe-logo-new.svg';
   import ContactIcon from '@common/components/contact-icon/contact-icon.vue';
   import { useAppPage } from '@common/composables/useAppPage';
@@ -31,6 +38,7 @@
     customLogoSrc,
     commonLoading,
     connectivityStatusText,
+    t,
     appExit,
     setAppWindowSize,
   } = useAppPage();
@@ -72,7 +80,7 @@
           /
         </div>
         <div :class="$style.info">
-          {{ $tr('app.title') }}
+          {{ t('app.title') }}
           <div :class="$style.version">
             v {{ appVersion }}
           </div>
@@ -85,9 +93,9 @@
             {{ me }}
           </span>
           <span :class="$style.connection">
-            {{ $tr('app.status') }}:
+            {{ t('app.status.label') }}:
             <span :class="connectivityStatusText === 'app.status.connected.online' && $style.connectivity">
-              {{ $tr(connectivityStatusText) }}
+              {{ t(connectivityStatusText) }}
             </span>
           </span>
         </div>
@@ -113,7 +121,7 @@
                 :class="$style.menuItem"
                 @click="appExit"
               >
-                {{ $tr('app.exit') }}
+                {{ t('app.exit') }}
               </div>
             </div>
           </template>
@@ -140,6 +148,8 @@
     </div>
 
     <div id="notification" />
+
+    <ui3n-dialog-provider />
   </div>
 </template>
 

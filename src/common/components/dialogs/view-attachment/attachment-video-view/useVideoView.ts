@@ -15,14 +15,15 @@ You should have received a copy of the GNU General Public License along with
 this program. If not, see <http://www.gnu.org/licenses/>.
 */
 import { computed, inject, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { transformWeb3nFileToFile } from '@v1nt1248/3nclient-lib/utils';
-import { NOTIFICATIONS_KEY, NotificationsPlugin, I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
+import { NOTIFICATIONS_KEY, NotificationsPlugin } from '@v1nt1248/3nclient-lib/plugins';
 import { getFileByInfoFromMsg, timeInSecondsToString } from '@common/utils';
 import type { AttachmentInfo } from '@common/types';
 
 export function useVideoView({ item, incomingMsgId }: { item: AttachmentInfo; incomingMsgId?: string }) {
   const { $createNotice } = inject<NotificationsPlugin>(NOTIFICATIONS_KEY)!;
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   const videoPlayerRef = useTemplateRef<HTMLVideoElement>('videoEl');
   const isProcessing = ref(true);
@@ -88,7 +89,7 @@ export function useVideoView({ item, incomingMsgId }: { item: AttachmentInfo; in
             isProcessing.value = false;
             $createNotice({
               type: 'error',
-              content: $tr('chat.view.load.file.error'),
+              content: t('chat.view.load.file.error'),
             });
             return;
           }
@@ -124,6 +125,7 @@ export function useVideoView({ item, incomingMsgId }: { item: AttachmentInfo; in
     volume,
     currentTimeAsText,
     durationAsText,
+    t,
     updateVolume,
     updateCurrentTime,
     play,

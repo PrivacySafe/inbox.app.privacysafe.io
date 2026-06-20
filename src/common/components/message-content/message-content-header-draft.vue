@@ -15,14 +15,9 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import { inject } from 'vue';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
+  import { useI18n } from 'vue-i18n';
   import { Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
-  import type {
-    IncomingMessageView,
-    MessageAction,
-    OutgoingMessageView,
-  } from '@common/types';
+  import type { IncomingMessageView, MessageAction, OutgoingMessageView } from '@common/types';
 
   const props = defineProps<{
     message: OutgoingMessageView;
@@ -31,7 +26,7 @@
     (event: 'action', value: { action: MessageAction; message: IncomingMessageView | OutgoingMessageView }): void;
   }>();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   function editMessage() {
     emits('action', { action: 'edit', message: props.message });
@@ -45,7 +40,7 @@
 <template>
   <div :class="$style.headerOutbox">
     <ui3n-tooltip
-      :content="$tr('msg.content.tooltip.edit')"
+      :content="t('msg.content.tooltip.edit')"
       position-strategy="fixed"
       placement="top-start"
     >
@@ -57,12 +52,12 @@
         :class="$style.btn"
         @click.stop.prevent="editMessage"
       >
-        {{ $tr('msg.content.tooltip.edit') }}
+        {{ t('msg.content.tooltip.edit') }}
       </ui3n-button>
     </ui3n-tooltip>
 
     <ui3n-tooltip
-      :content="$tr('msg.content.tooltip.send')"
+      :content="t('msg.content.tooltip.send')"
       position-strategy="fixed"
       placement="top-start"
     >
@@ -74,7 +69,7 @@
         :class="$style.btn"
         @click.stop.prevent="sendMessage"
       >
-        {{ $tr('msg.content.tooltip.send') }}
+        {{ t('msg.content.tooltip.send') }}
       </ui3n-button>
     </ui3n-tooltip>
   </div>
@@ -96,4 +91,3 @@
     --ui3n-button-bg-color-custom: var(--color-bg-block-primary-default) !important;
   }
 </style>
-

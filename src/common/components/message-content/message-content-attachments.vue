@@ -16,15 +16,11 @@
 -->
 <script lang="ts" setup>
   import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import get from 'lodash/get';
   import size from 'lodash/size';
   import hasIn from 'lodash/hasIn';
-  import {
-    I18N_KEY,
-    I18nPlugin,
-    VUEBUS_KEY,
-    VueBusPlugin,
-  } from '@v1nt1248/3nclient-lib/plugins';
+  import { VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { type Nullable, Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { useAppStore } from '@/common/store/app.store';
   import { useDownloadAttachments } from '@/common/composables/useDownloadAttachments';
@@ -38,7 +34,7 @@
   }>();
 
   const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   const appStore = useAppStore();
 
@@ -47,7 +43,7 @@
   const { downloadAll, downloadAttachment } = useDownloadAttachments({
     msgId: props.message.msgId,
     isIncomingMessage: isIncomingMessage.value,
-    $tr,
+    t,
   });
 
   const wrapperEl = ref<Nullable<HTMLDivElement>>(null);
@@ -78,15 +74,18 @@
             const bodyElWidth = bodyEl.value.clientWidth;
             let startWidth = 0;
 
-            [firstRowFilesCount.value, widthOfFirstRowFiles.value] = [...bodyEl.value.children].reduce((acc, el) => {
-              startWidth += (el.clientWidth + 8);
-              if (startWidth < bodyElWidth) {
-                acc[0] += 1;
-                acc[1] = startWidth;
-              }
+            [firstRowFilesCount.value, widthOfFirstRowFiles.value] = [...bodyEl.value.children].reduce(
+              (acc, el) => {
+                startWidth += el.clientWidth + 8;
+                if (startWidth < bodyElWidth) {
+                  acc[0] += 1;
+                  acc[1] = startWidth;
+                }
 
-              return acc;
-            }, [0, 0]);
+                return acc;
+              },
+              [0, 0],
+            );
           }
         }
       }
@@ -115,7 +114,8 @@
       if (val !== oVal) {
         initAttachmentListDisplaying();
       }
-    }, {
+    },
+    {
       immediate: true,
     },
   );
@@ -128,11 +128,11 @@
       $style.msgAttachments,
       appStore.isMobileMode && $style.mobileMode,
       isBlockOpen && $style.opened,
-      isOverflowing && $style.overflowing
+      isOverflowing && $style.overflowing,
     ]"
   >
     <ui3n-tooltip
-      :content="$tr('msg.content.tooltip.download-all')"
+      :content="t('msg.content.tooltip.download_all')"
       position-strategy="fixed"
       placement="top-end"
       :disabled="readonly"
@@ -140,8 +140,10 @@
       <ui3n-button
         v-if="!readonly"
         type="icon"
+        color="var(--color-bg-block-primary-default)"
         icon="outline-download-for-offline"
         icon-color="var(--color-icon-button-secondary-default)"
+        icon-size="24"
         :class="$style.downloadAll"
         @click.stop.prevent="downloadAll(message.attachmentsInfo || [])"
       />
@@ -170,7 +172,7 @@
         :class="$style.lessBtn"
         @click.stop.prevent="toggleDisplayingAttachments(false)"
       >
-        {{ $tr('msg.content.attachments.collapse') }}
+        {{ t('msg.content.btn.attachments_collapse') }}
       </ui3n-button>
     </div>
 
@@ -218,8 +220,6 @@
   }
 
   .downloadAll {
-    --ui3n-button-bg-color-custom: var(--color-bg-block-primary-default) !important;
-
     position: absolute !important;
     right: var(--spacing-xs);
     top: 0;

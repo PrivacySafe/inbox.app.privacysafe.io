@@ -1,5 +1,6 @@
 <script lang="ts" setup>
   import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { storeToRefs } from 'pinia';
   import get from 'lodash/get';
   import size from 'lodash/size';
@@ -8,15 +9,20 @@
   import type { MessageBulkActions } from '@common/types';
   import { SYSTEM_FOLDERS } from '@common/constants';
 
-  const props = withDefaults(defineProps<{
-    folder: string;
-    markedMessages?: string[];
-  }>(), {
-    markedMessages: () => [],
-  });
+  const props = withDefaults(
+    defineProps<{
+      folder: string;
+      markedMessages?: string[];
+    }>(),
+    {
+      markedMessages: () => [],
+    },
+  );
   const emits = defineEmits<{
     (event: 'bulk-actions', value: MessageBulkActions): void;
   }>();
+
+  const { t } = useI18n();
 
   const messagesStore = useMessagesStore();
   const { messagesByFolders, messageThreadsByFolder, messageThreadsFromTrash } = storeToRefs(messagesStore);
@@ -26,9 +32,10 @@
       return size(get(messagesByFolders.value, [props.folder, 'data'], {}));
     }
 
-    const treads = props.folder === SYSTEM_FOLDERS.trash
-      ? Object.values(messageThreadsFromTrash.value)
-      : get(messageThreadsByFolder.value, props.folder, []);
+    const treads =
+      props.folder === SYSTEM_FOLDERS.trash
+        ? Object.values(messageThreadsFromTrash.value)
+        : get(messageThreadsByFolder.value, props.folder, []);
 
     return treads.reduce((res, thread) => {
       const { messages } = thread;
@@ -37,7 +44,9 @@
     }, 0);
   });
 
-  const areAllMessagesInFolderSelected = computed(() => size(props.markedMessages) === messagesInFolderTotal.value);
+  const areAllMessagesInFolderSelected = computed(
+    () => size(props.markedMessages) === messagesInFolderTotal.value,
+  );
 </script>
 
 <template>
@@ -93,8 +102,7 @@
         />
 
         <span :class="[$style.info, $style.offset]">
-          {{ areAllMessagesInFolderSelected ? $tr('msg.bulk.actions.deselect.all') : $tr('msg.bulk.actions.select.all')
-          }}
+          {{ areAllMessagesInFolderSelected ? t('msg.actions.deselect_all') : t('msg.actions.select_all') }}
         </span>
       </div>
     </div>

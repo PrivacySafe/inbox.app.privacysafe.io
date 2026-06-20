@@ -15,12 +15,11 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import type { Nullable } from '@v1nt1248/3nclient-lib';
   import type { IncomingMessageView, MessageAction, OutgoingMessageView } from '@common/types';
   import MessageContent from '@common/components/message-content/message-content.vue';
 
   defineProps<{
-    message: Nullable<IncomingMessageView | OutgoingMessageView>;
+    message: IncomingMessageView | OutgoingMessageView;
   }>();
   const emits = defineEmits<{
     (event: 'mark-as-read'): void;

@@ -16,18 +16,19 @@
 -->
 <script lang="ts" setup>
   import { inject } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { useRouter, useRoute } from 'vue-router';
   import { storeToRefs } from 'pinia';
   import get from 'lodash/get';
   import size from 'lodash/size';
-  import { I18nPlugin, I18N_KEY, VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
+  import { VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { Ui3nBadge, Ui3nButton, Ui3nIcon } from '@v1nt1248/3nclient-lib';
   import { useFoldersStore, useMessagesStore } from '@common/store';
   import type { AppGlobalEvents, MailFolder, PreparedMessageData } from '@common/types';
   import { SYSTEM_FOLDERS } from '@common/constants';
 
   const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   const route = useRoute();
   const router = useRouter();
@@ -40,7 +41,7 @@
       return size(get(messagesByFolders.value, [folder.id, 'data'], []));
     }
 
-    return get(messagesByFolders.value, [folder.id, 'unread'], 0)
+    return get(messagesByFolders.value, [folder.id, 'unread'], 0);
   }
 
   async function goToFolder(path: string) {
@@ -63,7 +64,7 @@
           icon-position="left"
           @click="createNewMsg"
         >
-          {{ $tr('app.new.mail') }}
+          {{ t('app.new.mail') }}
         </ui3n-button>
       </div>
 
@@ -85,6 +86,7 @@
           <ui3n-badge
             v-if="getBadgeText(systemFolder)"
             :value="getBadgeText(systemFolder)"
+            :class="$style.systemFolderBadge"
           />
         </div>
       </div>
@@ -166,6 +168,10 @@
       color: var(--color-text-control-primary-default);
     }
 
+    .systemFolderBadge {
+      min-width: 20px;
+    }
+
     &.systemFolderSelected,
     &:hover {
       background-color: var(--color-bg-control-primary-hover);
@@ -176,4 +182,3 @@
     }
   }
 </style>
-

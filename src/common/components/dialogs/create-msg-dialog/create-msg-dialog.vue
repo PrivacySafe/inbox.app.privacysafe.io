@@ -16,7 +16,7 @@
 -->
 <script lang="ts" setup>
   import isEmpty from 'lodash/isEmpty';
-  import { Ui3nAutocomplete, Ui3nButton, Ui3nChip, Ui3nInput, Ui3nHtml } from '@v1nt1248/3nclient-lib';
+  import { Ui3nAutocomplete, Ui3nButton, Ui3nChip, Ui3nDialog, Ui3nInput, Ui3nHtml } from '@v1nt1248/3nclient-lib';
   import { markSearch } from '@v1nt1248/3nclient-lib/utils';
   import type { CreateMsgDialogProps, CreateMsgDialogEmits } from './types';
   import { useCreateMsg } from './useCreateMsg';
@@ -30,11 +30,12 @@
   const emits = defineEmits<CreateMsgDialogEmits>();
 
   const {
-    $tr,
+    t,
     isLoading,
     dialogEl,
     contactList,
     msgData,
+    withoutSave,
     showEditorToolbar,
     isFormDisabled,
     filterContactList,
@@ -52,126 +53,143 @@
 </script>
 
 <template>
-  <div
-    ref="dialogEl"
+  <ui3n-dialog
+    v-bind="dialogProps"
+    :data="{ msgData, withoutSave }"
     :class="$style.createMsgDialog"
+    @action="emits('action', $event)"
   >
-    <div :class="[$style.block, $style.blockStyle2]">
-      <span :class="$style.blockTitle">{{ $tr('msg.create.label.subject') }}:</span>
-      <div :class="$style.blockContent">
-        <ui3n-input
-          v-model="msgData.subject"
-          :disabled="isLoading"
-          @update:model-value="onMsgDataUpdateDebounced"
-        />
-      </div>
-    </div>
-
-    <div :class="[$style.block, $style.blockStyle1]">
-      <span :class="$style.blockTitle">
-        {{ $tr('msg.create.label.to') }}:
-      </span>
-
-      <div :class="$style.blockContent">
-        <ui3n-autocomplete
-          v-model="msgData.recipients"
-          :placeholder="$tr('msg.create.contacts.placeholder')"
-          :items="contactList"
-          :custom-filter="filterContactList"
-          chips
-          clear-on-select
-          hide-selected
-          multiple
-          item-title="displayName"
-          item-value="mail"
-          add-new-value
-          :new-value-validator="(v: string) => v.includes('@')"
-          :disabled="isLoading"
-          :class="isEmpty(msgData.recipients) && $style.noRecipients"
-          @update:model-value="onMsgDataUpdate"
-        >
-          <template #item="{ item, query }">
-            <div :class="$style.item">
-              <span
-                v-ui3n-html="markSearch(getDisplayItem(item), query || '')"
-                :class="$style.itemName"
-              />
-            </div>
-          </template>
-
-          <template #chip="{ item }">
-            <ui3n-chip
-              height="32"
-              max-width="100%"
-              closeable
+    <template #body>
+      <div
+        ref="dialogEl"
+        :class="$style.createMsgDialogBody"
+      >
+        <div :class="[$style.block, $style.blockStyle2]">
+          <span :class="$style.blockTitle">{{ t('msg.create.label.subject') }}:</span>
+          <div :class="$style.blockContent">
+            <ui3n-input
+              v-model="msgData.subject"
               :disabled="isLoading"
-              @close="removeRecipient(item as string)"
+              @update:model-value="onMsgDataUpdateDebounced"
+            />
+          </div>
+        </div>
+
+        <div :class="[$style.block, $style.blockStyle1]">
+          <span :class="$style.blockTitle"> {{ t('msg.create.label.to') }}: </span>
+
+          <div :class="$style.blockContent">
+            <ui3n-autocomplete
+              v-model="msgData.recipients"
+              :placeholder="t('msg.create.placeholder.contacts')"
+              :items="contactList"
+              :custom-filter="filterContactList"
+              chips
+              clear-on-select
+              hide-selected
+              multiple
+              item-title="displayName"
+              item-value="mail"
+              add-new-value
+              :new-value-validator="(v: string) => v.includes('@')"
+              :disabled="isLoading"
+              :class="isEmpty(msgData.recipients) && $style.noRecipients"
+              @update:model-value="onMsgDataUpdate"
             >
-              <template #left>
-                <contact-icon
-                  :size="24"
-                  :name="item as string"
-                  readonly
-                />
+              <template #item="{ item, query }">
+                <div :class="$style.item">
+                  <span
+                    v-ui3n-html="markSearch(getDisplayItem(item), query || '')"
+                    :class="$style.itemName"
+                  />
+                </div>
               </template>
 
-              <span :class="$style.chipText">
-                {{ item }}
-              </span>
-            </ui3n-chip>
-          </template>
-        </ui3n-autocomplete>
-      </div>
-    </div>
+              <template #chip="{ item }">
+                <ui3n-chip
+                  height="32"
+                  max-width="100%"
+                  closeable
+                  :disabled="isLoading"
+                  @close="removeRecipient(item as string)"
+                >
+                  <template #left>
+                    <contact-icon
+                      :size="24"
+                      :name="item as string"
+                      readonly
+                    />
+                  </template>
 
-    <div :class="[$style.block, $style.blockStyle2]">
-      <attach-to-outgoing-message
-        :msg-id="msgData.id"
-        :value="data?.attachmentsInfo"
-        @update="updateAttachments"
-        @update:loading="isLoading = $event"
-      />
-    </div>
+                  <span :class="$style.chipText">
+                    {{ item }}
+                  </span>
+                </ui3n-chip>
+              </template>
+            </ui3n-autocomplete>
+          </div>
+        </div>
 
-    <text-editor
-      :autofocus="isThisReplyOrForward"
-      :text="data?.htmlTxtBody"
-      :placeholder="$tr('msg.create.editor.placeholder')"
-      :show-toolbar="showEditorToolbar"
-      :disabled="isLoading"
-      @init="onEditorInit"
-      @update:text="msgBodyUpdate"
-    />
+        <div :class="[$style.block, $style.blockStyle2]">
+          <attach-to-outgoing-message
+            :msg-id="msgData.id"
+            :value="data?.attachmentsInfo"
+            @update="updateAttachments"
+            @update:loading="isLoading = $event"
+          />
+        </div>
 
-    <div :class="$style.createMsgDialogActions">
-      <ui3n-button
-        type="custom"
-        :color="showEditorToolbar ? 'var(--color-bg-button-secondary-pressed)' : 'var(--color-bg-button-secondary-default)'"
-        :text-color="showEditorToolbar ? 'var(--color-text-button-secondary-pressed)' : 'var(--color-text-button-secondary-default)'"
-        :disabled="isLoading"
-        @click.stop.prevent="toggleEditorToolbarDisplaying"
-      >
-        {{ $tr('msg.create.editor.formating.btn') }}
-      </ui3n-button>
-
-      <div :class="$style.createMsgDialogActionsBlock">
-        <ui3n-button
-          type="secondary"
+        <text-editor
+          :autofocus="isThisReplyOrForward"
+          :text="data?.htmlTxtBody"
+          :placeholder="t('msg.create.placeholder.editor')"
+          :show-toolbar="showEditorToolbar"
           :disabled="isLoading"
-          @click.stop.prevent="discardMsg"
+          @init="onEditorInit"
+          @update:text="msgBodyUpdate"
+        />
+      </div>
+    </template>
+
+    <template #actions>
+      <div :class="$style.createMsgDialogActions">
+        <ui3n-button
+          type="custom"
+          :color="
+            showEditorToolbar
+              ? 'var(--color-bg-button-secondary-pressed)'
+              : 'var(--color-bg-button-secondary-default)'
+          "
+          :text-color="
+            showEditorToolbar
+              ? 'var(--color-text-button-secondary-pressed)'
+              : 'var(--color-text-button-secondary-default)'
+          "
+          :disabled="isLoading"
+          @click.stop.prevent="toggleEditorToolbarDisplaying"
         >
-          {{ $tr('msg.create.discard.btn') }}
+          {{ t('msg.create.btn.editor_formating') }}
         </ui3n-button>
 
-        <ui3n-button
-          :disabled="isFormDisabled || isLoading"
-          @click.stop.prevent="send"
-        >
-          {{ $tr('msg.create.send.btn') }}
-        </ui3n-button>
+        <div :class="$style.createMsgDialogActionsBlock">
+          <ui3n-button
+            type="secondary"
+            :disabled="isLoading"
+            @click.stop.prevent="discardMsg"
+          >
+            {{ t('msg.create.btn.discard') }}
+          </ui3n-button>
+
+          <ui3n-button
+            :disabled="isFormDisabled || isLoading"
+            @click.stop.prevent="send"
+          >
+            {{ t('msg.create.btn.send') }}
+          </ui3n-button>
+        </div>
       </div>
-    </div>
-  </div>
+    </template>
+  </ui3n-dialog>
 </template>
 
 <style lang="scss" module>
@@ -180,11 +198,18 @@
   .createMsgDialog {
     --create-dialog-actions-height: 64px;
 
-    display: flex;
-    flex-direction: column;
+    position: relative;
     width: 100%;
-    height: 480px;
-    padding-bottom: var(--create-dialog-actions-height);
+    height: 100%;
+    border-radius: var(--spacing-m) !important;
+  }
+
+  .createMsgDialogBody {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .block {
@@ -263,8 +288,8 @@
     align-items: center;
     z-index: 1;
     background-color: var(--color-bg-block-primary-default);
-    border-bottom-right-radius: var(--dialog-border-radius);
-    border-bottom-left-radius: var(--dialog-border-radius);
+    border-bottom-right-radius: var(--spacing-m);
+    border-bottom-left-radius: var(--spacing-m);
   }
 
   .createMsgDialogActionsBlock {
@@ -274,4 +299,3 @@
     column-gap: var(--spacing-s);
   }
 </style>
-

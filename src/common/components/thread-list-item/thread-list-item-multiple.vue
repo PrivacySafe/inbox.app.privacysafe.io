@@ -16,13 +16,13 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
   import { computed, ComputedRef, inject, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { storeToRefs } from 'pinia';
   import size from 'lodash/size';
   import isEmpty from 'lodash/isEmpty';
   import cloneDeep from 'lodash/cloneDeep';
   import difference from 'lodash/difference';
   import uniq from 'lodash/uniq';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { prepareDateAsSting } from '@v1nt1248/3nclient-lib/utils';
   import { Ui3nBadge, Ui3nCheckbox, Ui3nIcon } from '@v1nt1248/3nclient-lib';
   import { useAppStore } from '@common/store';
@@ -37,23 +37,33 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     folder: string;
   }>();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
   const { markedMessages, setMarkedMessages } = inject(MARKED_MESSAGES_INJECTION_KEY)!;
   const { isMobileMode } = storeToRefs(useAppStore());
 
   const isExpanded = ref(!!props.item.isExpanded);
 
-  const lastIncomingMessage = computed(() => props.item.messages.find(msg => !!(msg as IncomingMessageView).sender
-    && props.item.lastIncomingTS === msg.deliveryTS)) as ComputedRef<IncomingMessageView | undefined>;
+  const lastIncomingMessage = computed(() =>
+    props.item.messages.find(
+      msg => !!(msg as IncomingMessageView).sender && props.item.lastIncomingTS === msg.deliveryTS,
+    ),
+  ) as ComputedRef<IncomingMessageView | undefined>;
   // @ts-ignore
-  const lastOutgoingMessage = computed(() => props.item.messages.find(msg => !msg.sender
-    && (props.item.lastOutgoingTS === msg.deliveryTS || props.item.lastOutgoingTS === msg.cTime))) as ComputedRef<OutgoingMessageView | undefined>;
+  const lastOutgoingMessage = computed(() =>
+    props.item.messages.find(
+      msg =>
+        !(msg as IncomingMessageView).sender &&
+        (props.item.lastOutgoingTS === msg.deliveryTS || props.item.lastOutgoingTS === msg.cTime),
+    ),
+  ) as ComputedRef<OutgoingMessageView | undefined>;
 
-  const isUnread = computed(() => props.folder === SYSTEM_FOLDERS.inbox && props.item.messages.some(msg => isMessageUnread(msg)));
+  const isUnread = computed(
+    () => props.folder === SYSTEM_FOLDERS.inbox && props.item.messages.some(msg => isMessageUnread(msg)),
+  );
 
   const sender = computed(() => {
     if (props.folder === SYSTEM_FOLDERS.inbox) {
-      return lastIncomingMessage.value!.sender;
+      return lastIncomingMessage.value?.sender || 'Me';
     }
 
     if (props.folder === SYSTEM_FOLDERS.trash) {
@@ -119,23 +129,29 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 
   const status = computed(() => {
     if (props.folder === SYSTEM_FOLDERS.inbox) {
-      return getMessageStatusUiData({ message: lastIncomingMessage.value, $tr });
+      return getMessageStatusUiData({ message: lastIncomingMessage.value, t });
     }
 
     if (props.folder === SYSTEM_FOLDERS.trash) {
       return props.item.lastIncomingTS > props.item.lastOutgoingTS
-        ? getMessageStatusUiData({ message: lastIncomingMessage.value, $tr })
-        : getMessageStatusUiData({ message: lastOutgoingMessage.value, $tr });
+        ? getMessageStatusUiData({ message: lastIncomingMessage.value, t })
+        : getMessageStatusUiData({ message: lastOutgoingMessage.value, t });
     }
 
-    return getMessageStatusUiData({ message: lastOutgoingMessage.value, $tr });
+    return getMessageStatusUiData({ message: lastOutgoingMessage.value, t });
   });
 
-  const messages = computed(() => props.item.messages) as ComputedRef<(IncomingMessageView | OutgoingMessageView)[]>;
-  const messagesIds = computed(() => (messages.value || []).map((msg) => msg.msgId));
+  const messages = computed(() => props.item.messages) as ComputedRef<
+    (IncomingMessageView | OutgoingMessageView)[]
+  >;
+  const messagesIds = computed(() => (messages.value || []).map(msg => msg.msgId));
 
-  const isThreadMarked = computed(() => (messages.value || []).some(msg => markedMessages.value.includes(msg.msgId)));
-  const isThreadMarkedCompletely = computed(() => messagesIds.value.every(msgId => markedMessages.value.includes(msgId)));
+  const isThreadMarked = computed(() =>
+    (messages.value || []).some(msg => markedMessages.value.includes(msg.msgId)),
+  );
+  const isThreadMarkedCompletely = computed(() =>
+    messagesIds.value.every(msgId => markedMessages.value.includes(msgId)),
+  );
 
   function isMessageUnread(msg: IncomingMessageView | OutgoingMessageView): boolean {
     const isIncomingMessage = !!(msg as IncomingMessageView).sender;
@@ -155,12 +171,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 </script>
 
 <template>
-  <div
-    :class="[
-      $style.threadListItemMultiple,
-      isThreadMarked && $style.marked
-    ]"
-  >
+  <div :class="[$style.threadListItemMultiple, isThreadMarked && $style.marked]">
     <div :class="$style.senderIcon">
       <contact-icon
         v-if="isMobileMode"
@@ -273,10 +284,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     <div
       v-for="message in messages"
       :key="message.msgId"
-      :class="[
-        $style.threadItem,
-        markedMessages.includes(message.msgId) && $style.threadItemMarked,
-      ]"
+      :class="[$style.threadItem, markedMessages.includes(message.msgId) && $style.threadItemMarked]"
     >
       <ui3n-icon
         icon="round-subdirectory-arrow-right"

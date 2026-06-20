@@ -21,30 +21,14 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": [
-      "vite/client",
-      "@types/node",
-      "@types/lodash"
-    ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@common/*": ["src/common/*"],
-      "@desktop/*": ["src/desktop/*"],
-      "@mobile/*": ["src/mobile/*"]
-    },
-    "plugins": [{
-      "name": "@vuedx/typescript-plugin-vue"
-    }]
+      "@/*": ["./src/*"],
+      "@common/*": ["./src/common/*"],
+      "@desktop/*": ["./src/desktop/*"],
+      "@mobile/*": ["./src/mobile/*"]
+    }
   },
-  "include": [
-    "vite.config.ts",
-    "src/**/*",
-    "@types/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "public",
-    "app"
-  ]
+  "include": ["vite.config.ts", "src/**/*", "@types/**/*"],
+  "exclude": ["node_modules", "public", "app", "doc"]
 }

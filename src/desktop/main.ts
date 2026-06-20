@@ -21,12 +21,9 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   dialogs,
-  i18n,
-  I18nOptions,
   notifications,
   storeDialogs,
   storeVueBus,
-  storeI18n,
   storeNotifications,
   vueBus,
 } from '@v1nt1248/3nclient-lib/plugins';
@@ -40,7 +37,7 @@ import '@v1nt1248/3nclient-lib/variables.css';
 import '@v1nt1248/3nclient-lib/style.css';
 import '@common/assets/styles/main.css';
 
-import en from '@/common/data/i18/en.json';
+import i18n from '@common/data/i18';
 
 const init = () => {
   initializationServices().then(async () => {
@@ -49,7 +46,6 @@ const init = () => {
     const pinia = createPinia();
     pinia.use(piniaRouter);
     pinia.use(storeVueBus);
-    pinia.use(storeI18n);
     pinia.use(storeDialogs);
     pinia.use(storeNotifications);
 
@@ -63,16 +59,8 @@ const init = () => {
 
     dayjs.extend(relativeTime);
 
-    app
-      .use(pinia)
-      .use<I18nOptions>(i18n, { lang: 'en', messages: { en } })
-      .use(vueBus)
-      .use(dialogs)
-      .use(notifications)
-      .use(router)
-      .mount('#main');
+    app.use(pinia).use(i18n).use(vueBus).use(dialogs).use(notifications).use(router).mount('#main');
   });
 };
 
 init();
-

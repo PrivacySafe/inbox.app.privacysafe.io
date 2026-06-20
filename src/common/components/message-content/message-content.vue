@@ -15,15 +15,14 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import { inject, onBeforeMount, watch } from 'vue';
+  import { onBeforeMount, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { storeToRefs } from 'pinia';
   import size from 'lodash/size';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { Ui3nButton, Ui3nIcon, Ui3nMenu, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { useAppStore, useContactsStore } from '@common/store';
   import { SYSTEM_FOLDERS } from '@common/constants';
-  import type { IncomingMessageView, OutgoingMessageView } from '@common/types';
-  import type { MessageContentProps, MessageContentEmits } from './types';
+  import type { IncomingMessageView, MessageAction, OutgoingMessageView } from '@common/types';
   import MessageContentHeader from './message-content-header.vue';
   import MessageContentHeaderOutbox from './message-content-header-outbox.vue';
   import MessageContentHeaderDraft from './message-content-header-draft.vue';
@@ -33,10 +32,14 @@
   import MessageContentAttachments from './message-content-attachments.vue';
   import TextEditor from '@common/components/text-editor/text-editor.vue';
 
-  const props = defineProps<MessageContentProps>();
-  const emits = defineEmits<MessageContentEmits>();
+  const props = defineProps<{
+    message?: IncomingMessageView | OutgoingMessageView;
+  }>();
+  const emits = defineEmits<{
+    (event: 'action', value: { action: MessageAction; message: IncomingMessageView | OutgoingMessageView }): void;
+  }>();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
   const { isMobileMode } = storeToRefs(useAppStore());
   const contactsStore = useContactsStore();
   const { getContactList } = contactsStore;
@@ -57,7 +60,8 @@
           }, 400);
         }
       }
-    }, {
+    },
+    {
       immediate: true,
     },
   );
@@ -96,7 +100,7 @@
           :offset-y="4"
         >
           <ui3n-tooltip
-            :content="$tr('msg.content.tooltip.delete')"
+            :content="t('msg.content.tooltip.delete')"
             placement="top-end"
             position-strategy="fixed"
           >
@@ -104,6 +108,7 @@
               type="icon"
               icon="outline-delete"
               icon-color="var(--color-icon-button-secondary-default)"
+              color="var(--color-bg-block-primary-default)"
               :class="$style.deleteBtn"
             />
           </ui3n-tooltip>
@@ -115,7 +120,7 @@
                 @click="emits('action', { action: 'move-to-trash', message })"
               >
                 <ui3n-icon icon="trash-can" />
-                <span>{{ $tr('msg.content.btn.moveToTrash') }}</span>
+                <span>{{ t('msg.content.btn.moveToTrash') }}</span>
               </div>
 
               <div
@@ -127,7 +132,7 @@
                   color="var(--warning-content-default)"
                 />
 
-                <span>{{ $tr('msg.content.btn.deleteForever') }}</span>
+                <span>{{ t('msg.content.btn.deleteForever') }}</span>
               </div>
             </div>
           </template>
@@ -202,8 +207,9 @@
   .menu {
     position: relative;
     background-color: var(--color-bg-control-secondary-default);
-    width: max-content;
+    width: fit-content;
     border-radius: var(--spacing-xs);
+
     @include mixins.elevation(1);
   }
 
@@ -211,7 +217,7 @@
     position: relative;
     width: max-content;
     height: var(--spacing-l);
-    padding: 0 var(--spacing-s);
+    padding: 0 calc(var(--spacing-s) * 1.5) 0 var(--spacing-s);
     font-size: var(--font-13);
     font-weight: 500;
     color: var(--color-text-control-primary-default);

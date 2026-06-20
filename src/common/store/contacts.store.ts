@@ -16,9 +16,8 @@
 */
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
-import { getRandomId } from '@v1nt1248/3nclient-lib/utils';
 import { appContactsSrvProxy } from '@common/services/services-provider';
-import type { Person, PersonView } from 'src/common/types';
+import type { Person, PersonView } from '@common/types';
 
 export const useContactsStore = defineStore('contacts', () => {
   const contactList = ref<Array<PersonView & { displayName: string }>>([]);

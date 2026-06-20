@@ -5,6 +5,7 @@ module.exports = {
 
   rules: {
     'length-zero-no-unit': null,
+    'value-keyword-case': null,
     'at-rule-empty-line-before': null,
     'declaration-block-no-redundant-longhand-properties': null,
     'no-empty-source': null,
@@ -34,9 +35,19 @@ module.exports = {
           'each',
           'content',
           'use',
+          'font-feature-values',
+          'character-variant',
+          'styleset',
         ],
       },
     ],
+    'property-no-unknown': [
+      true,
+      {
+        ignoreSelectors: ['/.*Inter.*/'],
+        ignoreAtRules: ['font-feature-values', 'character-variant', 'styleset'],
+      },
+    ],
+    'declaration-property-value-keyword-no-deprecated': [true, { ignoreKeywords: ['break-word'] }],
   },
 };
-

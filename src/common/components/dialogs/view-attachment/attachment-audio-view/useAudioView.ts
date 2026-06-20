@@ -15,15 +15,16 @@ You should have received a copy of the GNU General Public License along with
 this program. If not, see <http://www.gnu.org/licenses/>.
 */
 import { inject, onMounted, shallowRef, ref, useTemplateRef, computed, onBeforeUnmount } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { Nullable } from '@v1nt1248/3nclient-lib';
-import { NOTIFICATIONS_KEY, NotificationsPlugin, I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
+import { NOTIFICATIONS_KEY, NotificationsPlugin } from '@v1nt1248/3nclient-lib/plugins';
 import { transformWeb3nFileToFile } from '@v1nt1248/3nclient-lib/utils';
 import { getFileByInfoFromMsg, timeInSecondsToString } from '@common/utils';
 import type { AttachmentInfo } from '@common/types';
 
 export function useAudioView({ item, incomingMsgId }: { item: AttachmentInfo; incomingMsgId?: string }) {
   const { $createNotice } = inject<NotificationsPlugin>(NOTIFICATIONS_KEY)!;
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   const canvasRef = useTemplateRef<HTMLCanvasElement>('canvasEl');
   const ctx = ref<Nullable<CanvasRenderingContext2D>>(null);
@@ -112,7 +113,10 @@ export function useAudioView({ item, incomingMsgId }: { item: AttachmentInfo; in
 
   function drawColumn(x: number, width: number, height: number) {
     const gradient = ctx.value!.createLinearGradient(
-      0, canvasRef.value!.height - height / 2, 0, canvasRef.value!.height,
+      0,
+      canvasRef.value!.height - height / 2,
+      0,
+      canvasRef.value!.height,
     );
     gradient.addColorStop(1, '#20639b');
     gradient.addColorStop(0.2, '#f6d55c');
@@ -131,7 +135,7 @@ export function useAudioView({ item, incomingMsgId }: { item: AttachmentInfo; in
 
     analyser.getByteFrequencyData(frequencyData.value);
     ctx.value!.clearRect(0, 0, width, height);
-    const columnWidth = (width * 1.0) / ( frequencyDataSize * 0.5);
+    const columnWidth = (width * 1.0) / (frequencyDataSize * 0.5);
     const heightScale = height / 100;
 
     let xPos = 0;
@@ -204,12 +208,11 @@ export function useAudioView({ item, incomingMsgId }: { item: AttachmentInfo; in
     setTimeout(() => {
       getFileByInfoFromMsg(item, incomingMsgId)
         .then(file3n => {
-          console.log('file3n => ', file3n);
           if (!file3n) {
             isProcessing.value = false;
             $createNotice({
               type: 'error',
-              content: $tr('chat.view.load.file.error'),
+              content: t('chat.view.load.file.error'),
             });
             return;
           }
@@ -244,6 +247,7 @@ export function useAudioView({ item, incomingMsgId }: { item: AttachmentInfo; in
     currentTime,
     currentTimeAsText,
     currentAudioVisualization,
+    t,
     updateVolume,
     updateCurrentTime,
     play,

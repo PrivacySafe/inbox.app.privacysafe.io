@@ -15,13 +15,17 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import { computed, type ComputedRef, ref, watch } from 'vue';
+  import { computed, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
-  import { type Nullable, Ui3nButton } from '@v1nt1248/3nclient-lib';
+  import { type Nullable, Ui3nButton, Ui3nDialogEvent } from '@v1nt1248/3nclient-lib';
   import { useMessagesStore } from '@common/store';
   import { msgViewToPreparedMsgData, preparedMsgDataToOutgoingMsgView } from '@common/utils';
-  import type { CreateMsgDialogProps } from '@common/components/dialogs/create-msg-dialog/types';
-  import type { IncomingMessageView, MessageAction, OutgoingMessageView, PreparedMessageData } from '@common/types';
+  import type {
+    IncomingMessageView,
+    MessageAction,
+    OutgoingMessageView,
+    PreparedMessageData,
+  } from '@common/types';
   import { useFolderContent } from '@common/composables/useFolderContent';
   import MessageToolbar from '@mobile/components/message-toolbar/message-toolbar.vue';
   import MessageView from '@mobile/components/message-view/message-view.vue';
@@ -34,14 +38,21 @@
   const { getMessage, deleteMessages } = useMessagesStore();
   const { handleMessageAction } = useFolderContent();
 
+  const sourceFolder = ref<string | undefined>();
   const currentMessage = ref<Nullable<IncomingMessageView | OutgoingMessageView>>(null);
-  const messageInitialData = ref<Nullable<CreateMsgDialogProps>>(null);
+  const messageInitialData =
+    ref<Nullable<{ data: PreparedMessageData; isThisReplyOrForward?: boolean; sourceFolder?: string }>>(null);
 
   const editMode = computed(() => !route.query.readonly || route.query.readonly === 'no');
-  const sourceFolder = computed(() => route.query.sourceFolder) as ComputedRef<string | undefined>;
 
-  function updateCurrentMessage(value: { msgData: PreparedMessageData; withoutSave?: boolean }) {
-    currentMessage.value = preparedMsgDataToOutgoingMsgView(value.msgData);
+  function handleMessageFormAction(value: {
+    event: Ui3nDialogEvent<'send' | 'update'>;
+    data?: { msgData: PreparedMessageData; withoutSave?: boolean };
+  }) {
+    const { event, data } = value;
+    if (event === 'update') {
+      currentMessage.value = preparedMsgDataToOutgoingMsgView(data!.msgData);
+    }
   }
 
   async function goBack() {
@@ -104,8 +115,13 @@
       if (val && val !== oVal) {
         const { props } = route.query as { props?: string };
         if (props) {
-          messageInitialData.value = JSON.parse(props) as CreateMsgDialogProps;
+          messageInitialData.value = JSON.parse(props) as {
+            data: PreparedMessageData;
+            isThisReplyOrForward?: boolean;
+            sourceFolder?: string;
+          };
           currentMessage.value = preparedMsgDataToOutgoingMsgView(messageInitialData.value!.data);
+          sourceFolder.value = messageInitialData.value.sourceFolder;
 
           await router.push({
             query: {
@@ -117,7 +133,8 @@
           currentMessage.value = getMessage(val);
         }
       }
-    }, {
+    },
+    {
       immediate: true,
     },
   );
@@ -147,14 +164,14 @@
 
     <div :class="$style.messageBody">
       <message-form
-        v-if="editMode"
-        :data="messageInitialData?.data"
+        v-if="editMode && messageInitialData"
+        :data="messageInitialData.data"
         :is-this-reply-or-forward="messageInitialData?.isThisReplyOrForward"
-        @select="updateCurrentMessage"
+        @action="handleMessageFormAction"
       />
 
       <message-view
-        v-else
+        v-if="!editMode && currentMessage"
         :message="currentMessage"
         @mark-as-read="handleAction('mark-as-read')"
       />

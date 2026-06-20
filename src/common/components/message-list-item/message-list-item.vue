@@ -16,12 +16,12 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
   import { computed, inject } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { useRoute, useRouter } from 'vue-router';
   import { storeToRefs } from 'pinia';
   import hasIn from 'lodash/hasIn';
   import isEmpty from 'lodash/isEmpty';
   import size from 'lodash/size';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { prepareDateAsSting } from '@v1nt1248/3nclient-lib/utils';
   import { Ui3nCheckbox, Ui3nIcon, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { useAppStore, useContactsStore } from '@common/store';
@@ -37,7 +37,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   const route = useRoute();
   const router = useRouter();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
   const { markedMessages, markMessage, resetMarkMessages } = inject(MARKED_MESSAGES_INJECTION_KEY)!;
   const { isMobileMode } = storeToRefs(useAppStore());
   const { contactList } = storeToRefs(useContactsStore());
@@ -62,12 +62,12 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 
   const time = computed(() => props.item.deliveryTS || props.item.cTime);
 
-  const status = computed(() => getMessageStatusUiData({ message: props.item, $tr }));
+  const status = computed(() => getMessageStatusUiData({ message: props.item, t }));
 
   const statusDescription = computed(() => {
     if (isEmpty(props.item.statusDescription)) return '';
 
-    return getStatusDescriptionText({ $tr, statusDescription: props.item.statusDescription! });
+    return getStatusDescriptionText({ t, statusDescription: props.item.statusDescription! });
   });
 
   const plainTxtBody = computed(() => htmlToText({ value: props.item.htmlTxtBody }));

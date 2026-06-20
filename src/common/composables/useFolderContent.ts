@@ -1,15 +1,9 @@
 import { computed, inject, onBeforeMount, onBeforeUnmount, provide, readonly, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import get from 'lodash/get';
 import isEmpty from 'lodash/isEmpty';
 import size from 'lodash/size';
-import {
-  I18N_KEY,
-  I18nPlugin,
-  NOTIFICATIONS_KEY,
-  NotificationsPlugin,
-  VUEBUS_KEY,
-  VueBusPlugin,
-} from '@v1nt1248/3nclient-lib/plugins';
+import { NOTIFICATIONS_KEY, NotificationsPlugin, VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
 import type {
   AppGlobalEvents,
   IncomingMessageView,
@@ -24,13 +18,14 @@ import { SYSTEM_FOLDERS, MARKED_MESSAGES_INJECTION_KEY } from '@common/constants
 
 export function useFolderContent() {
   const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
   const $notifications = inject<NotificationsPlugin>(NOTIFICATIONS_KEY)!;
 
   const { getContactList } = useContactsStore();
   const messagesStore = useMessagesStore();
   const { moveToTrash, deleteMessagesUi, bulkMoveToTrash, bulkRestore, upsertMessage } = messagesStore;
-  const { openSendMessageUI, runMessageSending, prepareReplyMsgBody, prepareForwardMsgBody } = useCreateMsgActions();
+  const { openSendMessageUI, runMessageSending, prepareReplyMsgBody, prepareForwardMsgBody } =
+    useCreateMsgActions();
 
   const markedMessages = ref<string[]>([]);
 
@@ -64,7 +59,7 @@ export function useFolderContent() {
     sourceFolder?: string;
   }) {
     switch (action) {
-      case 'edit':
+      case 'edit': {
         resetMarkMessages();
         $bus.$emitter.emit('run-create-message', {
           data: {
@@ -77,10 +72,14 @@ export function useFolderContent() {
           },
         });
         break;
-      case 'move-to-trash':
+      }
+
+      case 'move-to-trash': {
         resetMarkMessages();
         await moveToTrash(message);
         break;
+      }
+
       case 'delete': {
         const res = await deleteMessagesUi([message.msgId!], true);
         if (res) {
@@ -88,22 +87,24 @@ export function useFolderContent() {
         }
         break;
       }
+
       case 'send': {
         resetMarkMessages();
         const sendingMessageData = {
           ...msgViewToPreparedMsgData(message),
           status: 'sending',
         };
-        const unavailableRecipients = await openSendMessageUI(sendingMessageData, $tr);
-        const availableRecipients =
-          unavailableRecipients === null
-            ? []
-            : sendingMessageData.recipients.filter(address => !unavailableRecipients[address]);
+        const unavailableRecipients = await openSendMessageUI(sendingMessageData, t);
+
+        const availableRecipients = isEmpty(unavailableRecipients)
+          ? sendingMessageData.recipients
+          : sendingMessageData.recipients.filter(address => !unavailableRecipients[address]);
 
         if (isEmpty(availableRecipients)) {
           $notifications.$createNotice({
             type: 'error',
-            content: $tr('msg.content.header.preflight.error'),
+            content: t('msg.content.preflight_error'),
+            duration: 4000,
           });
           return;
         }
@@ -112,21 +113,29 @@ export function useFolderContent() {
         await runMessageSending(sendingMessageData);
         break;
       }
+
       case 'reply': {
-        const replyMsgData = prepareReplyMsgBody(message as IncomingMessageView, $tr);
+        const replyMsgData = prepareReplyMsgBody(message as IncomingMessageView, t);
         $bus.$emitter.emit('run-create-message', { data: replyMsgData, isThisReplyOrForward: true, sourceFolder });
         break;
       }
+
       case 'reply-all': {
-        const replyMsgData = prepareReplyMsgBody(message as IncomingMessageView, $tr, true);
+        const replyMsgData = prepareReplyMsgBody(message as IncomingMessageView, t, true);
         $bus.$emitter.emit('run-create-message', { data: replyMsgData, isThisReplyOrForward: true, sourceFolder });
         break;
       }
+
       case 'forward': {
-        const forwardMsgData = prepareForwardMsgBody(message, $tr);
-        $bus.$emitter.emit('run-create-message', { data: forwardMsgData, isThisReplyOrForward: true, sourceFolder });
+        const forwardMsgData = prepareForwardMsgBody(message, t);
+        $bus.$emitter.emit('run-create-message', {
+          data: forwardMsgData,
+          isThisReplyOrForward: true,
+          sourceFolder,
+        });
         break;
       }
+
       case 'restore': {
         const isMessageIncoming = !!(message as IncomingMessageView).sender;
         const isMessageDraft = !isMessageIncoming && message.status === 'draft';
@@ -144,12 +153,16 @@ export function useFolderContent() {
         await upsertMessage(updatedMessage);
         break;
       }
-      case 'mark-as-read':
+
+      case 'mark-as-read': {
         await upsertMessage({
           ...message,
           status: 'read',
         });
         break;
+      }
+
+      // no default
     }
   }
 

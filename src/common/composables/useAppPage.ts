@@ -1,15 +1,10 @@
 import { computed, inject, onBeforeMount, onBeforeUnmount, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
-import {
-  DIALOGS_KEY,
-  DialogsPlugin,
-  I18N_KEY,
-  I18nPlugin,
-  VUEBUS_KEY,
-  VueBusPlugin,
-} from '@v1nt1248/3nclient-lib/plugins';
+import { DIALOGS_KEY, DialogsPlugin, VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
 import { getRandomId } from '@v1nt1248/3nclient-lib/utils';
+import type { Ui3nDialogEvent } from '@v1nt1248/3nclient-lib';
 import type { AppGlobalEvents, PreparedMessageData } from '@common/types';
 import {
   useAppStore,
@@ -26,7 +21,7 @@ import CreateMsgDialog from '@common/components/dialogs/create-msg-dialog/create
 export function useAppPage(mobileMode?: boolean) {
   const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
   const $dialogs = inject<DialogsPlugin>(DIALOGS_KEY)!;
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   const unsub = ref<() => void>();
 
@@ -71,11 +66,7 @@ export function useAppPage(mobileMode?: boolean) {
     w3n.closeSelf!();
   }
 
-  async function openCreateMsgDialog({
-    data,
-    isThisReplyOrForward,
-    sourceFolder,
-  }: {
+  async function openCreateMsgDialog(payload: {
     data?: PreparedMessageData;
     isThisReplyOrForward?: boolean;
     sourceFolder?: string;
@@ -83,25 +74,28 @@ export function useAppPage(mobileMode?: boolean) {
     if (isMobileMode.value) {
       await router.push({
         name: 'message',
-        params: { msgId: data?.id },
+        params: { msgId: payload.data?.id },
         query: {
           props: JSON.stringify({
-            data,
-            ...(isThisReplyOrForward && { isThisReplyOrForward }),
+            data: payload.data,
+            ...(payload.isThisReplyOrForward && { isThisReplyOrForward: payload.isThisReplyOrForward }),
           }),
-          ...(sourceFolder && { sourceFolder }),
+          ...(payload.sourceFolder && { sourceFolder: payload.sourceFolder }),
         },
       });
     } else {
-      $dialogs.$openDialog<typeof CreateMsgDialog>({
-        component: CreateMsgDialog,
-        componentProps: {
-          data: data || ({} as PreparedMessageData),
-          isThisReplyOrForward,
-        },
+      const res = await $dialogs.$openDialog<
+        { msgData: PreparedMessageData; withoutSave?: boolean },
+        Ui3nDialogEvent<'send'>
+      >(CreateMsgDialog, {
+        data: payload.data || ({} as PreparedMessageData),
+        isThisReplyOrForward: payload.isThisReplyOrForward,
         dialogProps: {
           width: 560,
-          title: $tr('msg.create.dialog.title'),
+          cssStyle: {
+            height: '90dvh',
+          },
+          title: t('msg.create.dialog.title'),
           icon: {
             icon: 'round-mail',
             color: 'var(--color-icon-block-accent-default)',
@@ -110,22 +104,24 @@ export function useAppPage(mobileMode?: boolean) {
           cancelButton: false,
           closeOnClickOverlay: false,
           closeOnEsc: true,
-          // @ts-ignore
-          onClose: async (data: { msgData: PreparedMessageData; withoutSave?: boolean }) => {
-            console.log('# ONCLOSE => ', data);
-            if (data?.msgData && !data?.withoutSave) {
-              await saveMsgToDraft(data.msgData!);
-            }
-          },
-          // @ts-ignore
-          onCancel: async (data: { msgData: PreparedMessageData; withoutSave?: boolean }) => {
-            console.log('# ONCANCEL => ', data);
-            if (data && data.msgData.id) {
-              await deleteMessages([data.msgData.id], true);
-            }
-          },
         },
       });
+
+      switch (res.event) {
+        case 'send': {
+          if (res.data?.msgData && !res.data?.withoutSave) {
+            await saveMsgToDraft(res.data.msgData!);
+          }
+          break;
+        }
+
+        case 'cancel': {
+          if (res.data && res.data.msgData.id) {
+            await deleteMessages([res.data.msgData.id], true);
+          }
+          break;
+        }
+      }
     }
   }
 
@@ -206,6 +202,7 @@ export function useAppPage(mobileMode?: boolean) {
   });
 
   return {
+    t,
     $bus,
     appVersion,
     me,

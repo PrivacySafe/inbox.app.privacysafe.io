@@ -15,11 +15,11 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import { computed, inject } from 'vue';
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { storeToRefs } from 'pinia';
   import get from 'lodash/get';
   import isEmpty from 'lodash/isEmpty';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { useMessagesStore } from '@common/store/messages.store';
   import type { MessageThread } from '@common/types';
   import { FOLDER_KEY_BY_ID } from '@common/components/message-list/constants';
@@ -33,11 +33,11 @@
   const messagesStore = useMessagesStore();
   const { messageThreadsByFolder, messageThreadsFromTrash } = storeToRefs(messagesStore);
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   const folderEmptyText = computed(() => {
     const folderKey = FOLDER_KEY_BY_ID[props.folder];
-    return folderKey ? $tr(`folder.empty.text.${folderKey}`) : '';
+    return folderKey ? t(`folder.empty.text.${folderKey}`) : '';
   });
 
   const threads = computed(() => {
@@ -56,7 +56,7 @@
       :class="$style.empty"
     >
       <div :class="$style.emptyTitle">
-        {{ $tr('folder.empty.title') }}
+        {{ t('folder.empty.title') }}
       </div>
       <div
         v-if="folderEmptyText"

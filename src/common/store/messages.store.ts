@@ -15,6 +15,7 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { defineStore } from 'pinia';
 import hasIn from 'lodash/hasIn';
 import get from 'lodash/get';
@@ -26,7 +27,7 @@ import { dbSrv, fileStoreSrv } from '@common/services/services-provider';
 import { useAppStore } from '@common/store/app.store';
 import { SYSTEM_FOLDERS } from '@common/constants';
 import type { Nullable } from '@v1nt1248/3nclient-lib';
-import type { AttachmentInfo, IncomingMessageView, MessageThread, OutgoingMessageView } from 'src/common/types';
+import type { AttachmentInfo, IncomingMessageView, MessageThread, OutgoingMessageView } from '@common/types';
 import type { FileInfo } from '@common/services/labelled-file-store';
 import ConfirmationDialog from '@common/components/dialogs/confirmation-dialog/confirmation-dialog.vue';
 
@@ -76,9 +77,11 @@ function getMessagesByThreads(
 }
 
 export const useMessagesStore = defineStore('messages', () => {
+  const { t } = useI18n();
+
   const procs = new NamedProcs();
   const appStore = useAppStore();
-  const { $dialogs, $i18n, setAppState } = appStore;
+  const { $dialogs, setAppState } = appStore;
 
   const messageList = ref<Record<string, IncomingMessageView | OutgoingMessageView>>({});
 
@@ -285,31 +288,28 @@ export const useMessagesStore = defineStore('messages', () => {
   }
 
   async function deleteMessagesUi(messageIds: string[] = [], withReload?: boolean) {
-    return new Promise(resolve => {
-      $dialogs.open<typeof ConfirmationDialog>({
-        component: ConfirmationDialog,
-        componentProps: {
-          dialogText: $i18n.tr('msg.delete.permanently.string1'),
-          additionalDialogText: $i18n.tr('msg.delete.permanently.string2'),
-        },
-        dialogProps: {
-          title: $i18n.tr('msg.delete.permanently.title'),
-          width: 340,
-          confirmButtonText: $i18n.tr('msg.delete.permanently.confirm.button'),
-          confirmButtonBackground: 'var(--error-content-default)',
-          confirmButtonColor: 'var(--error-fill-default)',
-          onConfirm: async () => {
-            try {
-              await deleteMessages(messageIds, withReload);
-              resolve(true);
-            } catch (error) {
-              w3n.log('error', `Error while delete messages ${messageIds.join(', ')}`, error);
-              resolve(false);
-            }
-          },
-        },
-      });
+    const res = await $dialogs.open<boolean>(ConfirmationDialog, {
+      dialogText: t('msg.permanent_delete.string1'),
+      additionalDialogText: t('msg.permanent_delete.string2'),
+      dialogProps: {
+        title: t('msg.permanent_delete.title'),
+        width: 340,
+        confirmButtonText: t('msg.permanent_delete.confirm_button'),
+        confirmButtonBackground: 'var(--error-content-default)',
+        confirmButtonColor: 'var(--error-fill-default)',
+      },
     });
+
+    const { event } = res;
+    if (event === 'confirm') {
+      try {
+        await deleteMessages(messageIds, withReload);
+        return true;
+      } catch (error) {
+        w3n.log('error', `Error while delete messages ${messageIds.join(', ')}`, error);
+        return false;
+      }
+    }
   }
 
   function getMessagesByThread(threadId: string) {
@@ -323,8 +323,8 @@ export const useMessagesStore = defineStore('messages', () => {
 
     // @ts-ignore
     const targetFile = await w3n.shell?.fileDialogs?.saveFileDialog(
-      $i18n.tr('msg.download.file.title'),
-      $i18n.tr('app.ok'),
+      t('msg.download.file_title'),
+      t('app.ok'),
       attachment.fileName,
     );
 
@@ -342,11 +342,7 @@ export const useMessagesStore = defineStore('messages', () => {
     }
 
     // @ts-ignore
-    const targetFs = await w3n.shell?.fileDialogs?.saveFolderDialog(
-      $i18n.tr('msg.download.title'),
-      $i18n.tr('app.ok'),
-      msgId,
-    );
+    const targetFs = await w3n.shell?.fileDialogs?.saveFolderDialog(t('msg.download.title'), t('app.ok'), msgId);
 
     if (targetFs) {
       await fileStoreSrv.downloadFiles(ids, targetFs);

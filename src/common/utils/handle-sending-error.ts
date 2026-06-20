@@ -19,54 +19,61 @@ import DeliveryProgress = web3n.asmail.DeliveryProgress;
 import type { Nullable } from '@v1nt1248/3nclient-lib';
 
 export function prepareErrorText({
-  $tr,
+  t,
   address,
   errorFlag,
 }: {
-  $tr: (key: string, placeholders?: Record<string, string>) => string;
+  t: (txt: string, placeholder?: Record<string, string>) => string;
   address: string;
   errorFlag: string;
 }): string {
   const domain = address.includes('@') ? address.split('@')[1] : '';
 
   if (errorFlag === 'unknownRecipient') {
-    return `[${address}] ${$tr('msg.sending.error.unknownRecipient')}`;
+    return `[${address}] ${t('msg.sending.error.unknownRecipient')}`;
   }
 
   if (errorFlag === 'msgTooBig') {
-    return `[${address}] ${$tr('msg.sending.error.msgTooBig')}`;
+    return `[${address}] ${t('msg.sending.error.msgTooBig')}`;
   }
 
   if (errorFlag === 'inboxIsFull') {
-    return `[${address}] ${$tr('msg.sending.error.inboxIsFull')}`;
+    return `[${address}] ${t('msg.sending.error.inboxIsFull')}`;
   }
 
   if (errorFlag === 'domainNotFound') {
-    return `[${domain}] ${$tr('msg.sending.error.domainNotFound')}`;
+    return `[${domain}] ${t('msg.sending.error.domainNotFound')}`;
   }
 
   if (errorFlag === 'noServiceRecord') {
-    return `[${domain}] ${$tr('msg.sending.error.noServiceRecord')}`;
+    return `[${domain}] ${t('msg.sending.error.noServiceRecord')}`;
   }
 
   if (errorFlag === 'recipientPubKeyFailsValidation') {
-    return `[${address}] ${$tr('msg.sending.error.recipientPubKeyFailsValidation')}`;
+    return `[${address}] ${t('msg.sending.error.recipientPubKeyFailsValidation')}`;
   }
 
-  return `[${address}] ${$tr('msg.sending.error.noDescription')}`;
+  return `[${address}] ${t('msg.sending.error.noDescription')}`;
 }
 
-export function getStatusDescriptionText(
-  { $tr, statusDescription }:
-  { $tr: (key: string, placeholders?: Record<string, string>) => string; statusDescription: Record<string, string> },
-): string {
-  return Object.entries(statusDescription).reduce((res, [address, errorFlag]) => {
-    res = res + `${prepareErrorText({ $tr, address, errorFlag })}. `
-    return res;
-  }, '' as string).trim();
+export function getStatusDescriptionText({
+  t,
+  statusDescription,
+}: {
+  t: (txt: string, placeholder?: Record<string, string>) => string;
+  statusDescription: Record<string, string>;
+}): string {
+  return Object.entries(statusDescription)
+    .reduce((res, [address, errorFlag]) => {
+      res = res + `${prepareErrorText({ t, address, errorFlag })}. `;
+      return res;
+    }, '' as string)
+    .trim();
 }
 
-export function handleSendingError<T extends string>(errorInfo: DeliveryProgress['recipients'][T]): Nullable<string> {
+export function handleSendingError<T extends string>(
+  errorInfo: DeliveryProgress['recipients'][T],
+): Nullable<string> {
   if (!errorInfo?.err) return null;
 
   const { err = {} } = errorInfo;

@@ -23,14 +23,7 @@
   const props = defineProps<TextEditorProps>();
   const emits = defineEmits<TextEditorEmits>();
 
-  const {
-    $tr,
-    editorEl,
-    isFocused,
-    selectionFormat,
-    focusEditor,
-    setFormat,
-  } = useTextEditor(props, emits);
+  const { t, editorEl, isFocused, selectionFormat, focusEditor, setFormat } = useTextEditor(props, emits);
 </script>
 
 <template>
@@ -42,7 +35,7 @@
             <toolbar-button
               icon="round-format-size"
               prepend-icon="round-unfold-more"
-              :tooltip="$tr('msg.content.editor.fontSize')"
+              :tooltip="t('msg.content.editor.fontSize')"
             />
 
             <template #menu>
@@ -57,7 +50,7 @@
                     height="18"
                   />
 
-                  <span>{{ $tr('msg.content.editor.fontSize.header') }} 1</span>
+                  <span>{{ t('msg.content.editor.fontSize_header') }} 1</span>
                 </div>
 
                 <div
@@ -70,7 +63,7 @@
                     height="18"
                   />
 
-                  <span>{{ $tr('msg.content.editor.fontSize.header') }} 2</span>
+                  <span>{{ t('msg.content.editor.fontSize_header') }} 2</span>
                 </div>
 
                 <div
@@ -83,14 +76,14 @@
                     height="18"
                   />
 
-                  <span>{{ $tr('msg.content.editor.fontSize.header') }} 3</span>
+                  <span>{{ t('msg.content.editor.fontSize_header') }} 3</span>
                 </div>
 
                 <div
                   :class="$style.menuItem"
                   @click="setFormat('paragraph')"
                 >
-                  <span>{{ $tr('msg.content.editor.fontSize.normal') }}</span>
+                  <span>{{ t('msg.content.editor.fontSize_normal') }}</span>
                 </div>
               </div>
             </template>
@@ -100,28 +93,38 @@
         <span :class="$style.toolbarBlock">
           <toolbar-button
             icon="round-format-bold"
-            :tooltip="selectionFormat === 'bold' ? $tr('msg.content.editor.unbold') : $tr('msg.content.editor.bold')"
+            :tooltip="selectionFormat === 'bold' ? t('msg.content.editor.unbold') : t('msg.content.editor.bold')"
             :is-active="selectionFormat === 'bold'"
             @click.stop.prevent="setFormat('bold')"
           />
 
           <toolbar-button
             icon="round-format-italic"
-            :tooltip="selectionFormat === 'italic' ? $tr('msg.content.editor.noItalic') : $tr('msg.content.editor.italic')"
+            :tooltip="
+              selectionFormat === 'italic' ? t('msg.content.editor.noItalic') : t('msg.content.editor.italic')
+            "
             :is-active="selectionFormat === 'italic'"
             @click.stop.prevent="setFormat('italic')"
           />
 
           <toolbar-button
             icon="round-format-underlined"
-            :tooltip="selectionFormat === 'underline' ? $tr('msg.content.editor.noUnderline') : $tr('msg.content.editor.underline')"
+            :tooltip="
+              selectionFormat === 'underline'
+                ? t('msg.content.editor.noUnderline')
+                : t('msg.content.editor.underline')
+            "
             :is-active="selectionFormat === 'underline'"
             @click.stop.prevent="setFormat('underline')"
           />
 
           <toolbar-button
             icon="round-strikethrough"
-            :tooltip="selectionFormat === 'strikethrough' ? $tr('msg.content.editor.noStrikethrough') : $tr('msg.content.editor.strikethrough')"
+            :tooltip="
+              selectionFormat === 'strikethrough'
+                ? t('msg.content.editor.noStrikethrough')
+                : t('msg.content.editor.strikethrough')
+            "
             :is-active="selectionFormat === 'strikethrough'"
             @click.stop.prevent="setFormat('strikethrough')"
           />
@@ -130,27 +133,31 @@
         <span :class="$style.toolbarBlock">
           <toolbar-button
             icon="round-format-list-numbered"
-            :tooltip="selectionFormat === 'ordered' ? $tr('msg.content.editor.noList') : $tr('msg.content.editor.ordered')"
+            :tooltip="
+              selectionFormat === 'ordered' ? t('msg.content.editor.noList') : t('msg.content.editor.ordered')
+            "
             :is-active="selectionFormat === 'ordered'"
             @click.stop.prevent="setFormat('ordered')"
           />
 
           <toolbar-button
             icon="round-format-list-bulleted"
-            :tooltip="selectionFormat === 'unordered' ? $tr('msg.content.editor.noList') : $tr('msg.content.editor.unordered')"
+            :tooltip="
+              selectionFormat === 'unordered' ? t('msg.content.editor.noList') : t('msg.content.editor.unordered')
+            "
             :is-active="selectionFormat === 'unordered'"
             @click.stop.prevent="setFormat('unordered')"
           />
 
           <toolbar-button
             icon="round-format-indent-decrease"
-            :tooltip="$tr('msg.content.editor.decreaseListLevel')"
+            :tooltip="t('msg.content.editor.decreaseListLevel')"
             @click.stop.prevent="setFormat('decreaseListLevel')"
           />
 
           <toolbar-button
             icon="round-format-indent-increase"
-            :tooltip="$tr('msg.content.editor.increaseListLevel')"
+            :tooltip="t('msg.content.editor.increaseListLevel')"
             @click.stop.prevent="setFormat('increaseListLevel')"
           />
         </span>
@@ -158,28 +165,28 @@
         <span :class="$style.toolbarBlock">
           <toolbar-button
             icon="round-format-align-left"
-            :tooltip="$tr('msg.content.editor.align.left')"
+            :tooltip="t('msg.content.editor.align_left')"
             :is-active="selectionFormat === 'align-left'"
             @click.stop.prevent="setFormat('align-left')"
           />
 
           <toolbar-button
             icon="round-format-align-right"
-            :tooltip="$tr('msg.content.editor.align.right')"
+            :tooltip="t('msg.content.editor.align_right')"
             :is-active="selectionFormat === 'align-right'"
             @click.stop.prevent="setFormat('align-right')"
           />
 
           <toolbar-button
             icon="round-format-align-center"
-            :tooltip="$tr('msg.content.editor.align.center')"
+            :tooltip="t('msg.content.editor.align_center')"
             :is-active="selectionFormat === 'align-center'"
             @click.stop.prevent="setFormat('align-center')"
           />
 
           <toolbar-button
             icon="round-format-align-justify"
-            :tooltip="$tr('msg.content.editor.align.justify')"
+            :tooltip="t('msg.content.editor.align_justify')"
             :is-active="selectionFormat === 'align-justify'"
             @click.stop.prevent="setFormat('align-justify')"
           />
@@ -188,14 +195,14 @@
         <span :class="$style.toolbarBlock">
           <toolbar-button
             icon="round-format-quote"
-            :tooltip="$tr('msg.content.editor.quote')"
+            :tooltip="t('msg.content.editor.quote')"
             :is-active="selectionFormat === 'quote'"
             @click.stop.prevent="setFormat('quote')"
           />
 
           <toolbar-button
             icon="round-code"
-            :tooltip="selectionFormat === 'code' ? $tr('msg.content.editor.noCode') : $tr('msg.content.editor.code')"
+            :tooltip="selectionFormat === 'code' ? t('msg.content.editor.noCode') : t('msg.content.editor.code')"
             :is-active="selectionFormat === 'code'"
             @click.stop.prevent="setFormat('code')"
           />

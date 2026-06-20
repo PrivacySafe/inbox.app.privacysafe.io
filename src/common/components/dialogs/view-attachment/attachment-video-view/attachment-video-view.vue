@@ -15,13 +15,7 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script setup lang="ts">
-  import {
-    Ui3nButton,
-    Ui3nIcon,
-    Ui3nProgressCircular,
-    Ui3nSlider,
-    Ui3nTooltip,
-  } from '@v1nt1248/3nclient-lib';
+  import { Ui3nButton, Ui3nIcon, Ui3nProgressCircular, Ui3nSlider, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { timeInSecondsToString } from '@common/utils';
   import { useVideoView } from './useVideoView';
   import type { AttachmentInfo } from '@common/types';
@@ -41,6 +35,7 @@
     volume,
     currentTimeAsText,
     durationAsText,
+    t,
     updateVolume,
     updateCurrentTime,
     play,
@@ -58,9 +53,7 @@
     <div :class="$style.videoPlayerControl">
       <div :class="$style.videoPlayerControlBody">
         <div :class="$style.videoPlayerControlActionsAdditional">
-          <ui3n-icon
-            icon="round-volume-mute"
-          />
+          <ui3n-icon icon="round-volume-mute" />
 
           <div :class="$style.volume">
             <ui3n-slider
@@ -80,7 +73,7 @@
 
         <div :class="$style.videoPlayerControlActions">
           <ui3n-tooltip
-            :content="$tr('chat.player.play')"
+            :content="t('chat.player.play')"
             placement="top-end"
             position-strategy="fixed"
           >
@@ -94,7 +87,7 @@
           </ui3n-tooltip>
 
           <ui3n-tooltip
-            :content="$tr('chat.player.pause')"
+            :content="t('chat.player.pause')"
             placement="top-end"
             position-strategy="fixed"
           >

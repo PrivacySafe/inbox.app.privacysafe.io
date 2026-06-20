@@ -1,35 +1,35 @@
 <script lang="ts" setup>
-  import { inject } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import size from 'lodash/size';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
-  import { Ui3nButton, Ui3nTooltip  } from '@v1nt1248/3nclient-lib';
+  import { Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import type { MessageBulkActions } from '@common/types';
   import { SYSTEM_FOLDERS } from '@common/constants';
 
-  withDefaults(defineProps<{
-    folder: string;
-    markedMessages?: string[];
-  }>(), {
-    markedMessages: () => [],
-  });
+  withDefaults(
+    defineProps<{
+      folder: string;
+      markedMessages?: string[];
+    }>(),
+    {
+      markedMessages: () => [],
+    },
+  );
   const emits = defineEmits<{
     (event: 'bulk-actions', value: { action: MessageBulkActions; messageIds: string[] }): void;
   }>();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 </script>
 
 <template>
   <div :class="$style.bulkActionsToolbar">
     <div :class="$style.block">
-      <span :class="$style.info">
-        {{ $tr('msg.bulk.actions.selected') }}: {{ size(markedMessages) }}
-      </span>
+      <span :class="$style.info"> {{ t('msg.actions.selected') }}: {{ size(markedMessages) }} </span>
 
       <div :class="$style.btns">
         <ui3n-tooltip
           v-if="folder === SYSTEM_FOLDERS.trash"
-          :content="$tr('msg.content.tooltip.restore')"
+          :content="t('msg.content.tooltip.restore')"
           position-strategy="fixed"
           placement="top-start"
         >
@@ -38,13 +38,13 @@
             color="var(--color-bg-block-primary-default)"
             icon="round-refresh"
             icon-color="var(--color-icon-table-primary-default)"
-            @click.stop.prevent="emits('bulk-actions', { action: 'restore', messageIds: markedMessages })"
+            @click.stop.prevent="emits('bulk-actions', { action: 'restore', messageIds: markedMessages || [] })"
           />
         </ui3n-tooltip>
 
         <ui3n-tooltip
           v-if="folder !== SYSTEM_FOLDERS.trash"
-          :content="$tr('msg.content.btn.moveToTrash')"
+          :content="t('msg.content.btn.moveToTrash')"
           position-strategy="fixed"
           placement="top-start"
         >
@@ -53,12 +53,14 @@
             color="var(--color-bg-block-primary-default)"
             icon="outline-delete"
             icon-color="var(--color-icon-table-primary-default)"
-            @click.stop.prevent="emits('bulk-actions', { action: 'move-to-trash', messageIds: markedMessages })"
+            @click.stop.prevent="
+              emits('bulk-actions', { action: 'move-to-trash', messageIds: markedMessages || [] })
+            "
           />
         </ui3n-tooltip>
 
         <ui3n-tooltip
-          :content="$tr('msg.content.btn.deleteForever')"
+          :content="t('msg.content.btn.deleteForever')"
           position-strategy="fixed"
           placement="top-start"
         >
@@ -67,22 +69,22 @@
             color="var(--color-bg-block-primary-default)"
             icon="trash-can"
             icon-color="var(--warning-content-default)"
-            @click.stop.prevent="emits('bulk-actions', { action: 'delete', messageIds: markedMessages })"
+            @click.stop.prevent="emits('bulk-actions', { action: 'delete', messageIds: markedMessages || [] })"
           />
         </ui3n-tooltip>
       </div>
     </div>
 
     <ui3n-tooltip
-      :content="$tr('msg.bulk.actions.btn.cancel.tooltip')"
+      :content="t('msg.actions.cancel_tooltip')"
       position-strategy="fixed"
       placement="top-end"
     >
       <ui3n-button
         type="secondary"
-        @click.stop.prevent="emits('bulk-actions', { action: 'cancel', messageIds: markedMessages })"
+        @click.stop.prevent="emits('bulk-actions', { action: 'cancel', messageIds: markedMessages || [] })"
       >
-        {{ $tr('msg.bulk.actions.btn.cancel') }}
+        {{ t('msg.actions.cancel') }}
       </ui3n-button>
     </ui3n-tooltip>
   </div>

@@ -18,10 +18,10 @@ import type { IncomingMessageView, OutgoingMessageView } from '@common/types';
 
 export function getMessageStatusUiData({
   message,
-  $tr,
+  t,
 }: {
   message?: IncomingMessageView | OutgoingMessageView;
-  $tr: (key: string, placeholders?: Record<string, string>) => string;
+  t: (txt: string, placeholder?: Record<string, string>) => string;
 }) {
   if (!message) return null;
 
@@ -31,21 +31,21 @@ export function getMessageStatusUiData({
 
   if (message.status === 'canceled') {
     return {
-      text: $tr('msg.sending.canceled.label'),
+      text: t('msg.sending.label.canceled'),
       color: 'var(--error-content-default)',
     };
   }
 
   if (message.status === 'error') {
     return {
-      text: $tr('msg.sending.error.label'),
+      text: t('msg.sending.label.error'),
       color: 'var(--error-content-default)',
     };
   }
 
   if (message.status === 'sending') {
     return {
-      text: $tr('msg.sending.progress.label'),
+      text: t('msg.sending.label.progress'),
       color: 'var(--color-text-block-accent-default)',
     };
   }

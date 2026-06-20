@@ -17,7 +17,7 @@
 import { makeServiceCaller } from '@common/libs/ipc/ipc-service-caller';
 import { makeLabelledFileStoreIn, type LabelledFileStore } from './labelled-file-store';
 import { dbProvider } from './db-provider';
-import type { AppContacts } from 'src/common/types';
+import type { AppContacts } from '@common/types';
 import type { DBProvider } from './db-provider/types';
 
 export let fileStoreSrv: LabelledFileStore;

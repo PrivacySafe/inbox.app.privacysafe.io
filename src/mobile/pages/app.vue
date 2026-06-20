@@ -21,7 +21,7 @@
   import size from 'lodash/size';
   import get from 'lodash/get';
   import { VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
-  import { Ui3nBadge, Ui3nButton, Ui3nProgressCircular } from '@v1nt1248/3nclient-lib';
+  import { Ui3nBadge, Ui3nButton, Ui3nDialogProvider, Ui3nProgressCircular } from '@v1nt1248/3nclient-lib';
   import { useMessagesStore } from '@common/store';
   import { useAppPage } from '@common/composables/useAppPage';
   import { MAIL_FOLDERS_DEFAULT, SYSTEM_FOLDERS } from '@common/constants';
@@ -58,7 +58,7 @@
       return size(get(messagesByFolders.value, [currentFolder.value.id, 'data'], []));
     }
 
-    return get(messagesByFolders.value, [currentFolder.value.id, 'unread'], 0)
+    return get(messagesByFolders.value, [currentFolder.value.id, 'unread'], 0);
   });
 
   const isCreateBtnShow = computed(() => route.name !== 'message');
@@ -115,6 +115,7 @@
 
           <ui3n-badge
             v-if="currentFolderBadgeText"
+            :class="$style.folderMsgsCount"
             :value="currentFolderBadgeText"
           />
         </div>
@@ -154,6 +155,8 @@
     </div>
 
     <div id="notification" />
+
+    <ui3n-dialog-provider />
   </div>
 </template>
 
@@ -222,6 +225,10 @@
     justify-content: center;
     align-items: center;
     column-gap: var(--spacing-s);
+
+    .folderMsgsCount {
+      min-width: 20px;
+    }
   }
 
   .folderName {

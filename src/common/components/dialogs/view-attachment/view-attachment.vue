@@ -15,9 +15,8 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script setup lang="ts">
-  import { inject } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { storeToRefs } from 'pinia';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { isFileImage, isFileVideo, isFileAudio, getFileExtension } from '@v1nt1248/3nclient-lib/utils';
   import { useAppStore } from '@common/store/app.store';
   import { Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
@@ -37,12 +36,12 @@
     (event: 'close'): void;
   }>();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   const { downloadAttachment } = useDownloadAttachments({
     msgId: props.msgId,
     isIncomingMessage: props.isIncomingMessage,
-    $tr,
+    t,
   });
 
   const { isMobileMode } = storeToRefs(useAppStore());
@@ -56,7 +55,7 @@
   <div :class="[$style.chatMessageAttachmentView, isMobileMode && $style.mobile]">
     <div :class="$style.actions">
       <ui3n-tooltip
-        :content="$tr('msg.content.tooltip.download')"
+        :content="t('msg.content.tooltip.download')"
         position-strategy="fixed"
         placement="bottom-end"
       >
@@ -71,7 +70,7 @@
       </ui3n-tooltip>
 
       <ui3n-tooltip
-        :content="$tr('msg.attachment.view.exit')"
+        :content="t('msg.attachment.view_exit')"
         position-strategy="fixed"
         placement="bottom-end"
       >

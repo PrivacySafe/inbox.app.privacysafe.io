@@ -16,7 +16,7 @@
 -->
 <script lang="ts" setup>
   import { computed } from 'vue';
-  import { getElementColor } from '@v1nt1248/3nclient-lib/utils';
+  import { generateColor } from '@v1nt1248/3nclient-lib/utils';
   import { Ui3nIcon } from '@v1nt1248/3nclient-lib';
 
   const props = defineProps<{
@@ -45,16 +45,18 @@
       width: `${innerSize.value}px`,
       minHeight: `${innerSize.value}px`,
       height: `${innerSize.value}px`,
-      backgroundColor: getElementColor(letters.value || '?'),
+      backgroundColor: generateColor(letters.value || '?'),
     };
     return props.photo
       ? {
-        ...styles,
-        backgroundImage: `url(${props.photo})`,
-      }
+          ...styles,
+          backgroundImage: `url(${props.photo})`,
+        }
       : styles;
   });
-  const nameStyle = computed<Record<string, string>>(() => ({ fontSize: `${Math.floor(innerSize.value * 0.6) - 6}px` }));
+  const nameStyle = computed<Record<string, string>>(() => ({
+    fontSize: `${Math.floor(innerSize.value * 0.6) - 6}px`,
+  }));
 
   const onClick = (ev: MouseEvent): void => {
     emit('click', ev);
@@ -65,7 +67,7 @@
   <div
     :class="[$style.contactIcon, selected && $style.contactIconSelected]"
     :style="mainStyle"
-    v-on="readonly ? {} : { 'click': onClick }"
+    v-on="readonly ? {} : { click: onClick }"
   >
     <div
       v-if="!photo"
@@ -106,16 +108,13 @@
     -webkit-font-smoothing: antialiased;
     color: var(--color-text-avatar-primary-default);
     font-weight: 600;
-    line-height: 1;
-    z-index: 1;
     pointer-events: none;
     user-select: none;
-    //text-shadow: 2px 2px 5px var(--grey-70);
   }
 
   .contactIconSelected {
     &::before {
-      content: "";
+      content: '';
       position: absolute;
       width: 100%;
       height: 100%;
@@ -126,7 +125,7 @@
     }
 
     &::after {
-      content: "";
+      content: '';
       position: absolute;
       width: 100%;
       height: 100%;

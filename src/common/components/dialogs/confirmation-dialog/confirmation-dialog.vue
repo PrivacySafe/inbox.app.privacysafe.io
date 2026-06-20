@@ -1,22 +1,35 @@
 <script lang="ts" setup>
-  import { computed, inject } from 'vue';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  import { Ui3nDialog, type Ui3nDialogEvent, type Ui3nDialogComponentProps } from '@v1nt1248/3nclient-lib';
 
   const props = defineProps<{
     dialogText?: string;
     additionalDialogText?: string;
+    dialogProps?: Ui3nDialogComponentProps<boolean>;
   }>();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const emits = defineEmits<{
+    (event: 'action', value: { event: Ui3nDialogEvent; data?: boolean }): void;
+  }>();
 
-  const text = computed(() => props.dialogText || $tr('confirmation.dialog.text'));
+  const { t } = useI18n();
+
+  const text = computed(() => props.dialogText || t('confirmation.dialog.text'));
 </script>
 
 <template>
-  <div :class="$style.confirmationDialog">
-    {{ text }}
-    <span v-if="additionalDialogText">{{ additionalDialogText }}</span>
-  </div>
+  <ui3n-dialog
+    v-bind="dialogProps"
+    @action="emits('action', $event)"
+  >
+    <template #body>
+      <div :class="$style.confirmationDialog">
+        {{ text }}
+        <span v-if="additionalDialogText">{{ additionalDialogText }}</span>
+      </div>
+    </template>
+  </ui3n-dialog>
 </template>
 
 <style lang="scss" module>

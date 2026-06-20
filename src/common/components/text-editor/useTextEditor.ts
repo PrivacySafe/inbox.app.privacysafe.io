@@ -1,13 +1,13 @@
-import { inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Squire from 'squire-rte';
 import sanitizeHtml from 'sanitize-html';
 import last from 'lodash/last';
-import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
 import type { Nullable } from '@v1nt1248/3nclient-lib';
 import type { TextEditorProps, TextEditorEmits } from './types';
 
 export function useTextEditor(props: TextEditorProps, emits: TextEditorEmits) {
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   const editorEl = ref<Nullable<HTMLDivElement>>(null);
   let editor: Squire | null = null;
@@ -236,7 +236,16 @@ export function useTextEditor(props: TextEditorProps, emits: TextEditorEmits) {
       sanitizeToDOMFragment(html: string) {
         const sanitizedHtml = sanitizeHtml(html, {
           allowedClasses: {
-            '*': ['te-font-12', 'te-font-18', 'te-font-24', 'te-font-32', 'align-left', 'align-right', 'align-center', 'align-justify'],
+            '*': [
+              'te-font-12',
+              'te-font-18',
+              'te-font-24',
+              'te-font-32',
+              'align-left',
+              'align-right',
+              'align-center',
+              'align-justify',
+            ],
           },
         });
 
@@ -284,11 +293,11 @@ export function useTextEditor(props: TextEditorProps, emits: TextEditorEmits) {
     () => props.text,
     () => {
       editor && editor.setHTML(props.text || '');
-    }
+    },
   );
 
   return {
-    $tr,
+    t,
     editorEl,
     editor,
     isFocused,

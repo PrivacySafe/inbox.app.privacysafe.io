@@ -22,11 +22,11 @@ import type { AttachmentInfo } from '@common/types';
 export function useDownloadAttachments({
   msgId,
   isIncomingMessage,
-  $tr,
+  t,
 }: {
   msgId: string;
   isIncomingMessage: boolean;
-  $tr: (key: string, placeholders?: Record<string, string>) => string;
+  t: (txt: string, placeholder?: Record<string, string>) => string;
 }) {
   const { $createNotice } = inject<NotificationsPlugin>(NOTIFICATIONS_KEY)!;
   const { downloadFileFromOutgoingMessage, downloadFilesFromOutgoingMessage } = useMessagesStore();
@@ -45,7 +45,7 @@ export function useDownloadAttachments({
       if (isSuccess) {
         $createNotice({
           type: 'success',
-          content: $tr('msg.writing.attachments.success'),
+          content: t('msg.attachments.writing.success'),
         });
       }
     } catch (error) {
@@ -53,7 +53,7 @@ export function useDownloadAttachments({
 
       $createNotice({
         type: 'error',
-        content: $tr('msg.writing.attachments.error'),
+        content: t('msg.attachments.writing.error'),
       });
     }
   }
@@ -67,15 +67,19 @@ export function useDownloadAttachments({
       if (isSuccess) {
         $createNotice({
           type: 'success',
-          content: $tr('msg.writing.attachment.success', { filename: attachment.fileName }),
+          content: t('msg.attachment.writing.success', { filename: attachment.fileName }),
         });
       }
     } catch (error) {
-      w3n.log('error', `Error downloading the file '${attachment.fileName}' from the message with id ${msgId}`, error);
+      w3n.log(
+        'error',
+        `Error downloading the file '${attachment.fileName}' from the message with id ${msgId}`,
+        error,
+      );
 
       $createNotice({
         type: 'error',
-        content: $tr('msg.writing.attachment.error', { fileName: attachment.fileName }),
+        content: t('msg.attachment.writing.error', { fileName: attachment.fileName }),
       });
     }
   }

@@ -17,7 +17,6 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
 import isEmpty from 'lodash/isEmpty';
-import omit from 'lodash/omit';
 import get from 'lodash/get';
 import size from 'lodash/size';
 import { NamedProcs } from '@v1nt1248/3nclient-lib/utils';
@@ -43,10 +42,13 @@ export const useSendingStore = defineStore('sending', () => {
 
   async function sendMessage(msgData: OutgoingMessageView) {
     const outgoingMessage = await outgoingMsgViewToOutgoingMsg(msgData);
+
     const { msgId, recipients = [] } = outgoingMessage;
-    await process.start(msgId!, async () => {
-      await w3n.mail?.delivery.addMsg(recipients, omit(outgoingMessage, 'plainTxtBody'), msgId!);
-    });
+    if ('plainTxtBody' in outgoingMessage) {
+      delete outgoingMessage.plainTxtBody;
+    }
+
+    await w3n.mail?.delivery.addMsg(recipients, outgoingMessage, msgId!);
   }
 
   async function cancelSendMessage(msgId: string): Promise<void> {
@@ -57,10 +59,13 @@ export const useSendingStore = defineStore('sending', () => {
     await w3n.mail?.delivery.rmMsg(msgId, cancelSending);
   }
 
-  async function handleDeliveryMessagesProgress(
-    { id, progress }:
-    { id: string; progress: web3n.asmail.DeliveryProgress }
-  ) {
+  async function handleDeliveryMessagesProgress({
+    id,
+    progress,
+  }: {
+    id: string;
+    progress: web3n.asmail.DeliveryProgress;
+  }) {
     if (!progress || progress?.localMeta?.chatId) {
       return;
     }
@@ -83,21 +88,23 @@ export const useSendingStore = defineStore('sending', () => {
           status: 'sent',
         };
       } else if (allDoneValue === 'with-errors') {
-        const statusDescription = Object.keys(progress.recipients || []).reduce((res, address) => {
-          const recipientInfo = get(progress, ['recipients', address]);
-          if (recipientInfo.err) {
-            const errorFlag = handleSendingError(recipientInfo);
-            errorFlag !== null && (res[address] = errorFlag || '');
-          }
+        const statusDescription = Object.keys(progress.recipients || []).reduce(
+          (res, address) => {
+            const recipientInfo = get(progress, ['recipients', address]);
+            if (recipientInfo.err) {
+              const errorFlag = handleSendingError(recipientInfo);
+              errorFlag !== null && (res[address] = errorFlag || '');
+            }
 
-          return res;
-        }, {} as Record<string, string>);
+            return res;
+          },
+          {} as Record<string, string>,
+        );
 
         message = {
           ...message,
-          mailFolder: size(statusDescription) === size(message?.recipients)
-            ? SYSTEM_FOLDERS.outbox
-            : SYSTEM_FOLDERS.sent,
+          mailFolder:
+            size(statusDescription) === size(message?.recipients) ? SYSTEM_FOLDERS.outbox : SYSTEM_FOLDERS.sent,
           status: 'error',
           statusDescription,
         };
@@ -105,7 +112,10 @@ export const useSendingStore = defineStore('sending', () => {
 
       await upsertMessage(message);
       if (message.mailFolder !== SYSTEM_FOLDERS.outbox) {
-        messagesStore.$emitter.emit('sending-complete', { id, status: message.status === 'sent' ? 'ok' : 'error' });
+        messagesStore.$emitter.emit('sending-complete', {
+          id,
+          status: message.status === 'sent' ? 'ok' : 'error',
+        });
       }
 
       await removeMessageFromDeliveryList(id);

@@ -15,10 +15,10 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import { inject, onMounted, ref, watch } from 'vue';
+  import { onMounted, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import isEmpty from 'lodash/isEmpty';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
-  import { Ui3nTooltip } from '@v1nt1248/3nclient-lib';
+  import { Ui3nDialog, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { useCreateMsgActions } from '@common/composables/useCreateMsgActions';
   import { prepareErrorText } from '@/common/utils';
   import type { PreFlightDialogProps, PreFlightDialogEmits } from './types';
@@ -27,7 +27,7 @@
   const props = defineProps<PreFlightDialogProps>();
   const emits = defineEmits<PreFlightDialogEmits>();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
   const { runPreFlightProcess } = useCreateMsgActions();
 
   const isLoading = ref(false);
@@ -35,7 +35,7 @@
   const _unavailableRecipients = ref<Record<string, string>>({});
 
   function getVerificationResult(recipient: string, errorFlag: string): string {
-    return prepareErrorText({ $tr, address: recipient, errorFlag });
+    return prepareErrorText({ t, address: recipient, errorFlag });
   }
 
   onMounted(async () => {
@@ -47,70 +47,67 @@
       _unavailableRecipients.value = unavailableRecipients;
       isLoading.value = false;
 
-      emits('select', _unavailableRecipients.value || {});
-
       if (isEmpty(_unavailableRecipients.value)) {
-        emits('confirm')
+        emits('action', { event: 'confirm', data: _unavailableRecipients.value });
         return;
       }
     } finally {
       isLoading.value = false;
     }
-
   });
-
-  watch(
-    () => isLoading.value,
-    (val) => {
-      emits('validate', !val);
-    }, {
-      immediate: true,
-    }
-  );
 </script>
 
 <template>
-  <div :class="$style.preFlightDialog">
-    <template v-if="isLoading">
-      <div :class="$style.text">
-        {{ $tr('msg.preflight.dialog.processing.text') }}
-      </div>
-    </template>
+  <ui3n-dialog
+    v-bind="dialogProps"
+    :data="_unavailableRecipients"
+    :is-valid="!isLoading"
+    @action="emits('action', $event)"
+  >
+    <template #body>
+      <div :class="$style.preFlightDialog">
+        <template v-if="isLoading">
+          <div :class="$style.text">
+            {{ t('msg.preflight_dialog.processing_text') }}
+          </div>
+        </template>
 
-    <template v-else>
-      <div :class="$style.text">
-        {{ $tr('msg.preflight.dialog.subtitle') }}
-      </div>
+        <template v-else>
+          <div :class="$style.text">
+            {{ t('msg.preflight_dialog.subtitle') }}
+          </div>
 
-      <div :class="$style.content">
-        <div
-          v-for="(errorFlag, recipient) in _unavailableRecipients"
-          :key="recipient"
-          :class="$style.recipient"
-        >
-          <contact-icon
-            :size="36"
-            :name="recipient"
-            readonly
-          />
+          <div :class="$style.content">
+            <div
+              v-for="(errorFlag, recipient) in _unavailableRecipients"
+              :key="recipient"
+              :class="$style.recipient"
+            >
+              <contact-icon
+                :size="36"
+                :name="recipient"
+                readonly
+              />
 
-          <ui3n-tooltip
-            :content="getVerificationResult(recipient, errorFlag)"
-            placement="top-start"
-            position-strategy="fixed"
-          >
-            <div :class="$style.mail">
-              {{ recipient }}
+              <ui3n-tooltip
+                :content="getVerificationResult(recipient, errorFlag)"
+                placement="top-start"
+                position-strategy="fixed"
+              >
+                <div :class="$style.mail">
+                  {{ recipient }}
+                </div>
+              </ui3n-tooltip>
             </div>
-          </ui3n-tooltip>
-        </div>
-      </div>
+          </div>
 
-      <div :class="$style.text">
-        {{ $tr('msg.preflight.dialog.question') }}
+          <div :class="$style.text">
+            {{ t('msg.preflight_dialog.question') }}
+          </div>
+        </template>
       </div>
     </template>
-  </div>
+  </ui3n-dialog>
 </template>
 
 <style lang="scss" module>

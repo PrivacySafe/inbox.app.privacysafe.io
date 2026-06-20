@@ -16,10 +16,11 @@
 -->
 <script lang="ts" setup>
   import { computed, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { isFileImage, getFileExtension, isFileVideo, isFileAudio } from '@v1nt1248/3nclient-lib/utils';
   import { type Nullable, Ui3nButton, Ui3nIcon, Ui3nProgressCircular, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { useAppStore } from '@/common/store/app.store';
-  import { createThumbnail } from '@/common/utils/create-thumbnail'
+  import { createThumbnail } from '@/common/utils/create-thumbnail';
   import type { AttachmentInfo } from '@common/types';
 
   const props = defineProps<{
@@ -33,6 +34,8 @@
     (event: 'view', value: AttachmentInfo): void;
   }>();
 
+  const { t } = useI18n();
+
   const appStore = useAppStore();
 
   const isProcessing = ref(false);
@@ -40,18 +43,27 @@
   const iconSizeCss = computed(() => `${iconSize}px`);
 
   const fileExt = computed(() => (getFileExtension(props.attachment.fileName) || '').toLowerCase());
-  const isThumbnailAvailable = computed(() =>
-    isFileImage({ fullName: props.attachment.fileName })
-    || isFileVideo({ fullName: props.attachment.fileName })
-    || fileExt.value === 'pdf');
-  const isViewAvailable = computed(() => isThumbnailAvailable.value || isFileAudio({ fullName: props.attachment.fileName }));
+  const isThumbnailAvailable = computed(
+    () =>
+      (isFileImage({ fullName: props.attachment.fileName }) ||
+        isFileVideo({ fullName: props.attachment.fileName }) ||
+        fileExt.value === 'pdf') &&
+      props.attachment.size,
+  );
+  const isViewAvailable = computed(
+    () =>
+      isThumbnailAvailable.value ||
+      (isFileAudio({ fullName: props.attachment.fileName }) && props.attachment.size),
+  );
 
   const iconName = computed(() => {
     if (isThumbnailAvailable.value) {
       return '';
     }
 
-    if (['zip', '7z', 'ace', 'cab', 'cbr', 'gz', 'gzip', 'jar', 'rar', 'tar', 'tgz', 'zipx'].includes(fileExt.value)) {
+    if (
+      ['zip', '7z', 'ace', 'cab', 'cbr', 'gz', 'gzip', 'jar', 'rar', 'tar', 'tgz', 'zipx'].includes(fileExt.value)
+    ) {
       return 'file-zip';
     }
 
@@ -88,6 +100,14 @@
     }
   }
 
+  function downloadAttachment() {
+    if (!props.attachment.size) {
+      return;
+    }
+
+    emits('download', props.attachment);
+  }
+
   makeThumbnail();
 </script>
 
@@ -116,7 +136,7 @@
 
       <div :class="$style.actions">
         <ui3n-tooltip
-          :content="$tr('msg.content.tooltip.download')"
+          :content="t('msg.content.tooltip.download')"
           placement="top"
           position-strategy="fixed"
           max-content-width="160"
@@ -127,13 +147,14 @@
             icon="outline-download-for-offline"
             icon-size="24"
             icon-color="var(--color-icon-button-tritery-default)"
-            @click.stop.prevent="emits('download', attachment)"
+            :disabled="!attachment.size"
+            @click.stop.prevent="downloadAttachment"
           />
         </ui3n-tooltip>
 
         <ui3n-tooltip
           v-if="isViewAvailable"
-          :content="$tr('msg.content.tooltip.view')"
+          :content="t('msg.content.tooltip.view')"
           placement="top"
           position-strategy="fixed"
           max-content-width="160"
@@ -149,6 +170,14 @@
           />
         </ui3n-tooltip>
       </div>
+
+      <ui3n-icon
+        v-if="!attachment.size"
+        icon="round-crisis-alert"
+        color="var(--color-icon-block-warning-default)"
+        size="16"
+        :class="$style.broken"
+      />
     </div>
 
     <div :class="$style.name">
@@ -214,6 +243,12 @@
     display: flex;
     justify-content: center;
     align-items: center;
+
+    .broken {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+    }
   }
 
   .loader {
@@ -235,6 +270,10 @@
     justify-content: center;
     align-items: center;
     column-gap: var(--spacing-s);
+
+    button[disabled] {
+      cursor: default;
+    }
   }
 
   .name {

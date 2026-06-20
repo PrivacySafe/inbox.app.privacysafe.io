@@ -1,21 +1,19 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { resolve } from 'node:path';
-import { defineConfig } from 'vite';
+import { defineConfig, type UserConfig, type ConfigEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import vueDevTools from 'vite-plugin-vue-devtools';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 function _resolve(dir: string) {
   return resolve(__dirname, dir);
 }
 
-// https://vitejs.dev/config/
-// @ts-ignore
-export default defineConfig(config => {
-  const isDev = config.mode === 'development';
+export const makeConfig = ({ mode }: ConfigEnv): UserConfig => {
+  const isDev = mode === 'development';
   // const isProd = mode === 'production'
 
   const server = {
-    port: '3030',
+    port: 3030,
     cors: { origin: '*' },
   };
 
@@ -23,44 +21,37 @@ export default defineConfig(config => {
     preprocessorOptions: {
       scss: {
         api: 'modern-compiler',
-      },
+      } as any,
     },
   };
 
-  const define = { 'process.env': {} };
+  const define = {
+    'process.env.NODE_ENV': JSON.stringify(mode),
+    global: 'globalThis',
+  };
 
-  const plugins = [
-    vue(),
-    nodePolyfills({
-      include: ['path', 'url', 'fs'],
-    }),
-    vueDevTools(),
-  ];
+  const plugins = [vue(), isDev && vueDevTools()].filter(Boolean);
 
-  let optimizeDeps = {};
+  const optimizeDeps = {
+    exclude: ['pdfjs-dist'],
+    include: [] as string[],
+  };
   if (isDev) {
-    optimizeDeps = {
-      include: ['vue', 'vue-router', 'pinia', 'lodash', 'dayjs'],
-    };
+    optimizeDeps.include = ['vue', 'vue-router', 'pinia', 'lodash', 'dayjs'];
   }
 
   const build = {
-    // reference: https://rollupjs.org/configuration-options/
-    rollupOptions: {
+    outDir: 'app',
+    chunkSizeWarningLimit: 0,
+    target: 'esnext',
+    commonjsOptions: {
+      include: [/pdfjs-dist/],
+    },
+    rolldownOptions: {
       input: {
         main: _resolve('./index.html'),
         'main-mobile': _resolve('./index-mobile.html'),
       },
-      output: [
-        {
-          name: 'main',
-          dir: 'app',
-        },
-        {
-          name: 'main-mobile',
-          dir: 'app',
-        },
-      ],
     },
   };
 
@@ -82,4 +73,6 @@ export default defineConfig(config => {
       },
     },
   };
-});
+};
+
+export default defineConfig(makeConfig);

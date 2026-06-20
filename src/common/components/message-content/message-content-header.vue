@@ -15,9 +15,9 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import { computed, inject } from 'vue';
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import size from 'lodash/size';
-  import { I18N_KEY, I18nPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import type { IncomingMessageView, MessageAction, OutgoingMessageView } from '@common/types';
   import { SYSTEM_FOLDERS } from '@common/constants';
@@ -29,7 +29,7 @@
     (event: 'action', value: { action: MessageAction; message: IncomingMessageView | OutgoingMessageView }): void;
   }>();
 
-  const { $tr } = inject<I18nPlugin>(I18N_KEY)!;
+  const { t } = useI18n();
 
   const isMessageIncoming = computed(() => !!(props.message as IncomingMessageView).sender);
 
@@ -42,7 +42,7 @@
   <div :class="$style.msgHeader">
     <ui3n-tooltip
       v-if="isReplyBtnShow"
-      :content="$tr('msg.content.tooltip.reply')"
+      :content="t('msg.content.tooltip.reply')"
       position-strategy="fixed"
       placement="top-start"
     >
@@ -53,13 +53,13 @@
         icon-position="left"
         @click.stop.prevent="emits('action', { action: 'reply', message })"
       >
-        {{ $tr('msg.content.tooltip.reply') }}
+        {{ t('msg.content.tooltip.reply') }}
       </ui3n-button>
     </ui3n-tooltip>
 
     <ui3n-tooltip
       v-if="isReplyAllBtnShow"
-      :content="$tr('msg.content.tooltip.replyAll')"
+      :content="t('msg.content.tooltip.replyAll')"
       position-strategy="fixed"
       placement="top-start"
     >
@@ -70,12 +70,12 @@
         icon-position="left"
         @click.stop.prevent="emits('action', { action: 'reply-all', message })"
       >
-        {{ $tr('msg.content.tooltip.replyAll') }}
+        {{ t('msg.content.tooltip.replyAll') }}
       </ui3n-button>
     </ui3n-tooltip>
 
     <ui3n-tooltip
-      :content="$tr('msg.content.tooltip.forward')"
+      :content="t('msg.content.tooltip.forward')"
       position-strategy="fixed"
       placement="top-start"
     >
@@ -86,13 +86,13 @@
         icon-position="left"
         @click.stop.prevent="emits('action', { action: 'forward', message })"
       >
-        {{ $tr('msg.content.tooltip.forward') }}
+        {{ t('msg.content.tooltip.forward') }}
       </ui3n-button>
     </ui3n-tooltip>
 
     <ui3n-tooltip
       v-if="isRestoreBtnShow"
-      :content="$tr('msg.content.tooltip.restore')"
+      :content="t('msg.content.tooltip.restore')"
       position-strategy="fixed"
       placement="top-start"
     >
@@ -103,7 +103,7 @@
         icon-position="left"
         @click.stop.prevent="emits('action', { action: 'restore', message })"
       >
-        {{ $tr('msg.content.tooltip.restore') }}
+        {{ t('msg.content.tooltip.restore') }}
       </ui3n-button>
     </ui3n-tooltip>
   </div>
