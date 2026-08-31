@@ -16,9 +16,10 @@
 */
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
-import { dbSrv } from '@common/services/services-provider';
+import { inboxSrv } from '@common/services/services-provider';
 import { SystemSettings } from '@common/utils/ui-settings';
 import type { AvailableLanguage, AvailableColorTheme, ConnectivityStatus, AppConfigs, AppState, AppConfig } from '@common/types';
+import type { SyncActivityView } from '@deno/services/sync/sync-activity';
 import { blobFromDataURL } from '../utils/image-files';
 
 export const useAppStore = defineStore('app', () => {
@@ -36,6 +37,21 @@ export const useAppStore = defineStore('app', () => {
   const isMobileMode = ref<boolean>(false);
   const appState = ref<AppState>({
     lastReceivingTimestamp: 0,
+  });
+  /**
+   * What synchronization with the user's other devices is doing.
+   *
+   * Both asked for once and subscribed to: events are built only while a GUI is
+   * attached, and the backend's catch-up scan often finishes before this page
+   * subscribes. `seq` settles the race - a snapshot never overwrites a newer
+   * event.
+   */
+  const syncActivity = ref<SyncActivityView>({
+    seq: 0,
+    syncing: false,
+    pending: 0,
+    phase: 'idle',
+    stalled: false,
   });
 
   async function getAppVersion() {
@@ -57,8 +73,25 @@ export const useAppStore = defineStore('app', () => {
     user.value = await w3n.mailerid!.getUserId();
   }
 
-  function getAppState() {
-    appState.value = dbSrv.getAppState();
+  async function getAppState() {
+    appState.value = await inboxSrv.getAppState();
+  }
+
+  // Merges, and does not replace: the `app-state` event carries whatever the
+  // backend happened to change, so assigning it whole would drop every field
+  // that event did not mention.
+  function applyAppState(state: Partial<AppState>) {
+    appState.value = { ...appState.value, ...state };
+  }
+
+  async function getSyncActivityState() {
+    applySyncActivity(await inboxSrv.getSyncActivityState());
+  }
+
+  function applySyncActivity(view: SyncActivityView) {
+    if (view.seq >= syncActivity.value.seq) {
+      syncActivity.value = view;
+    }
   }
 
   function setAppWindowSize({ width = 0, height = 0 }) {
@@ -121,9 +154,8 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function setAppState(state: AppState) {
-    appState.value = state;
-    await dbSrv.updateAppState(state);
+  async function setAppState(state: Partial<AppState>) {
+    applyAppState(state);
   }
 
   return {
@@ -137,10 +169,14 @@ export const useAppStore = defineStore('app', () => {
     commonLoading,
     customLogoSrc,
     appState,
+    syncActivity,
+    getSyncActivityState,
+    applySyncActivity,
     getAppVersion,
     getConnectivityStatus,
     getUser,
     getAppState,
+    applyAppState,
     setAppWindowSize,
     setCommonLoading,
     setMobileMode,

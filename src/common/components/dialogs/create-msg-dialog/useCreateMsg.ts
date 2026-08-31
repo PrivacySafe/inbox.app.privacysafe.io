@@ -77,7 +77,9 @@ export function useCreateMsg({
   }
 
   async function saveDraftMessage() {
-    if (readonly) return;
+    if (readonly) {
+      return;
+    }
 
     const msgId = await saveMsgToDraft(msgData.value);
     if (msgData.value.id !== msgId) {
@@ -97,7 +99,7 @@ export function useCreateMsg({
   async function removeRecipient(recipient: string) {
     const currentRecipientIndex = msgData.value.recipients.findIndex(r => r === recipient);
 
-    if (currentRecipientIndex === -1) return;
+    if (currentRecipientIndex === -1) {return;}
 
     msgData.value.recipients.splice(currentRecipientIndex, 1);
     await onMsgDataUpdateDebounced();
@@ -138,15 +140,26 @@ export function useCreateMsg({
   }
 
   async function send() {
-    const unavailableRecipients = await openSendMessageUI(msgData.value, t);
-    const availableRecipients = !unavailableRecipients
-      ? []
-      : msgData.value.recipients.filter(address => !unavailableRecipients[address]);
+    if (isLoading.value) {
+      return;
+    }
 
-    if (isEmpty(availableRecipients)) return;
+    // Held across preflight and handover to delivery: without it a second click
+    // starts the whole thing again while the first one is still in the dialog.
+    isLoading.value = true;
+    try {
+      const unavailableRecipients = await openSendMessageUI(msgData.value, t);
+      const availableRecipients = !unavailableRecipients
+        ? []
+        : msgData.value.recipients.filter(address => !unavailableRecipients[address]);
 
-    msgData.value.recipients = availableRecipients;
-    await sendMsg();
+      if (isEmpty(availableRecipients)) {return;}
+
+      msgData.value.recipients = availableRecipients;
+      await sendMsg();
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   onBeforeMount(async () => {

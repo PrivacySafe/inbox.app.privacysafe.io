@@ -71,10 +71,44 @@ export interface OutgoingMessage extends web3n.asmail.OutgoingMessage {
 }
 
 export interface AttachmentInfo {
-  id: string;
+  /**
+   * id in the file store, or a handle of a file held for this session.
+   *
+   * Absent when there are no bytes on this device at all: the record came in a
+   * phantom from another device, and an id from there points into another
+   * device's file store. Optional on purpose - that way "the file is not here"
+   * cannot be expressed as a valid id, and the compiler finds the places where
+   * an id was used without a check.
+   */
+  id?: string;
   fileName: string;
   size: number;
+  /** 'origin' marks an attachment of an incoming message: it lives in that message, not in the store. */
   type?: string;
+  /**
+   * The incoming message an `origin` attachment lives in. Set when such a record
+   * is carried into a forward, where `id` no longer says which message to look
+   * in — the record's own message is the forward by then.
+   */
+  originMsgId?: string;
+  /**
+   * The bytes were never copied: `id` is a store item that only references a file
+   * on this device. Set for attachments above ATTACHMENT_COPY_THRESHOLD, which
+   * are read from their original place when the message is packed.
+   *
+   * Unlike a copy, such an attachment is only as good as the user's own file: it
+   * stops resolving once that file is moved, renamed or deleted.
+   */
+  external?: true;
+  /**
+   * There are no bytes for this attachment on this device: it was attached on
+   * another device of the user, and only the record travelled here.
+   *
+   * The single flag availability is decided by - see attachmentAvailabilityOf().
+   */
+  hasNoLocalSource?: true;
+  /** The device the file is attached on. For logs and for what the user is told. */
+  originDeviceId?: string;
 }
 
 export interface PreparedMessageData {
@@ -94,6 +128,19 @@ export interface MessageExtraInfo {
   statusDescription?: Record<string, string>;
   mailFolder: string;
   attachmentsInfo?: AttachmentInfo[];
+  /**
+   * The device this record was created on.
+   *
+   * Needed apart from the per-attachment flag: a synchronized record with
+   * status 'sending' would otherwise show "cancel / retry" on another device,
+   * where pressing cancel would send a *false* 'canceled' back to the sending
+   * device and cancel nothing at all.
+   *
+   * Not an aspect and not part of the diff: it is a local fact about origin,
+   * the same on every device by virtue of coming from one phantom. Absent on
+   * records from before this column existed, which reads as "origin unknown".
+   */
+  originDeviceId?: string;
 }
 
 export type IncomingMessageView = Omit<IncomingMessage, 'establishedSenderKeyChain' | 'attachments'> &
@@ -131,6 +178,7 @@ export interface MessageViewDB {
   status: Nullable<string>; // 'draft' | 'sending' | 'sent' | 'error' | 'canceled'
   statusDescription: Nullable<string>;
   attachmentsInfo: Nullable<string>;
+  originDeviceId: Nullable<string>;
 }
 
 export type MessageAction =

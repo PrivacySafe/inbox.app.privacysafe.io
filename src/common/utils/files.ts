@@ -15,27 +15,45 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
 import { Nullable } from '@v1nt1248/3nclient-lib';
-import { fileStoreSrv } from '@common/services/services-provider';
+import { inboxSrv } from '@common/services/services-provider';
 import type { AttachmentInfo } from '@common/types';
 
+/**
+ * The file an attachment record points at, or null when there is nothing to
+ * read.
+ *
+ * Null rather than a rejection: an attachment can legitimately have no readable
+ * file — a reference to a file the user has moved or deleted, a record of an
+ * incoming attachment whose message is gone, or a file attached on another
+ * device of the user — and every caller here already renders "nothing to show"
+ * for null. Letting it throw instead turned an expected state into an unhandled
+ * rejection.
+ */
 export async function getFileByInfoFromMsg(
   attachment: AttachmentInfo,
   incomingMsgId?: string,
 ): Promise<Nullable<web3n.files.ReadonlyFile>> {
-  const { id, fileName } = attachment;
+  const { id, fileName, type, originMsgId, hasNoLocalSource } = attachment;
 
-  if (incomingMsgId) {
-    const msg = await w3n.mail?.inbox.getMsg(incomingMsgId);
-    if (!msg) {
-      return null;
-    }
-
-    const file = await msg.attachments?.readonlyFile(fileName);
-
-    return file || null;
+  // First of all: the bytes are on another device of the user, and no read here
+  // can produce them.
+  if (hasNoLocalSource) {
+    return null;
   }
 
-  const fileId = id || fileName;
-  const file = await fileStoreSrv.getFile(fileId);
+  // An attachment of an incoming message is found by message and name, not by
+  // id. `originMsgId` covers the same record carried into a forward, before the
+  // form has copied the file into the store.
+  const msgIdToReadFrom = incomingMsgId ?? (type === 'origin' ? originMsgId : undefined);
+  if (msgIdToReadFrom) {
+    return await inboxSrv.getIncomingAttachment(msgIdToReadFrom, fileName).catch(() => null);
+  }
+
+  // No `id || fileName` fallback: an id is what the store is keyed by, and
+  // looking a file up by its name silently asked for an id that cannot exist.
+  if (!id) {
+    return null;
+  }
+  const file = await inboxSrv.getFile(id).catch(() => null);
   return file || null;
 }

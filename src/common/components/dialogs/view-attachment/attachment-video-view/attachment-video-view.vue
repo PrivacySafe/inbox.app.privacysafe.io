@@ -15,9 +15,10 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script setup lang="ts">
-  import { Ui3nButton, Ui3nIcon, Ui3nProgressCircular, Ui3nSlider, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
+  import { Ui3nButton, Ui3nIcon, Ui3nSlider, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { timeInSecondsToString } from '@common/utils';
   import { useVideoView } from './useVideoView';
+  import AttachmentLoading from '../attachment-loading.vue';
   import type { AttachmentInfo } from '@common/types';
 
   const props = defineProps<{
@@ -26,21 +27,34 @@
     isMobileMode?: boolean;
   }>();
 
+  const emits = defineEmits<{
+    (event: 'cancel'): void;
+  }>();
+
   const {
     isProcessing,
+    isLoading,
+    percent,
+    progress,
+    seekMax,
     isPlaying,
     videoPlayerRef,
     currentTime,
-    duration,
     volume,
     currentTimeAsText,
     durationAsText,
     t,
+    cancel,
     updateVolume,
     updateCurrentTime,
     play,
     pause,
   } = useVideoView({ item: props.item, incomingMsgId: props.incomingMsgId });
+
+  function onCancel() {
+    cancel();
+    emits('cancel');
+  }
 </script>
 
 <template>
@@ -109,9 +123,11 @@
           {{ currentTimeAsText }}
         </div>
 
+        <!-- While streaming, only what has arrived can be played, so that is
+             where the slider ends. -->
         <ui3n-slider
           v-if="videoPlayerRef"
-          :max="duration"
+          :max="seekMax"
           :model-value="currentTime"
           :transform-value-method="timeInSecondsToString"
           :disabled="isProcessing || !videoPlayerRef?.src"
@@ -124,11 +140,12 @@
       </div>
     </div>
 
-    <ui3n-progress-circular
+    <attachment-loading
       v-if="isProcessing"
-      :class="$style.loader"
-      indeterminate
-      size="108"
+      :reading="isLoading"
+      :percent="percent"
+      :progress="progress"
+      @cancel="onCancel"
     />
   </div>
 </template>

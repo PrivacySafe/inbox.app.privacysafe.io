@@ -39,6 +39,7 @@
   const { handleMessageAction } = useFolderContent();
 
   const sourceFolder = ref<string | undefined>();
+  const isFormBusy = ref(false);
   const currentMessage = ref<Nullable<IncomingMessageView | OutgoingMessageView>>(null);
   const messageInitialData =
     ref<Nullable<{ data: PreparedMessageData; isThisReplyOrForward?: boolean; sourceFolder?: string }>>(null);
@@ -86,7 +87,7 @@
         });
         break;
       case 'discard': {
-        await deleteMessages([currentMessage.value!.msgId], true);
+        await deleteMessages([currentMessage.value!.msgId]);
         await router.push({ name: 'folder', params: { folderId } });
         break;
       }
@@ -157,6 +158,7 @@
           :folder="sourceFolder || currentMessage!.mailFolder"
           :edit-mode="editMode"
           :message="currentMessage"
+          :busy="isFormBusy"
           @action="handleAction"
         />
       </div>
@@ -168,6 +170,7 @@
         :data="messageInitialData.data"
         :is-this-reply-or-forward="messageInitialData?.isThisReplyOrForward"
         @action="handleMessageFormAction"
+        @update:busy="isFormBusy = $event"
       />
 
       <message-view
@@ -181,7 +184,7 @@
 
 <style lang="scss" module>
   .message {
-    --message-toolbar-height: 48px;
+    --message-toolbar-height: 64px;
 
     position: fixed;
     inset: 0;

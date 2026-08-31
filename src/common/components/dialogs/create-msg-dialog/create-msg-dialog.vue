@@ -15,7 +15,7 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import isEmpty from 'lodash/isEmpty';
+  import { ref } from 'vue';
   import { Ui3nAutocomplete, Ui3nButton, Ui3nChip, Ui3nDialog, Ui3nInput, Ui3nHtml } from '@v1nt1248/3nclient-lib';
   import { markSearch } from '@v1nt1248/3nclient-lib/utils';
   import type { CreateMsgDialogProps, CreateMsgDialogEmits } from './types';
@@ -28,6 +28,8 @@
 
   const props = defineProps<CreateMsgDialogProps>();
   const emits = defineEmits<CreateMsgDialogEmits>();
+
+  const hasBlockingAttachments = ref(false);
 
   const {
     t,
@@ -93,7 +95,6 @@
               add-new-value
               :new-value-validator="(v: string) => v.includes('@')"
               :disabled="isLoading"
-              :class="isEmpty(msgData.recipients) && $style.noRecipients"
               @update:model-value="onMsgDataUpdate"
             >
               <template #item="{ item, query }">
@@ -136,6 +137,7 @@
             :value="data?.attachmentsInfo"
             @update="updateAttachments"
             @update:loading="isLoading = $event"
+            @update:blocked="hasBlockingAttachments = $event"
           />
         </div>
 
@@ -181,7 +183,7 @@
           </ui3n-button>
 
           <ui3n-button
-            :disabled="isFormDisabled || isLoading"
+            :disabled="isFormDisabled || isLoading || hasBlockingAttachments"
             @click.stop.prevent="send"
           >
             {{ t('msg.create.btn.send') }}
@@ -220,12 +222,6 @@
     align-items: flex-start;
     column-gap: var(--spacing-s);
     border-bottom: 1px solid var(--color-border-block-primary-default);
-
-    .noRecipients {
-      input {
-        width: 200px;
-      }
-    }
   }
 
   .blockTitle {

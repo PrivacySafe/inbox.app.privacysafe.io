@@ -16,7 +16,8 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 */
 import { inject } from 'vue';
 import { NOTIFICATIONS_KEY, NotificationsPlugin } from '@v1nt1248/3nclient-lib/plugins';
-import { useMessagesStore, useReceivingStore } from '@common/store';
+import { useMessagesStore } from '@common/store';
+import { attachmentAvailabilityOf } from '@shared/utils/attachment-availability';
 import type { AttachmentInfo } from '@common/types';
 
 export function useDownloadAttachments({
@@ -29,25 +30,54 @@ export function useDownloadAttachments({
   t: (txt: string, placeholder?: Record<string, string>) => string;
 }) {
   const { $createNotice } = inject<NotificationsPlugin>(NOTIFICATIONS_KEY)!;
-  const { downloadFileFromOutgoingMessage, downloadFilesFromOutgoingMessage } = useMessagesStore();
-  const { downloadFileFromIncomingMessage, downloadAttachmentsFromIncomingMessage } = useReceivingStore();
+  const {
+    downloadFileFromOutgoingMessage,
+    downloadFilesFromOutgoingMessage,
+    downloadFileFromIncomingMessage,
+    downloadAttachmentsFromIncomingMessage,
+  } = useMessagesStore();
 
   async function downloadAll(attachments: AttachmentInfo[] = []) {
     try {
-      let isSuccess;
       if (isIncomingMessage) {
-        isSuccess = await downloadAttachmentsFromIncomingMessage(msgId);
-      } else {
-        const ids: string[] = attachments.map(item => item.id!);
-        isSuccess = await downloadFilesFromOutgoingMessage(msgId, ids);
+        // The bytes of an incoming message's attachments are in the shared
+        // inbox, so every device can read all of them.
+        const isSuccess = await downloadAttachmentsFromIncomingMessage(msgId);
+        if (isSuccess) {
+          $createNotice({ type: 'success', content: t('msg.attachments.writing.success') });
+        }
+        return;
       }
 
-      if (isSuccess) {
-        $createNotice({
-          type: 'success',
-          content: t('msg.attachments.writing.success'),
-        });
+      const available = attachments.filter(item => !item.hasNoLocalSource);
+      if (available.length === 0) {
+        // Checked BEFORE the save dialog is opened: a dialog followed by an
+        // error is the most irritating of the possible behaviours.
+        $createNotice({ type: 'error', content: t('msg.attachments.on_another_device') });
+        return;
       }
+
+      // Every record is passed on, unavailable ones included: the count of what
+      // was left out comes back from the one place that decides it.
+      const result = await downloadFilesFromOutgoingMessage(
+        msgId,
+        attachments.map(item => item.id),
+      );
+      if (!result) {
+        return;
+      }
+
+      $createNotice(
+        result.skipped > 0
+          ? {
+            type: 'info',
+            content: t('msg.attachments.partially_downloaded', {
+              done: `${attachments.length - result.skipped}`,
+              total: `${attachments.length}`,
+            }),
+          }
+          : { type: 'success', content: t('msg.attachments.writing.success') },
+      );
     } catch (error) {
       w3n.log('error', `Error downloading attachments of the message with id ${msgId}`, error);
 
@@ -59,6 +89,16 @@ export function useDownloadAttachments({
   }
 
   async function downloadAttachment(attachment: AttachmentInfo) {
+    // Before the save dialog, for the same reason as above.
+    if (attachmentAvailabilityOf(attachment, isIncomingMessage ? msgId : undefined)
+      === 'on-another-device') {
+      $createNotice({
+        type: 'error',
+        content: t('msg.attachment.on_another_device', { fileName: attachment.fileName }),
+      });
+      return;
+    }
+
     try {
       const isSuccess = isIncomingMessage
         ? await downloadFileFromIncomingMessage(msgId, attachment.fileName)
@@ -67,7 +107,7 @@ export function useDownloadAttachments({
       if (isSuccess) {
         $createNotice({
           type: 'success',
-          content: t('msg.attachment.writing.success', { filename: attachment.fileName }),
+          content: t('msg.attachment.writing.success', { fileName: attachment.fileName }),
         });
       }
     } catch (error) {

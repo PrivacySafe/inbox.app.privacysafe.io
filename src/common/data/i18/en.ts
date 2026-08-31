@@ -8,6 +8,20 @@ export const en = {
         offline: 'offline',
       },
     },
+    startup: {
+      starting: 'Starting ...',
+      'migrating-db': 'Moving the mailbox to this device ...',
+      'migrating-files': 'Moving attachments to this device: {done} of {total}',
+      loading: 'Loading messages ...',
+    },
+    sync: {
+      syncing: 'Synchronizing with your other devices…',
+      syncing_count: 'Synchronizing with your other devices… ({count} left)',
+      // Said only when a pass has actually failed: this is the one state the
+      // user can do something about, so it is worded as waiting rather than as
+      // breakage.
+      stalled: 'Changes are waiting to be sent',
+    },
     exit: 'Exit',
     select: 'Select',
     ok: 'Ok',
@@ -62,6 +76,7 @@ export const en = {
     },
     content: {
       preflight_error: 'The message could not be sent to the specified recipients.',
+      sending_on_another_device: 'This message is being sent from another of your devices.',
       add_address: 'Add address to the Contacts',
       btn: {
         moveToTrash: 'Move to Trash',
@@ -77,6 +92,7 @@ export const en = {
         download: 'Download the file',
         download_all: 'Download all files',
         view: 'View the file',
+        make_preview: 'Show a preview (reads the whole file)',
         reply: 'Reply',
         replyAll: 'Reply All',
         forward: 'Forward',
@@ -139,11 +155,36 @@ export const en = {
         success: 'Attachments have saved',
         error: 'Error writing attachments',
       },
+      removing: {
+        error: 'Error removing attachments',
+      },
+      linking: {
+        error: 'Error opening attachments of this draft',
+      },
+      on_another_device: 'These files were attached on another of your devices and are not available here.',
+      partially_downloaded: '{done} of {total} files saved; the rest are on another of your devices.',
     },
     attachment: {
       writing: {
         success: 'The file {fileName} has saved',
         error: 'Error writing the file {fileName}',
+      },
+      attaching: {
+        error: 'Error attaching the file {fileName}',
+      },
+      too_big: {
+        error: 'The file {fileName} is bigger than the {limit} limit and cannot be attached',
+      },
+      unavailable:
+        'The file {fileName} cannot be read — it looks like it was deleted, moved or renamed. Attach it again to send this message.',
+      link_broken: 'The file {fileName} cannot be shown — it looks like it was deleted, moved or renamed.',
+      on_another_device:
+        'The file {fileName} was attached on another of your devices and is not available here.',
+      on_another_device_short: 'On another device',
+      loading: '{done} of {total}',
+      loading_cancel: 'Cancel',
+      removing: {
+        error: 'Error removing the file {fileName}',
       },
       view_exit: 'Exit viewing',
     },
@@ -162,6 +203,50 @@ export const en = {
         sent: 'The Sent folder contains copies of emails that you have successfully sent to others.',
         trash:
           'The Trash folder temporarily holds deleted emails. Messages stay here until they are permanently removed either manually or after a set period.',
+      },
+    },
+  },
+
+  confirmation: {
+    dialog: {
+      text: 'Are you sure?',
+    },
+  },
+
+  dialog: {
+    'open-file': {
+      'image-type': 'Images',
+    },
+  },
+
+  chat: {
+    pdf: {
+      view: {
+        btn: {
+          prev: 'Previous page',
+          next: 'Next page',
+        },
+        page: 'Page',
+      },
+    },
+    player: {
+      play: 'Play',
+      pause: 'Pause',
+    },
+    audio: {
+      player: {
+        visual: {
+          setting: 'Visualization setting',
+          mode1: 'Mode 1',
+          mode2: 'Mode 2',
+        },
+      },
+    },
+    view: {
+      load: {
+        file: {
+          error: 'Error loading the file',
+        },
       },
     },
   },

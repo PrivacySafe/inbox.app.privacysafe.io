@@ -12,6 +12,7 @@
   import get from 'lodash/get';
 
   defineProps<{
+    appVersion: string;
     user: string;
     connectivityStatusText: string;
   }>();
@@ -46,7 +47,7 @@
   <div :class="$style.appMenu">
     <div :class="$style.appMenuHeader">
       <contact-icon
-        :size="32"
+        :size="40"
         :name="user"
         readonly
       />
@@ -90,6 +91,10 @@
           />
         </div>
       </template>
+
+      <div :class="$style.appInfo">
+        v {{ appVersion }}
+      </div>
     </div>
   </div>
 </template>
@@ -98,7 +103,7 @@
   @use '@common/assets/styles/_mixins' as mixins;
 
   .appMenu {
-    --app-menu-header-heigh: 48px;
+    --app-menu-header-heigh: 64px;
 
     position: relative;
     width: 100%;
@@ -125,14 +130,14 @@
   .user {
     font-size: var(--font-14);
     font-weight: 700;
-    line-height: var(--font-16);
+    line-height: var(--font-18);
     @include mixins.text-overflow-ellipsis();
   }
 
   .status {
     font-size: var(--font-12);
     font-weight: 600;
-    line-height: var(--font-14);
+    line-height: var(--font-16);
   }
 
   .ok {
@@ -146,6 +151,20 @@
     overflow-x: hidden;
     overflow-y: auto;
     padding: var(--spacing-m) 0 64px;
+
+    .appInfo {
+      position: absolute;
+      width: 100%;
+      left: 0;
+      bottom: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: var(--font-16);
+      font-weight: 500;
+      line-height: 1;
+      color: var(--color-text-control-secondary-default);
+    }
   }
 
   .systemFolder {

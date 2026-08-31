@@ -17,17 +17,11 @@
 <script setup lang="ts">
   import { watch } from 'vue';
   import { storeToRefs } from 'pinia';
-  import {
-    Ui3nButton,
-    Ui3nIcon,
-    Ui3nProgressCircular,
-    Ui3nSlider,
-    Ui3nSwitch,
-    Ui3nTooltip,
-  } from '@v1nt1248/3nclient-lib';
+  import { Ui3nButton, Ui3nIcon, Ui3nSlider, Ui3nSwitch, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { useAppStore } from '@/common/store/app.store';
   import { timeInSecondsToString } from '@common/utils';
   import { useAudioView } from './useAudioView';
+  import AttachmentLoading from '../attachment-loading.vue';
   import type { AttachmentInfo } from '@common/types';
 
   const props = defineProps<{
@@ -36,25 +30,38 @@
     isMobileMode?: boolean;
   }>();
 
+  const emits = defineEmits<{
+    (event: 'cancel'): void;
+  }>();
+
   const { appWindowSize } = storeToRefs(useAppStore());
 
   const {
     isProcessing,
+    isLoading,
+    percent,
+    progress,
+    seekMax,
     isPlaying,
     canvasRef,
     audioPlayerRef,
-    duration,
     durationAsText,
     volume,
     currentTime,
     currentTimeAsText,
     currentAudioVisualization,
     t,
+    cancel,
     updateVolume,
     updateCurrentTime,
     play,
     pause,
   } = useAudioView({ item: props.item, incomingMsgId: props.incomingMsgId });
+
+  function onCancel() {
+    cancel();
+    emits('cancel');
+  }
 
   watch(appWindowSize, () => {
     canvasRef.value!.width = canvasRef.value!.clientWidth;
@@ -126,7 +133,7 @@
         </div>
 
         <div :class="$style.audioPlayerActionsAdditional">
-          <span>Mode 2</span>
+          <span>{{ isMobileMode ? 2 : t('chat.audio.player.visual.mode2') }}</span>
 
           <ui3n-tooltip
             :content="t('chat.audio.player.visual.setting')"
@@ -141,7 +148,7 @@
             />
           </ui3n-tooltip>
 
-          <span>Mode 1</span>
+          <span>{{ isMobileMode ? 1 : t('chat.audio.player.visual.mode1') }}</span>
         </div>
       </div>
 
@@ -150,9 +157,11 @@
           {{ currentTimeAsText }}
         </div>
 
+        <!-- While streaming, only what has arrived can be played, so that is
+             where the slider ends. -->
         <ui3n-slider
           v-if="audioPlayerRef"
-          :max="duration"
+          :max="seekMax"
           :model-value="currentTime"
           :transform-value-method="timeInSecondsToString"
           :disabled="isProcessing || !audioPlayerRef?.src"
@@ -165,11 +174,12 @@
       </div>
     </div>
 
-    <ui3n-progress-circular
+    <attachment-loading
       v-if="isProcessing"
-      :class="$style.loader"
-      indeterminate
-      size="108"
+      :reading="isLoading"
+      :percent="percent"
+      :progress="progress"
+      @cancel="onCancel"
     />
   </div>
 </template>

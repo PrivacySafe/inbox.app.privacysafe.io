@@ -20,9 +20,12 @@
   import get from 'lodash/get';
   import size from 'lodash/size';
   import hasIn from 'lodash/hasIn';
+  import isEmpty from 'lodash/isEmpty';
   import { VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
   import { type Nullable, Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { useAppStore } from '@/common/store/app.store';
+  import { inboxSrv } from '@common/services/services-provider';
+  import { makeLogger } from '@shared/utils/logger';
   import { useDownloadAttachments } from '@/common/composables/useDownloadAttachments';
   import type { AppGlobalEvents, AttachmentInfo, IncomingMessageView, OutgoingMessageView } from '@common/types';
   import MessageContentAttachment from './message-content-attachment.vue';
@@ -35,6 +38,8 @@
 
   const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
   const { t } = useI18n();
+
+  const log = makeLogger('MsgAttachments');
 
   const appStore = useAppStore();
 
@@ -56,6 +61,40 @@
 
   const attachments = computed(() => get(props.message, 'attachmentsInfo', [] as AttachmentInfo[]));
   const widthOfFirstRowFilesCss = computed(() => `${widthOfFirstRowFiles.value}px`);
+
+  /**
+   * Whether any of these files was attached on another device of the user. One
+   * line for the whole block, rather than the same sentence repeated under every
+   * chip; the chips carry the short mark.
+   *
+   * Attachments of an incoming message are never among them: their bytes are in
+   * the SHARED inbox, so every device reads them.
+   */
+  const someOnAnotherDevice = computed(
+    () => !isIncomingMessage.value && attachments.value.some(item => item.hasNoLocalSource),
+  );
+  const noneAvailable = computed(
+    () => !isIncomingMessage.value && attachments.value.every(item => item.hasNoLocalSource),
+  );
+
+  /** Previews of this message's attachments, by file name. */
+  const thumbnails = ref<Record<string, string>>({});
+
+  // Asked for here rather than in each chip: one call for the message instead of
+  // one per attachment.
+  async function loadThumbnails(msgId: string) {
+    thumbnails.value = await inboxSrv.getThumbnails(msgId).catch(err => {
+      log.error(`Failed to read cached previews of the message ${msgId}`, err);
+      return {};
+    });
+  }
+
+  function onThumbnailMade({ fileName, dataUrl }: { fileName: string; dataUrl: string }) {
+    thumbnails.value = { ...thumbnails.value, [fileName]: dataUrl };
+    inboxSrv
+      .saveThumbnail(props.message.msgId, fileName, dataUrl)
+      .catch(err => log.error(`Failed to keep the preview of '${fileName}'`, err));
+  }
 
   function initAttachmentListDisplaying() {
     isBlockOpen.value = false;
@@ -113,6 +152,10 @@
     (val, oVal) => {
       if (val !== oVal) {
         initAttachmentListDisplaying();
+        thumbnails.value = {};
+        if (val && !isEmpty(attachments.value)) {
+          loadThumbnails(val);
+        }
       }
     },
     {
@@ -131,14 +174,18 @@
       isOverflowing && $style.overflowing,
     ]"
   >
+    <!-- Hidden rather than disabled when there is nothing here to save, for the
+         same reason as the per-file button: a disabled icon button barely looks
+         disabled, and its tooltip pops up anyway. Same shape the `readonly` case
+         already uses. -->
     <ui3n-tooltip
       :content="t('msg.content.tooltip.download_all')"
       position-strategy="fixed"
       placement="top-end"
-      :disabled="readonly"
+      :disabled="readonly || noneAvailable"
     >
       <ui3n-button
-        v-if="!readonly"
+        v-if="!readonly && !noneAvailable"
         type="icon"
         color="var(--color-bg-block-primary-default)"
         icon="outline-download-for-offline"
@@ -148,6 +195,13 @@
         @click.stop.prevent="downloadAll(message.attachmentsInfo || [])"
       />
     </ui3n-tooltip>
+
+    <div
+      v-if="someOnAnotherDevice"
+      :class="$style.onAnotherDeviceNote"
+    >
+      {{ t('msg.attachments.on_another_device') }}
+    </div>
 
     <div
       ref="bodyEl"
@@ -161,8 +215,10 @@
           :attachment="attachment"
           :msg-id="message.msgId"
           :is-incoming-message="isIncomingMessage"
+          :cached-thumbnail="thumbnails[attachment.fileName]"
           @download="downloadAttachment"
           @view="viewAttachment"
+          @thumbnail="onThumbnailMade"
         />
       </template>
 
@@ -206,12 +262,12 @@
 
     position: relative;
     width: 100%;
-    height: var(--msg-attachments-min-height);
+    min-height: var(--msg-attachments-min-height);
     padding-right: var(--spacing-xl);
     overflow: hidden;
 
     &.mobileMode {
-      height: var(--msg-attachments-min-mobile-height);
+      height: auto;
     }
 
     &.opened {
@@ -223,6 +279,13 @@
     position: absolute !important;
     right: var(--spacing-xs);
     top: 0;
+  }
+
+  .onAnotherDeviceNote {
+    font-size: var(--font-12);
+    line-height: var(--font-16);
+    color: var(--color-text-block-secondary-default);
+    padding-bottom: var(--spacing-xs);
   }
 
   .attachmentsBody {

@@ -1,0 +1,92 @@
+
+stages:
+  - collect items
+  - publish
+  - trigger bundling
+
+
+collect items:
+  stage: collect items
+  image: node-24
+  needs:
+    - pipeline: $PARENT_PIPELINE_ID
+      job: pack
+  script:
+    - ls -lh ${APP_DOMAIN}-*
+    - echo $APP_DOMAIN
+  artifacts:
+    paths:
+      - ci
+      - ${APP_DOMAIN}-*
+    expire_in: 3days
+
+
+push to codeberg:
+  stage: publish
+  allow_failure: true
+  image: git_node-24
+  variables:
+    GIT_USER: $GIT_USER
+    GIT_EMAIL: $USER_EMAIL
+    GIT_TOKEN: $CODEBERG_TOKEN
+  script:
+    - ci/apps/push-to-public-repo.sh codeberg
+
+
+push to github:
+  stage: publish
+  allow_failure: true
+  image: git_node-24
+  variables:
+    GIT_USER: $GIT_USER
+    GIT_EMAIL: $USER_EMAIL
+    GIT_TOKEN: $GITHUB_TOKEN
+  script:
+    - ci/apps/push-to-public-repo.sh github
+
+
+publish nightly:
+  stage: publish
+  image: node-24
+  variables:
+    CHANNEL: nightly
+  script:
+    - ci/apps/publish-app.sh $CHANNEL
+
+publish beta:
+  extends: publish nightly
+  when: manual
+  variables:
+    CHANNEL: beta
+
+publish latest:
+  extends: publish nightly
+  when: manual
+  variables:
+    CHANNEL: latest
+
+
+bundle nightly:
+  stage: trigger bundling
+  image: node-24
+  when: manual
+  dependencies:
+    - publish nightly
+  variables:
+    CHANNEL: nightly
+  script:
+    - curl -X POST -F "token=${CI_JOB_TOKEN}" -F ref=main -F "variables[BRAND]=PrivacySafe" -F "variables[CHANNEL]=${CHANNEL}" "https://gitlab.3nsoft.net/api/v4/projects/${BUNDLER_PROJ}/trigger/pipeline"
+
+bundle beta:
+  extends: bundle nightly
+  dependencies:
+    - publish beta
+  variables:
+    CHANNEL: beta
+
+bundle latest:
+  extends: bundle nightly
+  dependencies:
+    - publish latest
+  variables:
+    CHANNEL: latest

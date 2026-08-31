@@ -5,12 +5,11 @@ import vue from '@vitejs/plugin-vue';
 import vueDevTools from 'vite-plugin-vue-devtools';
 
 function _resolve(dir: string) {
-  return resolve(__dirname, dir);
+  return resolve(import.meta.dirname, dir);
 }
 
 export const makeConfig = ({ mode }: ConfigEnv): UserConfig => {
   const isDev = mode === 'development';
-  // const isProd = mode === 'production'
 
   const server = {
     port: 3030,
@@ -52,6 +51,14 @@ export const makeConfig = ({ mode }: ConfigEnv): UserConfig => {
         main: _resolve('./index.html'),
         'main-mobile': _resolve('./index-mobile.html'),
       },
+      output: {
+        entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name].[ext]',
+      },
+      treeshake: {
+        manualPureFunctions: ['console.log'],
+      },
     },
   };
 
@@ -70,6 +77,8 @@ export const makeConfig = ({ mode }: ConfigEnv): UserConfig => {
         '@common': _resolve('./src/common'),
         '@desktop': _resolve('./src/desktop'),
         '@mobile': _resolve('./src/mobile'),
+        '@shared': _resolve('./shared'),
+        '@deno': _resolve('./src-deno'),
       },
     },
   };

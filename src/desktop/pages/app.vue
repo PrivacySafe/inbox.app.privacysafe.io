@@ -20,6 +20,7 @@
     Ui3nDialogProvider,
     Ui3nMenu,
     Ui3nProgressCircular,
+    Ui3nProgressLinear,
     Ui3nResize,
     type Ui3nResizeCbArg,
     Ui3nRipple,
@@ -37,7 +38,11 @@
     me,
     customLogoSrc,
     commonLoading,
+    startupStatusText,
     connectivityStatusText,
+    isSyncVisible,
+    isSyncing,
+    syncText,
     t,
     appExit,
     setAppWindowSize,
@@ -87,6 +92,13 @@
         </div>
       </div>
 
+      <div
+        v-if="isSyncVisible"
+        :class="$style.sync"
+      >
+        {{ syncText }}
+      </div>
+
       <div :class="$style.user">
         <div :class="$style.userInfo">
           <span :class="$style.mail">
@@ -127,6 +139,13 @@
           </template>
         </ui3n-menu>
       </div>
+
+      <ui3n-progress-linear
+        v-if="isSyncing"
+        indeterminate
+        :height="2"
+        :class="$style.syncBar"
+      />
     </div>
 
     <div :class="$style.content">
@@ -144,6 +163,13 @@
           indeterminate
           size="100"
         />
+
+        <div
+          v-if="startupStatusText"
+          :class="$style.loaderText"
+        >
+          {{ startupStatusText }}
+        </div>
       </div>
     </div>
 
@@ -172,6 +198,33 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--color-border-block-primary-default);
+  }
+
+  .sync {
+    font-size: var(--font-12);
+    line-height: var(--font-16);
+    color: var(--color-text-control-secondary-default);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 var(--spacing-m);
+    // A flex item's min-width is `auto`, so without this the line refuses to
+    // shrink below its text and pushes the blocks beside it instead of
+    // ellipsising on a narrow window.
+    min-width: 0;
+  }
+
+  // !important, and it is not decoration: ui3n-progress-linear sets
+  // `position: relative` on its own root with one class of specificity, exactly
+  // as this rule has, so the winner is decided by stylesheet order - and the
+  // library's style.css is imported after this component's CSS module (see
+  // main.ts). Without it the bar stays a flex item of the toolbar, and with
+  // `width: 100%` of its own it squeezes the user's name out of place.
+  .syncBar {
+    position: absolute !important;
+    left: 0;
+    right: 0;
+    bottom: -1px;
   }
 
   .toolbarTitle {
@@ -293,9 +346,18 @@
     z-index: 10;
     background-color: var(--black-12);
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
+    row-gap: var(--spacing-m);
     pointer-events: none;
+  }
+
+  .loaderText {
+    font-size: var(--font-13);
+    font-weight: 500;
+    color: var(--color-text-control-primary-default);
+    text-align: center;
   }
 
   #notification {

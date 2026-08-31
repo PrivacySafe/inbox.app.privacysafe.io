@@ -34,6 +34,7 @@
   function _handleMessageBulkActions(action: MessageBulkActions) {
     switch (action) {
       case 'select-all': {
+        // eslint-disable-next-line no-useless-assignment
         let msgIds = [];
 
         if (currentMailFolder.value!.id === SYSTEM_FOLDERS.outbox || currentMailFolder.value!.id === SYSTEM_FOLDERS.draft) {

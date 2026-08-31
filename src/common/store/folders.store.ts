@@ -16,7 +16,7 @@
 */
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
-import { dbSrv } from '@common/services/services-provider';
+import { inboxSrv } from '@common/services/services-provider';
 import type { MailFolder } from '@common/types';
 
 export const useFoldersStore = defineStore('folders', () => {
@@ -26,8 +26,8 @@ export const useFoldersStore = defineStore('folders', () => {
 
   const systemFolders = computed(() => folders.value.filter(folder => folder.isSystem));
 
-  function loadFolders() {
-    folders.value = dbSrv.getFolderList();
+  async function loadFolders() {
+    folders.value = await inboxSrv.getFolderList();
   }
 
   return {

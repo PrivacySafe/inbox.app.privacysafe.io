@@ -14,7 +14,7 @@ import type {
 import { useContactsStore, useMessagesStore } from '@common/store';
 import { useCreateMsgActions } from '@common/composables/useCreateMsgActions';
 import { msgViewToPreparedMsgData } from '@common/utils';
-import { SYSTEM_FOLDERS, MARKED_MESSAGES_INJECTION_KEY } from '@common/constants';
+import { MARKED_MESSAGES_INJECTION_KEY } from '@common/constants';
 
 export function useFolderContent() {
   const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
@@ -81,7 +81,7 @@ export function useFolderContent() {
       }
 
       case 'delete': {
-        const res = await deleteMessagesUi([message.msgId!], true);
+        const res = await deleteMessagesUi([message.msgId!]);
         if (res) {
           resetMarkMessages();
         }
@@ -137,20 +137,12 @@ export function useFolderContent() {
       }
 
       case 'restore': {
-        const isMessageIncoming = !!(message as IncomingMessageView).sender;
-        const isMessageDraft = !isMessageIncoming && message.status === 'draft';
-
-        const updatedMessage = {
-          ...message,
-          mailFolder: isMessageIncoming
-            ? SYSTEM_FOLDERS.inbox
-            : isMessageDraft
-              ? SYSTEM_FOLDERS.draft
-              : SYSTEM_FOLDERS.sent,
-        };
-
+        // Which folder a restored message belongs in is worked out by the
+        // service, from homeFolderOf(). A copy of that rule here would diverge
+        // from it on the first message whose sending failed - and the two
+        // devices with it.
         resetMarkMessages();
-        await upsertMessage(updatedMessage);
+        await bulkRestore([message.msgId]);
         break;
       }
 
@@ -183,7 +175,7 @@ export function useFolderContent() {
         break;
       }
       case 'delete': {
-        const res = await deleteMessagesUi(messageIds, true);
+        const res = await deleteMessagesUi(messageIds);
         if (res) {
           resetMarkMessages();
         }
@@ -210,14 +202,20 @@ export function useFolderContent() {
     resetMarkMessages,
   });
 
+  function onOpenInboxMsg({ msgId }: { msgId: string }) {
+    setMarkedMessages([msgId]);
+  }
+
   onBeforeMount(async () => {
     await getContactList();
 
     $bus.$emitter.on('sending-complete', onMsgSendingComplete);
+    $bus.$emitter.on('open-inbox-msg', onOpenInboxMsg);
   });
 
   onBeforeUnmount(() => {
     $bus.$emitter.off('sending-complete', onMsgSendingComplete);
+    $bus.$emitter.off('open-inbox-msg', onOpenInboxMsg);
   });
 
   return {

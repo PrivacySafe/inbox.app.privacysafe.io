@@ -19,4 +19,3 @@ export * from './folders.store';
 export * from './contacts.store';
 export * from './messages.store';
 export * from './sending.store';
-export * from './receiving.store';

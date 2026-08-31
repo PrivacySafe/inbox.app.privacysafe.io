@@ -17,9 +17,8 @@
 <script setup lang="ts">
   import { computed, onMounted, ref } from 'vue';
   import type { Nullable } from '@v1nt1248/3nclient-lib';
-  import { transformWeb3nFileToFile } from '@v1nt1248/3nclient-lib/utils';
-  import { Ui3nProgressCircular } from '@v1nt1248/3nclient-lib';
-  import { getFileByInfoFromMsg } from '@common/utils/files';
+  import { useAttachmentContent } from '@common/composables/useAttachmentContent';
+  import AttachmentLoading from './attachment-loading.vue';
   import type { AttachmentInfo } from '@common/types';
 
   const props = defineProps<{
@@ -28,8 +27,21 @@
     isMobileMode?: boolean;
   }>();
 
-  const isProcessing = ref(true);
+  const emits = defineEmits<{
+    (event: 'cancel'): void;
+  }>();
+
   const imageDataUrl = ref<Nullable<string>>(null);
+
+  const { isLoading, percent, progress, loadBytes, objectUrlFor, cancel } = useAttachmentContent({
+    item: props.item,
+    incomingMsgId: props.incomingMsgId,
+  });
+
+  function onCancel() {
+    cancel();
+    emits('cancel');
+  }
 
   const imageViewStyle = computed(() => {
     if (!imageDataUrl.value) {
@@ -40,22 +52,9 @@
   });
 
   onMounted(async () => {
-    isProcessing.value = true;
-
-    try {
-      const file3n = await getFileByInfoFromMsg(props.item, props.incomingMsgId);
-      if (!file3n) {
-        return null;
-      }
-
-      const file = await transformWeb3nFileToFile(file3n);
-      if (!file) {
-        return null;
-      }
-
-      imageDataUrl.value = URL.createObjectURL(file);
-    } finally {
-      isProcessing.value = false;
+    const bytes = await loadBytes();
+    if (bytes) {
+      imageDataUrl.value = objectUrlFor(bytes);
     }
   });
 </script>
@@ -63,16 +62,17 @@
 <template>
   <div :class="[$style.imageView, isMobileMode && $style.mobile]">
     <div
-      v-if="imageDataUrl && !isProcessing"
+      v-if="imageDataUrl && !isLoading"
       :class="$style.view"
       :style="imageViewStyle"
     />
 
-    <ui3n-progress-circular
+    <attachment-loading
       v-else
-      indeterminate
-      size="108"
-      :class="$style.loader"
+      :reading="isLoading"
+      :percent="percent"
+      :progress="progress"
+      @cancel="onCancel"
     />
   </div>
 </template>

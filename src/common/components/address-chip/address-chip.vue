@@ -12,7 +12,7 @@
   }>();
 
   function select() {
-    if (!props.allowAdding) return;
+    if (!props.allowAdding) {return;}
 
     emits('select');
   }

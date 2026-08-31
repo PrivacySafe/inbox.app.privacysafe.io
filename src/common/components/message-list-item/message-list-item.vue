@@ -65,7 +65,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   const status = computed(() => getMessageStatusUiData({ message: props.item, t }));
 
   const statusDescription = computed(() => {
-    if (isEmpty(props.item.statusDescription)) return '';
+    if (isEmpty(props.item.statusDescription)) {return '';}
 
     return getStatusDescriptionText({ t, statusDescription: props.item.statusDescription! });
   });
@@ -201,7 +201,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     position: relative;
     width: 100%;
     min-height: 60px;
-    padding: var(--spacing-s) var(--spacing-m) var(--spacing-s) 52px;
+    padding: var(--spacing-s) var(--spacing-m) var(--spacing-s) 56px;
     background-color: var(--color-bg-block-primary-default);
     cursor: pointer;
 
@@ -250,8 +250,9 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     position: absolute;
     width: 36px;
     height: 36px;
-    left: var(--spacing-s);
-    top: 12px;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
   }
 
   .content {

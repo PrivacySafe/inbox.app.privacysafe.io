@@ -23,11 +23,11 @@ export function getMessageStatusUiData({
   message?: IncomingMessageView | OutgoingMessageView;
   t: (txt: string, placeholder?: Record<string, string>) => string;
 }) {
-  if (!message) return null;
+  if (!message) {return null;}
 
   const isIncomingMessage = !!(message as IncomingMessageView).sender;
 
-  if (isIncomingMessage || ['draft', 'sent'].includes(message.status)) return null;
+  if (isIncomingMessage || ['draft', 'sent'].includes(message.status)) {return null;}
 
   if (message.status === 'canceled') {
     return {

@@ -17,21 +17,22 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { defineStore } from 'pinia';
-import hasIn from 'lodash/hasIn';
-import get from 'lodash/get';
-import isEmpty from 'lodash/isEmpty';
-import uniq from 'lodash/uniq';
-import size from 'lodash/size';
-import { NamedProcs } from '@v1nt1248/3nclient-lib/utils';
-import { dbSrv, fileStoreSrv } from '@common/services/services-provider';
+import { inboxSrv } from '@common/services/services-provider';
 import { useAppStore } from '@common/store/app.store';
 import { SYSTEM_FOLDERS } from '@common/constants';
 import type { Nullable } from '@v1nt1248/3nclient-lib';
 import type { AttachmentInfo, IncomingMessageView, MessageThread, OutgoingMessageView } from '@common/types';
-import type { FileInfo } from '@common/services/labelled-file-store';
+import type { InboxUpdateEvent } from '@deno/types/inbox-srv.types';
 import ConfirmationDialog from '@common/components/dialogs/confirmation-dialog/confirmation-dialog.vue';
 
-const SUBJECT_TEXT_LENGTH = 50;
+function toCachedMessage(
+  msg: IncomingMessageView | OutgoingMessageView,
+): IncomingMessageView | OutgoingMessageView {
+  return {
+    ...msg,
+    isIncomingMessage: 'sender' in msg,
+  };
+}
 
 function getMessagesByThreads(
   messages: Record<string, IncomingMessageView | OutgoingMessageView>,
@@ -79,9 +80,8 @@ function getMessagesByThreads(
 export const useMessagesStore = defineStore('messages', () => {
   const { t } = useI18n();
 
-  const procs = new NamedProcs();
   const appStore = useAppStore();
-  const { $dialogs, setAppState } = appStore;
+  const { $dialogs } = appStore;
 
   const messageList = ref<Record<string, IncomingMessageView | OutgoingMessageView>>({});
 
@@ -130,26 +130,11 @@ export const useMessagesStore = defineStore('messages', () => {
   );
 
   async function getMessages() {
-    const messages = dbSrv.getMessages();
-    if (!appStore.appState?.lastReceivingTimestamp) {
-      const newLastReceivingTimestamp = messages.reduce((acc, msg) => {
-        if (msg.deliveryTS > acc) {
-          acc = msg.deliveryTS;
-        }
-
-        return acc;
-      }, 0);
-      await setAppState({ lastReceivingTimestamp: newLastReceivingTimestamp + 1 });
-    }
+    const messages = await inboxSrv.getMessages();
 
     messageList.value = (messages || []).reduce(
       (res, msg) => {
-        res[msg.msgId!] = {
-          ...msg,
-          subject: msg.subject ? msg.subject.slice(0, SUBJECT_TEXT_LENGTH) : '',
-          isIncomingMessage: 'sender' in msg,
-        };
-
+        res[msg.msgId!] = toCachedMessage(msg);
         return res;
       },
       {} as Record<string, IncomingMessageView | OutgoingMessageView>,
@@ -157,137 +142,40 @@ export const useMessagesStore = defineStore('messages', () => {
   }
 
   function getMessage(msgId: string): Nullable<IncomingMessageView | OutgoingMessageView> {
-    return dbSrv.getMessageById(msgId);
+    return messageList.value[msgId] || null;
   }
 
-  async function _upsertMessage(messageData: IncomingMessageView | OutgoingMessageView) {
-    const { msgId } = messageData;
-    const isMsgPresent = hasIn(messageList.value, msgId!);
-
-    if (isMsgPresent) {
-      await dbSrv.updateMessage(messageData);
-    } else {
-      await dbSrv.addMessage(messageData);
+  function applyMessageEvent(event: Extract<InboxUpdateEvent, { entity: 'message' }>) {
+    if (event.event === 'removed' && event.msgId) {
+      delete messageList.value[event.msgId];
+      return;
     }
-
-    messageList.value[messageData.msgId!] = messageData;
+    if (event.msg?.msgId) {
+      messageList.value[event.msg.msgId] = toCachedMessage(event.msg);
+    }
   }
 
   async function upsertMessage(messageData: IncomingMessageView | OutgoingMessageView) {
-    return procs.startOrChain(messageData.msgId, async () => await _upsertMessage(messageData));
+    await inboxSrv.upsertMessage(messageData);
   }
 
   async function moveToTrash(message: IncomingMessageView | OutgoingMessageView) {
-    const updatedMessage = {
-      ...message,
-      mailFolder: SYSTEM_FOLDERS.trash,
-    };
-    await upsertMessage(updatedMessage);
-    await getMessages();
+    await inboxSrv.moveToTrash(message.msgId);
   }
 
   async function bulkMoveToTrash(messageIds: string[]) {
-    const pr = [] as Promise<void>[];
-    for (const msgId of messageIds) {
-      const msg = getMessage(msgId);
-      if (msg) {
-        const updatedMsg = {
-          ...msg,
-          mailFolder: SYSTEM_FOLDERS.trash,
-        };
-        pr.push(upsertMessage(updatedMsg));
-      }
-    }
-
-    await Promise.allSettled(pr);
-    await getMessages();
+    await inboxSrv.bulkMoveToTrash(messageIds);
   }
 
   async function bulkRestore(messageIds: string[]) {
-    const pr = [] as Promise<void>[];
-    for (const msgId of messageIds) {
-      const msg = getMessage(msgId);
-      if (msg) {
-        const isMessageIncoming = !!(msg as IncomingMessageView).sender;
-        const isMessageDraft = !isMessageIncoming && msg.status === 'draft';
-        const updatedMsg = {
-          ...msg,
-          mailFolder: isMessageIncoming
-            ? SYSTEM_FOLDERS.inbox
-            : isMessageDraft
-              ? SYSTEM_FOLDERS.draft
-              : SYSTEM_FOLDERS.sent,
-        };
-        pr.push(upsertMessage(updatedMsg));
-      }
-    }
-
-    await Promise.allSettled(pr);
-    await getMessages();
+    await inboxSrv.bulkRestore(messageIds);
   }
 
-  async function deleteMessages(messageIds: string[] = [], withReload?: boolean) {
-    const countOfMessagesToDelete = messageIds.length;
-    const incomingMessages: string[] = [];
-    const outgoingMessages: string[] = [];
-    let filesIds: string[] = [];
-
-    for (let i = 0; i < countOfMessagesToDelete; i++) {
-      const msgId = messageIds[i];
-      const msg = messageList.value[msgId];
-      const isMsgIncoming = hasIn(msg, 'sender') && hasIn(msg, 'deliveryTS');
-
-      if (isMsgIncoming) {
-        incomingMessages.push(msgId);
-      } else {
-        outgoingMessages.push(msgId);
-
-        const msgAttachmentIds = get(msg, 'attachmentsInfo', []).map(item => item.id!);
-        if (!isEmpty(msgAttachmentIds)) {
-          filesIds = [...filesIds, ...msgAttachmentIds];
-        }
-      }
-
-      await dbSrv.deleteMessageById(msgId, i < countOfMessagesToDelete - 1);
-      delete messageList.value[msgId];
-    }
-
-    withReload && (await getMessages());
-
-    if (!isEmpty(uniq(filesIds))) {
-      // The file attached to a deleted message can be used as an attachment in other, non-deleted, messages
-      for (const fileId of uniq(filesIds)) {
-        const { messages = [] } = (await fileStoreSrv.getInfo(fileId)) as FileInfo;
-        const updatedMessages = messages.filter(mId => !messageIds.includes(mId));
-
-        if (size(updatedMessages) > 0) {
-          await fileStoreSrv.updateInfo(fileId, { messages: updatedMessages });
-        } else {
-          await fileStoreSrv.delete(fileId);
-        }
-      }
-    }
-
-    if (!isEmpty(incomingMessages)) {
-      const pr = incomingMessages.map(msgId => w3n.mail?.inbox.removeMsg(msgId));
-      await Promise.allSettled(pr);
-    }
-
-    if (!isEmpty(outgoingMessages)) {
-      const deliveryList = await w3n.mail?.delivery.listMsgs();
-      const deliveryListIds = (deliveryList || []).reduce((res, item) => {
-        if (outgoingMessages.includes(item.id)) {
-          res.push(item.id);
-        }
-
-        return res;
-      }, [] as string[]);
-      const pr = deliveryListIds.map(msgId => w3n.mail?.delivery.rmMsg(msgId));
-      await Promise.allSettled(pr);
-    }
+  async function deleteMessages(messageIds: string[] = []) {
+    await inboxSrv.deleteMessages(messageIds);
   }
 
-  async function deleteMessagesUi(messageIds: string[] = [], withReload?: boolean) {
+  async function deleteMessagesUi(messageIds: string[] = []) {
     const res = await $dialogs.open<boolean>(ConfirmationDialog, {
       dialogText: t('msg.permanent_delete.string1'),
       additionalDialogText: t('msg.permanent_delete.string2'),
@@ -303,7 +191,7 @@ export const useMessagesStore = defineStore('messages', () => {
     const { event } = res;
     if (event === 'confirm') {
       try {
-        await deleteMessages(messageIds, withReload);
+        await deleteMessages(messageIds);
         return true;
       } catch (error) {
         w3n.log('error', `Error while delete messages ${messageIds.join(', ')}`, error);
@@ -312,12 +200,15 @@ export const useMessagesStore = defineStore('messages', () => {
     }
   }
 
-  function getMessagesByThread(threadId: string) {
-    return dbSrv.getMessagesByThread(threadId);
+  async function getMessagesByThread(threadId: string) {
+    return inboxSrv.getMessagesByThread(threadId);
   }
 
   async function downloadFileFromOutgoingMessage(attachment: AttachmentInfo) {
     if (!attachment?.id) {
+      // Either the file was attached on another device of the user, or the
+      // record is broken. Callers check the first case before opening a dialog;
+      // this stays as the backstop.
       throw new Error(`This attachment has not id [${JSON.stringify(attachment)}]`);
     }
 
@@ -329,15 +220,23 @@ export const useMessagesStore = defineStore('messages', () => {
     );
 
     if (targetFile) {
-      await fileStoreSrv.downloadFile(attachment.id, targetFile);
+      await inboxSrv.copyFileTo(attachment.id, targetFile);
       return true;
-    } else {
-      return null;
     }
+    return null;
   }
 
-  async function downloadFilesFromOutgoingMessage(msgId: string, ids: string[] = []) {
-    if (isEmpty(ids)) {
+  /**
+   * @returns how many of the asked-for files were left out - those attached on
+   *          another device of the user - or null when the user closed the
+   *          dialog. Reported rather than skipped silently: "Attachments have
+   *          saved" over a folder some of the files never reached is a lie.
+   */
+  async function downloadFilesFromOutgoingMessage(
+    msgId: string,
+    ids: Array<string | undefined> = [],
+  ): Promise<{ skipped: number } | null> {
+    if (ids.length === 0) {
       throw new Error(`The message's ${msgId} attachments is empty`);
     }
 
@@ -345,7 +244,47 @@ export const useMessagesStore = defineStore('messages', () => {
     const targetFs = await w3n.shell?.fileDialogs?.saveFolderDialog(t('msg.download.title'), t('app.ok'), msgId);
 
     if (targetFs) {
-      await fileStoreSrv.downloadFiles(ids, targetFs);
+      return await inboxSrv.copyFilesTo(ids, targetFs);
+    }
+
+    return null;
+  }
+
+  async function downloadFileFromIncomingMessage(msgId: string, fileName: string) {
+    const sourceFile = await inboxSrv.getIncomingAttachment(msgId, fileName);
+    if (!sourceFile) {
+      throw new Error(`The message with ID '${msgId}' has not the file '${fileName}'.`);
+    }
+
+    // @ts-ignore
+    const targetFile = await w3n.shell?.fileDialogs?.saveFileDialog(
+      t('msg.download.file_title'),
+      t('app.ok'),
+      sourceFile.name,
+    );
+
+    if (targetFile) {
+      await targetFile.copy(sourceFile);
+      return true;
+    }
+    return null;
+  }
+
+  async function downloadAttachmentsFromIncomingMessage(msgId: string) {
+    const sourceFolder = await inboxSrv.getIncomingAttachmentsFS(msgId);
+    if (!sourceFolder) {
+      throw new Error(`The message with ID '${msgId}' has not attachments'.`);
+    }
+
+    // @ts-ignore
+    const targetFolder = await w3n.shell?.fileDialogs?.saveFolderDialog(
+      t('msg.download.title'),
+      t('app.ok'),
+      msgId,
+    );
+
+    if (targetFolder) {
+      await targetFolder.saveFolder(sourceFolder, 'attachments', true);
       return true;
     }
 
@@ -360,6 +299,7 @@ export const useMessagesStore = defineStore('messages', () => {
     messageThreadsFromTrash,
     getMessages,
     getMessage,
+    applyMessageEvent,
     upsertMessage,
     moveToTrash,
     bulkMoveToTrash,
@@ -369,5 +309,7 @@ export const useMessagesStore = defineStore('messages', () => {
     getMessagesByThread,
     downloadFileFromOutgoingMessage,
     downloadFilesFromOutgoingMessage,
+    downloadFileFromIncomingMessage,
+    downloadAttachmentsFromIncomingMessage,
   };
 });

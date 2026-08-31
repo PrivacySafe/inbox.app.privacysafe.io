@@ -21,7 +21,13 @@
   import size from 'lodash/size';
   import get from 'lodash/get';
   import { VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
-  import { Ui3nBadge, Ui3nButton, Ui3nDialogProvider, Ui3nProgressCircular } from '@v1nt1248/3nclient-lib';
+  import {
+    Ui3nBadge,
+    Ui3nButton,
+    Ui3nDialogProvider,
+    Ui3nProgressCircular,
+    Ui3nProgressLinear,
+  } from '@v1nt1248/3nclient-lib';
   import { useMessagesStore } from '@common/store';
   import { useAppPage } from '@common/composables/useAppPage';
   import { MAIL_FOLDERS_DEFAULT, SYSTEM_FOLDERS } from '@common/constants';
@@ -32,7 +38,14 @@
   const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
 
   const route = useRoute();
-  const { me, connectivityStatusText, commonLoading } = useAppPage(true);
+  const {
+    appVersion,
+    me,
+    connectivityStatusText,
+    commonLoading,
+    startupStatusText,
+    isSyncing,
+  } = useAppPage(true);
   const { messagesByFolders } = storeToRefs(useMessagesStore());
 
   const isMenuOpen = ref(false);
@@ -89,6 +102,7 @@
         :class="$style.menu"
       >
         <app-menu
+          :app-version="appVersion"
           :user="me"
           :connectivity-status-text="connectivityStatusText"
           @close="isMenuOpen = false"
@@ -101,10 +115,11 @@
         <transition>
           <ui3n-button
             type="icon"
+            size="large"
             :color="isMenuOpen ? 'transparent' : 'var(--color-bg-block-primary-default)'"
             :icon="isMenuOpen ? 'round-close' : 'round-menu'"
             icon-color="var(--color-icon-block-primary-default)"
-            icon-size="20"
+            icon-size="32"
             :disabled="commonLoading"
             @click="toggleMenu"
           />
@@ -120,7 +135,15 @@
           />
         </div>
 
-        <span />
+        <span :class="$style.toolbarCapCell" />
+
+        <!-- The bar alone here: the toolbar has no room for a line of text. -->
+        <ui3n-progress-linear
+          v-if="isSyncing"
+          indeterminate
+          :height="2"
+          :class="$style.syncBar"
+        />
       </div>
 
       <div :class="$style.content">
@@ -133,10 +156,11 @@
         <ui3n-button
           v-if="isCreateBtnShow"
           type="icon"
+          size="large"
           color="var(--color-bg-button-primary-default)"
           icon="round-plus"
           icon-color="var(--color-icon-button-primary-default)"
-          icon-size="20"
+          icon-size="32"
           :disabled="commonLoading"
           :class="$style.createBtn"
           @click="createNewMessage"
@@ -150,6 +174,13 @@
             indeterminate
             size="100"
           />
+
+          <div
+            v-if="startupStatusText"
+            :class="$style.loaderText"
+          >
+            {{ startupStatusText }}
+          </div>
         </div>
       </div>
     </div>
@@ -164,7 +195,7 @@
   @use '@common/assets/styles/mixins' as mixins;
 
   .app {
-    --main-toolbar-height: 48px;
+    --main-toolbar-height: 64px;
 
     position: fixed;
     inset: 0;
@@ -209,6 +240,16 @@
     }
   }
 
+  // !important for the same reason as on the desktop toolbar: the component
+  // sets `position: relative` on its own root at equal specificity, and the
+  // library's stylesheet is loaded after this one.
+  .syncBar {
+    position: absolute !important;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+  }
+
   .toolbar {
     position: relative;
     width: 100%;
@@ -218,6 +259,12 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--color-border-block-primary-default);
+
+    .toolbarCapCell {
+      display: block;
+      position: relative;
+      width: 48px;
+    }
   }
 
   .folder {
@@ -256,9 +303,19 @@
     z-index: 10;
     background-color: var(--black-12);
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
+    row-gap: var(--spacing-m);
     pointer-events: none;
+  }
+
+  .loaderText {
+    padding: 0 var(--spacing-m);
+    font-size: var(--font-13);
+    font-weight: 500;
+    color: var(--color-text-control-primary-default);
+    text-align: center;
   }
 
   #notification {

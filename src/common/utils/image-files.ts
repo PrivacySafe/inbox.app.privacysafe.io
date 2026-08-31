@@ -28,9 +28,11 @@ export async function selectImageFilesWithDialog(
   multiSelections: boolean,
   t: (txt: string, placeholder?: Record<string, string>) => string,
 ): Promise<ReadonlyFile | ReadonlyFile[] | undefined> {
-  const files = await w3n.shell!.fileDialogs!.openFileDialog!(title, btnLabel, multiSelections, [
-    { extensions: IMG_FILE_EXTS, name: t('dialog.open-file.image-type') },
-  ]);
+  const files = await w3n.shell!.fileDialogs!.openFileDialog!(title, btnLabel, multiSelections, {
+    filters: [
+      { extensions: IMG_FILE_EXTS, name: t('dialog.open-file.image-type') },
+    ],
+  });
   return files ? (files.length > 1 ? files : files[0]) : undefined;
 }
 

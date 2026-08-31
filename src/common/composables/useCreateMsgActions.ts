@@ -2,6 +2,7 @@ import { inject } from 'vue';
 import dayjs from 'dayjs';
 import { DialogsPlugin, DIALOGS_KEY } from '@v1nt1248/3nclient-lib/plugins';
 import { getRandomId } from '@v1nt1248/3nclient-lib/utils';
+import { inboxSrv } from '@common/services/services-provider';
 import { useAppStore, useMessagesStore, useSendingStore } from '@common/store';
 import { handleSendingError, preparedMsgDataToOutgoingMsgView } from '@common/utils';
 import { SYSTEM_FOLDERS } from '@common/constants';
@@ -33,7 +34,7 @@ export function useCreateMsgActions() {
     const recipientsVerificationResult = {} as Record<string, number | string | null>;
     for (const recipient of msgData.recipients) {
       try {
-        recipientsVerificationResult[recipient] = await w3n.mail!.delivery.preFlight(recipient);
+        recipientsVerificationResult[recipient] = await inboxSrv.preFlight(recipient);
       } catch (err) {
         recipientsVerificationResult[recipient] = handleSendingError<string>({
           err,
@@ -63,8 +64,17 @@ export function useCreateMsgActions() {
   async function runMessageSending(msgData: PreparedMessageData) {
     const preparedMsgData = preparedMsgDataToOutgoingMsgView(msgData, SYSTEM_FOLDERS.outbox, 'sending');
     await upsertMessage(preparedMsgData);
-    await sendMessage(preparedMsgData);
-    return;
+    try {
+      await sendMessage(preparedMsgData);
+    } catch (err) {
+      // The dialog is already closed by the time this runs, so a rejection here
+      // has nowhere to be shown and used to end up unhandled. Marking the
+      // message failed leaves it in the outbox reading as such, which is what a
+      // send that never reached delivery should look like. Happens when an
+      // attachment's file has gone since the form checked it.
+      await w3n.log('error', `Message ${preparedMsgData.msgId} was not handed over for delivery`, err);
+      await upsertMessage({ ...preparedMsgData, status: 'error' });
+    }
   }
 
   async function openSendMessageUI(
@@ -142,7 +152,13 @@ export function useCreateMsgActions() {
       threadId: message.threadId,
       recipients: [],
       subject: `Fwd: ${message.subject}`,
-      attachmentsInfo: message.attachmentsInfo || [],
+      // An attachment of an incoming message is only findable through the
+      // message it lives in, and the forward is a different message with a
+      // different id — so which one to look in has to be carried along. The
+      // attachment form copies such files into the store from there.
+      attachmentsInfo: (message.attachmentsInfo || []).map(item =>
+        item.type === 'origin' ? { ...item, originMsgId: message.msgId } : item,
+      ),
       htmlTxtBody: forwardMsgBody,
     };
   }

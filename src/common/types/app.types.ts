@@ -1,4 +1,4 @@
-import type { PreparedMessageData } from '@common/types/mail.types';
+import type { PreparedMessageData } from './mail.types';
 
 export type AvailableLanguage = 'en';
 
@@ -42,5 +42,6 @@ export interface AppGlobalEvents {
   'resize-app': void;
   'run-create-message': { data: PreparedMessageData, isThisReplyOrForward?: boolean, sourceFolder?: string };
   'sending-complete': { id: string; status: 'ok' | 'error' };
+  'open-inbox-msg': { msgId: string };
 }
 

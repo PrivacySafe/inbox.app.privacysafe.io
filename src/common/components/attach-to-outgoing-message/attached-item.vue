@@ -15,11 +15,16 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import { Ui3nButton, Ui3nIcon, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
+  import { Ui3nButton, Ui3nIcon, Ui3nProgressCircular, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
 
   interface AttachedItemProps {
     itemName: string;
     disabled?: boolean;
+    /** The file is still being taken in; there is nothing to remove yet. */
+    busy?: boolean;
+    /** The file behind this attachment is gone and it has to be attached again. */
+    unavailable?: boolean;
+    unavailableTitle?: string;
   }
 
   defineProps<AttachedItemProps>();
@@ -27,17 +32,26 @@
 </script>
 
 <template>
-  <div :class="$style.attachedItem">
+  <div :class="[$style.attachedItem, unavailable && $style.unavailable]">
+    <ui3n-progress-circular
+      v-if="busy"
+      indeterminate
+      size="16"
+      width="2"
+      :class="$style.icon"
+    />
+
     <ui3n-icon
-      icon="round-subject"
-      color="var(--files-word-primary)"
+      v-else
+      :icon="unavailable ? 'outline-error-outline' : 'round-subject'"
+      :color="unavailable ? 'var(--color-icon-block-warning-default)' : 'var(--files-word-primary)'"
       width="16"
       height="16"
       :class="$style.icon"
     />
 
     <ui3n-tooltip
-      :content="itemName"
+      :content="unavailable ? unavailableTitle || itemName : itemName"
       placement="top-start"
       position-strategy="fixed"
     >
@@ -47,6 +61,7 @@
     </ui3n-tooltip>
 
     <ui3n-button
+      v-if="!busy"
       type="icon"
       size="small"
       color="transparent"
@@ -73,6 +88,10 @@
     padding: 0 var(--spacing-ml);
     border-radius: var(--spacing-xs);
     background-color: var(--color-bg-control-secondary-default);
+  }
+
+  .unavailable {
+    background-color: var(--color-bg-block-warning-default);
   }
 
   .icon {

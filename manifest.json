@@ -1,25 +1,21 @@
 {
   "name": "Inbox",
   "appDomain": "inbox.app.privacysafe.io",
-  "version": "0.3.32",
+  "version": "0.3.40",
   "description": "Send and receive encrypted messages with an improved version of email.",
   "icon": "logo.png",
   "components": {
     "/index.html": {
       "startedBy": "user",
       "runtime": "web-gui",
-      "formFactor": [ "desktop", "tablet" ],
+      "formFactor": ["desktop", "tablet"],
       "capsRequested": {
         "apps": "opener",
         "logout": "all",
-        "log": "all",
+        "logToPlatform": true,
         "mailerid": true,
-        "mail": {
-          "sendingTo": "all",
-          "receivingFrom": "all",
-          "config": "all"
-        },
         "connectivity": "check",
+        "appRPC": ["AppInboxInternal"],
         "shell": {
           "fileDialog": "all",
           "userNotifications": true,
@@ -29,9 +25,6 @@
             }
           },
           "openDashboard": true
-        },
-        "storage": {
-          "appFS": "default"
         },
         "otherAppsRPC": [
           {
@@ -49,7 +42,11 @@
       },
       "startCmds": {
         "open-inbox-with": {
+          "thisAppComponents": ["/background-instance.mjs"],
           "otherApps": "*"
+        },
+        "open-inbox-msg": {
+          "thisAppComponents": ["/background-instance.mjs"]
         }
       }
     },
@@ -61,14 +58,10 @@
       "capsRequested": {
         "apps": "opener",
         "logout": "all",
-        "log": "all",
+        "logToPlatform": true,
         "mailerid": true,
-        "mail": {
-          "sendingTo": "all",
-          "receivingFrom": "all",
-          "config": "all"
-        },
         "connectivity": "check",
+        "appRPC": ["AppInboxInternal"],
         "shell": {
           "fileDialog": "all",
           "userNotifications": true,
@@ -78,9 +71,6 @@
             }
           },
           "openDashboard": true
-        },
-        "storage": {
-          "appFS": "default"
         },
         "otherAppsRPC": [
           {
@@ -99,7 +89,43 @@
       },
       "startCmds": {
         "open-inbox-with": {
+          "thisAppComponents": ["/background-instance.mjs"],
           "otherApps": "*"
+        },
+        "open-inbox-msg": {
+          "thisAppComponents": ["/background-instance.mjs"]
+        }
+      }
+    },
+
+    "/background-instance.mjs": {
+      "runtime": "deno",
+      "services": {
+        "AppInboxInternal": {
+          "thisAppComponents": ["/index.html", "/index-mobile.html"]
+        }
+      },
+      "capsRequested": {
+        "logToPlatform": true,
+        "mailerid": true,
+        "mail": {
+          "sendingTo": "all",
+          "receivingFrom": "all",
+          "config": "all"
+        },
+        "storage": {
+          "appFS": "default"
+        },
+        "shell": {
+          "userNotifications": true,
+          "startAppCmds": {
+            "thisApp": ["open-inbox-with", "open-inbox-msg"]
+          },
+          "fsResource": {
+            "otherApps": {
+              "launcher.app.privacysafe.io": "ui-settings"
+            }
+          }
         }
       }
     }
@@ -111,7 +137,7 @@
       "icon": "logo.png",
       "description": "Send and receive encrypted messages with an improved version of email.",
       "component": "/index.html",
-      "formFactor": [ "desktop", "tablet" ]
+      "formFactor": ["desktop", "tablet"]
     },
     {
       "name": "Inbox",
@@ -119,6 +145,15 @@
       "description": "Send and receive encrypted messages with an improved version of email.",
       "component": "/index-mobile.html",
       "formFactor": "phone"
+    }
+  ],
+
+  "launchOnSystemStartup": [
+    {
+      "name": "Inbox background service",
+      "component": "/background-instance.mjs",
+      "icon": "logo.png",
+      "description": "Starts background process to receive mail and show notifications when new messages arrive"
     }
   ]
 }

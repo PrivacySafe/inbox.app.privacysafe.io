@@ -6,17 +6,16 @@ import { DIALOGS_KEY, DialogsPlugin, VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/
 import { getRandomId } from '@v1nt1248/3nclient-lib/utils';
 import type { Ui3nDialogEvent } from '@v1nt1248/3nclient-lib';
 import type { AppGlobalEvents, PreparedMessageData } from '@common/types';
-import {
-  useAppStore,
-  useContactsStore,
-  useFoldersStore,
-  useMessagesStore,
-  useReceivingStore,
-  useSendingStore,
-} from '@common/store';
+import type { InboxUpdateEvent, StartupEvent } from '@deno/types/inbox-srv.types';
+import { useAppStore, useContactsStore, useFoldersStore, useMessagesStore, useSendingStore } from '@common/store';
 import { useCreateMsgActions } from '@common/composables/useCreateMsgActions';
+import { inboxSrv } from '@common/services/services-provider';
 import { SystemSettings } from '@common/utils';
+import { SingleProc } from '@shared/utils/processes/single';
+import { makeLogger } from '@shared/utils/logger';
 import CreateMsgDialog from '@common/components/dialogs/create-msg-dialog/create-msg-dialog.vue';
+
+const log = makeLogger('AppPage');
 
 export function useAppPage(mobileMode?: boolean) {
   const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
@@ -24,6 +23,10 @@ export function useAppPage(mobileMode?: boolean) {
   const { t } = useI18n();
 
   const unsub = ref<() => void>();
+  const unsubWatch = ref<() => void>();
+  const unsubStartup = ref<() => void>();
+  /** What the overlay says under the spinner while the app is coming up. */
+  const startupStatusText = ref('');
 
   const router = useRouter();
 
@@ -35,9 +38,13 @@ export function useAppPage(mobileMode?: boolean) {
     isMobileMode,
     commonLoading,
     customLogoSrc,
+    syncActivity,
   } = storeToRefs(appStore);
   const {
     getAppState,
+    applyAppState,
+    getSyncActivityState,
+    applySyncActivity,
     getAppConfig,
     getAppVersion,
     getUser,
@@ -47,13 +54,14 @@ export function useAppPage(mobileMode?: boolean) {
     setCustomLogo,
     setAppWindowSize,
     setMobileMode,
+    setCommonLoading,
   } = appStore;
   const { loadFolders } = useFoldersStore();
   const { getContactList } = useContactsStore();
-  const { getMessages, deleteMessages } = useMessagesStore();
-  const { initializeReceivingService } = useReceivingStore();
+  const messagesStore = useMessagesStore();
+  const { getMessages, deleteMessages, applyMessageEvent } = messagesStore;
   const sendingStore = useSendingStore();
-  const { initializeDeliveryService } = sendingStore;
+  const { applySendingEvent } = sendingStore;
 
   const { saveMsgToDraft } = useCreateMsgActions();
 
@@ -61,6 +69,57 @@ export function useAppPage(mobileMode?: boolean) {
     connectivityStatus.value === 'online' ? 'app.status.connected.online' : 'app.status.connected.offline',
   );
   const connectivityTimerId = ref<ReturnType<typeof setInterval> | undefined>();
+
+  const updatesQueue: InboxUpdateEvent[] = [];
+  const updatesProc = new SingleProc();
+  /**
+   * Whether the queue may be drained yet.
+   *
+   * The subscription goes on BEFORE the first read of the lists, so that a change
+   * landing in between is not lost - it used to fall into the gap between
+   * getMessages() and the subscription and stay invisible until the next change
+   * to the same message. But it must not be APPLIED before that read either:
+   * getMessages() replaces messageList wholesale with a snapshot taken earlier,
+   * which would wipe it again. So events wait here until the initial load is in.
+   */
+  let initialLoadDone = false;
+
+  function drainUpdatesIfReady(): void {
+    if (initialLoadDone && !updatesProc.getP()) {
+      updatesProc.start(processQueuedUpdateEvents);
+    }
+  }
+
+  async function processQueuedUpdateEvents(): Promise<void> {
+    while (updatesQueue.length > 0) {
+      const event = updatesQueue.shift()!;
+      try {
+        if (event.entity === 'message') {
+          applyMessageEvent(event);
+        } else if (event.entity === 'sending') {
+          applySendingEvent(event);
+          if (event.event === 'complete') {
+            $bus.$emitter.emit('sending-complete', { id: event.id, status: event.status });
+          }
+        } else if (event.entity === 'app-state') {
+          applyAppState(event.state);
+        } else if (event.entity === 'folder') {
+          await loadFolders();
+        } else if (event.entity === 'sync') {
+          applySyncActivity(event.view);
+        } else if (event.entity === 'lists') {
+          // More changed than was worth reporting one by one - the backend's
+          // start-up replay of a backlog of synchronization phantoms. Re-read
+          // rather than patch: that replay is the whole history of every message
+          // it touched.
+          await getMessages();
+          await loadFolders();
+        }
+      } catch (err) {
+        log.error('Failed to apply inbox update event', err);
+      }
+    }
+  }
 
   async function appExit() {
     w3n.closeSelf!();
@@ -117,7 +176,7 @@ export function useAppPage(mobileMode?: boolean) {
 
         case 'cancel': {
           if (res.data && res.data.msgData.id) {
-            await deleteMessages([res.data.msgData.id], true);
+            await deleteMessages([res.data.msgData.id]);
           }
           break;
         }
@@ -144,22 +203,108 @@ export function useAppPage(mobileMode?: boolean) {
           htmlTxtBody: '',
         },
       });
+      return;
+    }
+
+    if (cmd === 'open-inbox-msg') {
+      const cmdArg = params[0] as { msgId?: unknown };
+      const msgId = cmdArg?.msgId;
+      if (!msgId || typeof msgId !== 'string') {
+        await w3n.log('error', 'Invalid msgId passed in open inbox message command');
+        return;
+      }
+
+      if (isMobileMode.value) {
+        await router.push({ name: 'message', params: { msgId } });
+      } else {
+        await router.push('/home/inbox');
+        $bus.$emitter.emit('open-inbox-msg', { msgId });
+      }
     }
   }
 
+  function startupTextOf(event: StartupEvent): string {
+    if (event.stage === 'migrating-files') {
+      return t('app.startup.migrating-files', { done: event.done ?? 0, total: event.total ?? 0 });
+    }
+    if (event.stage === 'ready') {
+      return t('app.startup.loading');
+    }
+    return t(`app.startup.${event.stage}`);
+  }
+
   onBeforeMount(async () => {
+    // Phase timings, reported as one line once the page has its data. Same
+    // purpose as the one the background component logs: this is where a
+    // regression in how long the window takes to fill up shows itself.
+    const startedAt = Date.now();
+    const phases: string[] = [];
+    let phaseStartedAt = startedAt;
+    const phaseDone = (name: string) => {
+      const now = Date.now();
+      phases.push(`${name} ${now - phaseStartedAt}ms`);
+      phaseStartedAt = now;
+    };
+
     try {
       mobileMode && setMobileMode(true);
-      getAppState();
-      await getAppVersion();
-      await getUser();
-      await getAppConfig();
-      await getConnectivityStatus();
-      await getContactList();
-      loadFolders();
+
+      // Before the first call that waits on the background component: until it
+      // has finished starting, every other method of the service is queued
+      // behind that, and this is the only one that answers meanwhile.
+      setCommonLoading(true);
+      startupStatusText.value = t('app.startup.starting');
+      unsubStartup.value = inboxSrv.watchStartup({
+        next: event => {
+          startupStatusText.value = startupTextOf(event);
+        },
+        error: err => log.error('Error occurred in observation of the app startup.', err),
+      });
+
+      // Before the lists are read, not after. The backend answers requests from
+      // the moment its service is built, which is BEFORE it replays the backlog
+      // of synchronization phantoms - so a read of the lists lands in the middle
+      // of that replay, and anything applied between the read and a later
+      // subscription used to be invisible until the next change to the same
+      // message. Events queue up here and wait for the read to finish.
+      unsubWatch.value = inboxSrv.watch({
+        next: updateEvent => {
+          updatesQueue.push(updateEvent);
+          drainUpdatesIfReady();
+        },
+        complete: () => log.info('Observation of inbox updates completed.'),
+        error: err => log.error('Error occurred in observation of inbox updates.', err),
+      });
+
+      await Promise.all([
+        getAppState(),
+        getAppVersion(),
+        getUser(),
+        getAppConfig(),
+        getConnectivityStatus(),
+        // Asked for as well as subscribed to: the catch-up scan often finishes
+        // before this page can subscribe, and a state nobody asked for would
+        // then be missed entirely.
+        getSyncActivityState().catch(err => log.error('Failed to read the sync state', err)),
+      ]);
+      phaseDone('app-data');
+      // Reaching the contacts app can take up to 13 s of retries when it is not
+      // running, and nothing below needs it: names show as addresses until it
+      // answers. See contactsSrv() in initializationServices.
+      getContactList().catch(err => log.error('Failed to get the contact list', err));
+      await loadFolders();
+      phaseDone('folders');
       await getMessages();
-      await initializeReceivingService();
-      await initializeDeliveryService();
+      phaseDone('messages');
+
+      // Whatever arrived while the lists were being read is applied now, on top
+      // of them rather than under them.
+      initialLoadDone = true;
+      drainUpdatesIfReady();
+
+      setCommonLoading(false);
+      startupStatusText.value = '';
+      log.info(`page filled in ${Date.now() - startedAt}ms: ${phases.join(', ')}`);
 
       connectivityTimerId.value = setInterval(getConnectivityStatus, 60000);
 
@@ -183,9 +328,12 @@ export function useAppPage(mobileMode?: boolean) {
       unsub.value = w3n.shell!.watchStartCmds!({
         next: ({ cmd, params }: web3n.shell.commands.CmdParams) => handleExternalCommand({ cmd, params }),
         error: err => console.error(`Error in listening to commands for inbox app:`, err),
-        complete: () => console.log(`Listening to commands for chat app is closed by platform side.`),
+        complete: () => console.log(`Listening to commands for inbox app is closed by platform side.`),
       });
     } catch (e) {
+      // Otherwise the overlay keeps spinning over an app that will not load.
+      setCommonLoading(false);
+      startupStatusText.value = '';
       console.error('# APP MOUNTED ERROR => ', e);
       throw e;
     }
@@ -197,6 +345,8 @@ export function useAppPage(mobileMode?: boolean) {
     }
 
     unsub.value && unsub.value();
+    unsubWatch.value && unsubWatch.value();
+    unsubStartup.value && unsubStartup.value();
 
     $bus.$emitter.off('run-create-message', openCreateMsgDialog);
   });
@@ -208,7 +358,23 @@ export function useAppPage(mobileMode?: boolean) {
     me,
     customLogoSrc,
     commonLoading,
+    startupStatusText,
     connectivityStatusText,
+    /** Whether to show the synchronization line at all. */
+    isSyncVisible: computed(() => syncActivity.value.syncing || syncActivity.value.stalled),
+    /** Whether the progress bar moves - stuck work is by definition not in progress. */
+    isSyncing: computed(() => syncActivity.value.syncing),
+    syncStalled: computed(() => syncActivity.value.stalled),
+    syncText: computed(() => {
+      const { syncing, stalled, pending } = syncActivity.value;
+      if (stalled) {
+        return t('app.sync.stalled');
+      }
+      if (!syncing) {
+        return '';
+      }
+      return pending > 1 ? t('app.sync.syncing_count', { count: pending }) : t('app.sync.syncing');
+    }),
     appExit,
     setAppWindowSize,
   };

@@ -74,33 +74,33 @@ export function getStatusDescriptionText({
 export function handleSendingError<T extends string>(
   errorInfo: DeliveryProgress['recipients'][T],
 ): Nullable<string> {
-  if (!errorInfo?.err) return null;
+  if (!errorInfo?.err) {return null;}
 
   const { err = {} } = errorInfo;
 
-  if (hasIn(err, 'domainNotFound')) return 'domainNotFound';
+  if (hasIn(err, 'domainNotFound')) {return 'domainNotFound';}
 
-  if (hasIn(err, 'unknownRecipient')) return 'unknownRecipient';
+  if (hasIn(err, 'unknownRecipient')) {return 'unknownRecipient';}
 
-  if (hasIn(err, 'senderNotAllowed')) return 'senderNotAllowed';
+  if (hasIn(err, 'senderNotAllowed')) {return 'senderNotAllowed';}
 
-  if (hasIn(err, 'inboxIsFull')) return 'inboxIsFull';
+  if (hasIn(err, 'inboxIsFull')) {return 'inboxIsFull';}
 
-  if (hasIn(err, 'badRedirect')) return 'badRedirect';
+  if (hasIn(err, 'badRedirect')) {return 'badRedirect';}
 
-  if (hasIn(err, 'authFailedOnDelivery')) return 'authFailedOnDelivery';
+  if (hasIn(err, 'authFailedOnDelivery')) {return 'authFailedOnDelivery';}
 
-  if (hasIn(err, 'msgTooBig')) return 'msgTooBig';
+  if (hasIn(err, 'msgTooBig')) {return 'msgTooBig';}
 
-  if (hasIn(err, 'allowedSize')) return 'allowedSize';
+  if (hasIn(err, 'allowedSize')) {return 'allowedSize';}
 
-  if (hasIn(err, 'recipientHasNoPubKey')) return 'recipientHasNoPubKey';
+  if (hasIn(err, 'recipientHasNoPubKey')) {return 'recipientHasNoPubKey';}
 
-  if (hasIn(err, 'recipientPubKeyFailsValidation')) return 'recipientPubKeyFailsValidation';
+  if (hasIn(err, 'recipientPubKeyFailsValidation')) {return 'recipientPubKeyFailsValidation';}
 
-  if (hasIn(err, 'msgNotFound')) return 'msgNotFound';
+  if (hasIn(err, 'msgNotFound')) {return 'msgNotFound';}
 
-  if (hasIn(err, 'msgCancelled')) return 'msgCancelled';
+  if (hasIn(err, 'msgCancelled')) {return 'msgCancelled';}
 
   return '';
 }

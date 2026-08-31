@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+  import isEmpty from 'lodash/isEmpty'
   import { type Nullable, Ui3nButton } from '@v1nt1248/3nclient-lib';
   import type { IncomingMessageView, MessageAction, OutgoingMessageView } from '@common/types';
   import { SYSTEM_FOLDERS } from '@common/constants';
@@ -10,6 +11,8 @@
     folder: Nullable<string>;
     editMode?: boolean;
     message?: Nullable<IncomingMessageView | OutgoingMessageView>;
+    /** The form is not ready to send: attachments are still being taken in, or one is missing. */
+    busy?: boolean;
   }>();
   const emits = defineEmits<{
     (event: 'action', value: MessageAction): void;
@@ -25,6 +28,7 @@
         icon="send-variant-outline"
         icon-color="var(--color-icon-block-primary-default)"
         icon-size="20"
+        :disabled="busy || isEmpty(message?.recipients)"
         @click="emits('action', 'send')"
       />
 

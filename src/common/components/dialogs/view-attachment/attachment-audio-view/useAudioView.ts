@@ -18,8 +18,8 @@ import { inject, onMounted, shallowRef, ref, useTemplateRef, computed, onBeforeU
 import { useI18n } from 'vue-i18n';
 import type { Nullable } from '@v1nt1248/3nclient-lib';
 import { NOTIFICATIONS_KEY, NotificationsPlugin } from '@v1nt1248/3nclient-lib/plugins';
-import { transformWeb3nFileToFile } from '@v1nt1248/3nclient-lib/utils';
-import { getFileByInfoFromMsg, timeInSecondsToString } from '@common/utils';
+import { timeInSecondsToString } from '@common/utils';
+import { usePlayableAttachment } from '@common/composables/usePlayableAttachment';
 import type { AttachmentInfo } from '@common/types';
 
 export function useAudioView({ item, incomingMsgId }: { item: AttachmentInfo; incomingMsgId?: string }) {
@@ -46,14 +46,39 @@ export function useAudioView({ item, incomingMsgId }: { item: AttachmentInfo; in
 
   const currentAudioVisualization = ref(1);
 
+  const { isLoading, percent, progress, isStreaming, seekableEnd, attachTo, cancel, noteBuffered } =
+    usePlayableAttachment({
+      item,
+      incomingMsgId,
+      onMissing: () => {
+        isProcessing.value = false;
+        $createNotice({ type: 'error', content: t('chat.view.load.file.error') });
+      },
+    });
+
   const durationAsText = computed(() => timeInSecondsToString(duration.value));
   const currentTimeAsText = computed(() => timeInSecondsToString(currentTime.value));
+  /** Playback cannot go past what has arrived while streaming. */
+  const seekMax = computed(() => (isStreaming.value ? seekableEnd.value : duration.value));
 
   let requestAnimation: number;
+
+  function onCanplay() {
+    isProcessing.value = false;
+    duration.value = audioPlayerRef.value!.duration;
+  }
 
   function onCanplaythrough() {
     isProcessing.value = false;
     duration.value = audioPlayerRef.value!.duration;
+  }
+
+  function onDurationchange() {
+    duration.value = audioPlayerRef.value!.duration;
+  }
+
+  function onProgressEvent() {
+    noteBuffered(audioPlayerRef.value!);
   }
 
   function onTimeupdate(event: Event) {
@@ -87,8 +112,9 @@ export function useAudioView({ item, incomingMsgId }: { item: AttachmentInfo; in
 
   function updateCurrentTime(val: number | [number, number]) {
     if (!Array.isArray(val)) {
-      currentTime.value = val;
-      audioPlayerRef.value!.currentTime = val;
+      const target = Math.min(val, seekMax.value || val);
+      currentTime.value = target;
+      audioPlayerRef.value!.currentTime = target;
     }
   }
 
@@ -197,7 +223,10 @@ export function useAudioView({ item, incomingMsgId }: { item: AttachmentInfo; in
     audioPlayerRef.value!.currentTime = 0;
     audioPlayerRef.value!.volume = volume.value / 100;
 
+    audioPlayerRef.value!.addEventListener('canplay', onCanplay);
     audioPlayerRef.value!.addEventListener('canplaythrough', onCanplaythrough);
+    audioPlayerRef.value!.addEventListener('durationchange', onDurationchange);
+    audioPlayerRef.value!.addEventListener('progress', onProgressEvent);
     audioPlayerRef.value!.addEventListener('timeupdate', onTimeupdate);
     audioPlayerRef.value!.addEventListener('ended', onEnded);
 
@@ -205,39 +234,27 @@ export function useAudioView({ item, incomingMsgId }: { item: AttachmentInfo; in
     source.value!.connect(analyser);
     analyser.connect(audioContext.destination);
 
-    setTimeout(() => {
-      getFileByInfoFromMsg(item, incomingMsgId)
-        .then(file3n => {
-          if (!file3n) {
-            isProcessing.value = false;
-            $createNotice({
-              type: 'error',
-              content: t('chat.view.load.file.error'),
-            });
-            return;
-          }
-
-          return transformWeb3nFileToFile(file3n);
-        })
-        .then(val => {
-          if (!val) {
-            return;
-          }
-
-          const mediaData = URL.createObjectURL(val);
-          audioPlayerRef.value && (audioPlayerRef.value.src = mediaData);
-        });
-    }, 100);
+    // Straight away: the setTimeout that used to be here delayed the whole read
+    // by 100 ms and nothing depended on it.
+    attachTo(audioPlayerRef.value!);
   });
 
   onBeforeUnmount(() => {
+    audioPlayerRef.value!.removeEventListener('canplay', onCanplay);
     audioPlayerRef.value!.removeEventListener('canplaythrough', onCanplaythrough);
+    audioPlayerRef.value!.removeEventListener('durationchange', onDurationchange);
+    audioPlayerRef.value!.removeEventListener('progress', onProgressEvent);
     audioPlayerRef.value!.removeEventListener('timeupdate', onTimeupdate);
     audioPlayerRef.value!.removeEventListener('ended', onEnded);
   });
 
   return {
     isProcessing,
+    isLoading,
+    percent,
+    progress,
+    isStreaming,
+    seekMax,
     isPlaying,
     canvasRef,
     audioPlayerRef,
@@ -248,6 +265,7 @@ export function useAudioView({ item, incomingMsgId }: { item: AttachmentInfo; in
     currentTimeAsText,
     currentAudioVisualization,
     t,
+    cancel,
     updateVolume,
     updateCurrentTime,
     play,

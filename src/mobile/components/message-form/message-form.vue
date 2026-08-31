@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+  import { computed, ref, watch } from 'vue';
   import isEmpty from 'lodash/isEmpty';
   import { markSearch } from '@v1nt1248/3nclient-lib/utils';
   import { Ui3nAutocomplete, Ui3nChip, Ui3nHtml, Ui3nInput } from '@v1nt1248/3nclient-lib';
@@ -11,8 +12,16 @@
 
   const vUi3nHtml = Ui3nHtml;
 
+  // The send button lives in the toolbar next to this form, not in it, so the
+  // form has to say out loud when the message is not ready to go.
+  interface MessageFormEmits extends CreateMsgDialogEmits {
+    (event: 'update:busy', value: boolean): void;
+  }
+
   const props = defineProps<{ data: PreparedMessageData; isThisReplyOrForward?: boolean }>();
-  const emits = defineEmits<CreateMsgDialogEmits>();
+  const emits = defineEmits<MessageFormEmits>();
+
+  const hasBlockingAttachments = ref(false);
 
   const {
     t,
@@ -29,6 +38,10 @@
     onEditorInit,
     msgBodyUpdate,
   } = useCreateMsg({ props, emits, isMobileMode: true });
+
+  const isBusy = computed(() => isLoading.value || hasBlockingAttachments.value);
+
+  watch(isBusy, value => emits('update:busy', value), { immediate: true });
 </script>
 
 <template>
@@ -105,6 +118,7 @@
         :value="data?.attachmentsInfo"
         @update="updateAttachments"
         @update:loading="isLoading = $event"
+        @update:blocked="hasBlockingAttachments = $event"
       />
     </div>
 

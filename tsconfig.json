@@ -8,7 +8,7 @@
     "useDefineForClassFields": true,
     "strictNullChecks": true,
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": false,
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -21,14 +21,23 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@common/*": ["./src/common/*"],
       "@desktop/*": ["./src/desktop/*"],
-      "@mobile/*": ["./src/mobile/*"]
+      "@mobile/*": ["./src/mobile/*"],
+      "@shared/*": ["./shared/*"],
+      "@deno/*": ["./src-deno/*"]
     }
   },
-  "include": ["vite.config.ts", "src/**/*", "@types/**/*"],
-  "exclude": ["node_modules", "public", "app", "doc"]
+  "include": [
+    "./vite.config.ts",
+    "./vitest.config.ts",
+    "./src/**/*",
+    "./src-deno/**/*",
+    "./shared/**/*",
+    "./tests/unit/**/*",
+    "./@types/**/*"
+  ],
+  "exclude": ["./node_modules", "./public", "./app", "./doc", "./node_modules/.deno"]
 }

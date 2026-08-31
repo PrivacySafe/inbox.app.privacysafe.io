@@ -20,14 +20,19 @@
   import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
   import pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs?url';
   import type { PDFDocumentProxy } from 'pdfjs-dist';
-  import { Ui3nButton, Ui3nProgressCircular, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
-  import { getFileByInfoFromMsg } from '@common/utils/files';
+  import { Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
+  import { useAttachmentContent } from '@common/composables/useAttachmentContent';
+  import AttachmentLoading from './attachment-loading.vue';
   import type { AttachmentInfo } from '@common/types';
 
   const props = defineProps<{
     item: AttachmentInfo;
     incomingMsgId?: string;
     isMobileMode?: boolean;
+  }>();
+
+  const emits = defineEmits<{
+    (event: 'cancel'): void;
   }>();
 
   pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -39,6 +44,16 @@
   const isProcessing = ref(true);
   const currentPage = ref(1);
   const totalPage = ref(1);
+
+  const { isLoading, percent, progress, loadBytes, cancel } = useAttachmentContent({
+    item: props.item,
+    incomingMsgId: props.incomingMsgId,
+  });
+
+  function onCancel() {
+    cancel();
+    emits('cancel');
+  }
 
   const canvasRef = useTemplateRef<HTMLCanvasElement>('canvasEl');
   const canvasStyle = ref({});
@@ -91,30 +106,17 @@
     renderPage(currentPage.value);
   }
 
-  onMounted(() => {
-    getFileByInfoFromMsg(props.item, props.incomingMsgId)
-      .then(file => {
-        if (!file) {
-          return;
-        }
+  onMounted(async () => {
+    const bytes = await loadBytes();
+    if (!bytes) {
+      // Cancelled, or the file is not there; the dialog reports the latter.
+      isProcessing.value = false;
+      return;
+    }
 
-        return file.readBytes();
-      })
-      .then(byteArray => {
-        if (!byteArray) {
-          return;
-        }
-
-        return pdfjs.getDocument(byteArray).promise;
-      })
-      .then(doc => {
-        pdfDoc = doc;
-        if (pdfDoc) {
-          totalPage.value = pdfDoc.numPages;
-        }
-
-        return renderPage(currentPage.value);
-      });
+    pdfDoc = await pdfjs.getDocument(bytes).promise;
+    totalPage.value = pdfDoc.numPages;
+    renderPage(currentPage.value);
   });
 </script>
 
@@ -176,11 +178,12 @@
       </div>
     </div>
 
-    <ui3n-progress-circular
+    <attachment-loading
       v-if="isProcessing"
-      :class="$style.loader"
-      indeterminate
-      size="108"
+      :reading="isLoading"
+      :percent="percent"
+      :progress="progress"
+      @cancel="onCancel"
     />
   </div>
 </template>

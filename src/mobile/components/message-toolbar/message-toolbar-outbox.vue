@@ -1,14 +1,10 @@
 <script lang="ts" setup>
   import { computed } from 'vue';
   import { useI18n } from 'vue-i18n';
-  import { storeToRefs } from 'pinia';
-  import get from 'lodash/get';
-  import size from 'lodash/size';
-  import { formatFileSize } from '@v1nt1248/3nclient-lib/utils';
-  import { Ui3nButton } from '@v1nt1248/3nclient-lib';
-  import { useSendingStore } from '@common/store';
+  import { Ui3nButton, Ui3nProgressLinear } from '@v1nt1248/3nclient-lib';
   import type { MessageAction, OutgoingMessageView } from '@common/types';
   import { getMessageStatusUiData } from '@common/utils';
+  import { useSendingProgress } from '@common/composables/useSendingProgress';
 
   const props = defineProps<{
     message: OutgoingMessageView;
@@ -19,47 +15,23 @@
 
   const { t } = useI18n();
 
-  const sendingStore = useSendingStore();
-  const { listOfSendingMessage } = storeToRefs(sendingStore);
-
   const isSendingStopped = computed(() => ['error', 'canceled'].includes(props.message?.status));
+
+  /**
+   * The sending belongs to another device of the user; cancel and resend are
+   * both meaningless here - see message-content-header-outbox.vue.
+   */
+  const isOnAnotherDevice = computed(() => !!props.message.originDeviceId);
 
   const status = computed(() => getMessageStatusUiData({ message: props.message, t }));
 
-  const messageProgress = computed(() => get(listOfSendingMessage.value, props.message.msgId!, null));
-
-  const totalMsgDataSize = computed(() => {
-    if (!messageProgress.value) return 0;
-
-    const { msgSize, recipients } = messageProgress.value!;
-    return msgSize * size(recipients);
-  });
-
-  const sentDataSize = computed(() => {
-    if (!messageProgress.value) return 0;
-
-    const { recipients } = messageProgress.value!;
-    return Object.keys(recipients).reduce((res, address) => {
-      const { bytesSent = 0 } = recipients[address];
-      res += bytesSent;
-      return res;
-    }, 0);
-  });
-
-  const progressText = computed(() => {
-    const current =
-      totalMsgDataSize.value == 0 ? '0' : ((sentDataSize.value / totalMsgDataSize.value) * 100).toFixed(1);
-    return t('msg.sending.progress', {
-      percent: `${current}%`,
-      currentValue: formatFileSize(sentDataSize.value),
-      totalValue: formatFileSize(totalMsgDataSize.value),
-    });
-  });
+  const { percent, progressText } = useSendingProgress(computed(() => props.message.msgId));
 </script>
 
 <template>
   <div :class="$style.toolbarOutbox">
     <ui3n-button
+      v-if="!isOnAnotherDevice"
       type="icon"
       color="var(--color-bg-block-primary-default)"
       :icon="isSendingStopped ? 'round-refresh' : 'cancel'"
@@ -70,7 +42,18 @@
 
     <div :class="$style.info">
       <div :class="$style.progress">
-        <span>{{ progressText }}</span>
+        <!-- The numbers belong to a delivery of THIS device; there is none here,
+             so they would read "0 of 0". See message-content-header-outbox.vue. -->
+        <span>
+          {{ isOnAnotherDevice ? t('msg.content.sending_on_another_device') : progressText }}
+        </span>
+
+        <ui3n-progress-linear
+          v-if="!isSendingStopped && !isOnAnotherDevice"
+          :value="percent"
+          :height="2"
+          :class="$style.progressBar"
+        />
       </div>
 
       <div
@@ -137,6 +120,12 @@
   .progress {
     font-weight: 400;
     color: var(--color-text-chat-bubble-other-default);
+  }
+
+  .progressBar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
   }
 
   .status {

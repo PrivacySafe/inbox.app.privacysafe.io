@@ -17,14 +17,11 @@
 <script lang="ts" setup>
   import { computed } from 'vue';
   import { useI18n } from 'vue-i18n';
-  import { storeToRefs } from 'pinia';
   import isEmpty from 'lodash/isEmpty';
-  import get from 'lodash/get';
-  import size from 'lodash/size';
-  import { formatFileSize } from '@v1nt1248/3nclient-lib/utils';
-  import { Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
+  import { Ui3nButton, Ui3nProgressLinear, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
   import { useMessagesStore, useSendingStore } from '@common/store';
   import { getMessageStatusUiData, getStatusDescriptionText } from '@common/utils';
+  import { useSendingProgress } from '@common/composables/useSendingProgress';
   import type { IncomingMessageView, MessageAction, OutgoingMessageView } from '@common/types';
 
   const props = defineProps<{
@@ -37,11 +34,20 @@
   const { t } = useI18n();
 
   const { upsertMessage } = useMessagesStore();
-  const sendingStore = useSendingStore();
-  const { listOfSendingMessage } = storeToRefs(sendingStore);
-  const { cancelSendMessage } = sendingStore;
+  const { cancelSendMessage } = useSendingStore();
 
   const isSendingStopped = computed(() => ['error', 'canceled'].includes(props.message?.status));
+
+  /**
+   * The sending belongs to another device of the user.
+   *
+   * Cancel and resend are then both meaningless here and worse than meaningless:
+   * cancel() writes status 'canceled' through upsertMessage, which would send a
+   * FALSE status back to the device that is actually sending, while
+   * cancelSendMessage would cancel nothing at all - there is no delivery of this
+   * message on this device.
+   */
+  const isOnAnotherDevice = computed(() => !!props.message.originDeviceId);
 
   const actionBtnTitle = computed(() =>
     isSendingStopped.value ? t('msg.content.tooltip.resend') : t('msg.content.tooltip.cancel_sending'),
@@ -49,7 +55,6 @@
 
   const status = computed(() => getMessageStatusUiData({ message: props.message, t }));
 
-  const messageProgress = computed(() => get(listOfSendingMessage.value, props.message.msgId!, null));
 
   const errorStateDescription = computed(() => {
     if (!isEmpty(props.message.statusDescription)) {
@@ -59,33 +64,7 @@
     return t('msg.sending.error.noDescription');
   });
 
-  const totalMsgDataSize = computed(() => {
-    if (!messageProgress.value) return 0;
-
-    const { msgSize, recipients } = messageProgress.value!;
-    return msgSize * size(recipients);
-  });
-
-  const sentDataSize = computed(() => {
-    if (!messageProgress.value) return 0;
-
-    const { recipients } = messageProgress.value!;
-    return Object.keys(recipients).reduce((res, address) => {
-      const { bytesSent = 0 } = recipients[address];
-      res += bytesSent;
-      return res;
-    }, 0);
-  });
-
-  const progressText = computed(() => {
-    const current =
-      totalMsgDataSize.value == 0 ? '0' : ((sentDataSize.value / totalMsgDataSize.value) * 100).toFixed(1);
-    return t('msg.sending.progress', {
-      percent: `${current}%`,
-      currentValue: formatFileSize(sentDataSize.value),
-      totalValue: formatFileSize(totalMsgDataSize.value),
-    });
-  });
+  const { percent, progressText } = useSendingProgress(computed(() => props.message.msgId));
 
   async function resend() {
     emits('action', { action: 'send', message: props.message });
@@ -103,6 +82,7 @@
 <template>
   <div :class="$style.headerOutbox">
     <ui3n-tooltip
+      v-if="!isOnAnotherDevice"
       :content="actionBtnTitle"
       position-strategy="fixed"
       placement="top-start"
@@ -130,7 +110,22 @@
           <span v-if="isSendingStopped">{{ errorStateDescription }}</span>
         </ui3n-tooltip>
 
+        <!-- The progress numbers belong to a delivery of THIS device. There is
+             no delivery here, so `useSendingProgress` has nothing to read and
+             would report "0 of 0" - which reads as a stalled send rather than
+             as somebody else's. -->
+        <span v-else-if="isOnAnotherDevice">
+          {{ t('msg.content.sending_on_another_device') }}
+        </span>
+
         <span v-else>{{ progressText }}</span>
+
+        <ui3n-progress-linear
+          v-if="!isSendingStopped && !isOnAnotherDevice"
+          :value="percent"
+          :height="2"
+          :class="$style.progressBar"
+        />
       </div>
 
       <div
@@ -185,6 +180,12 @@
   .progress {
     font-weight: 400;
     color: var(--color-text-chat-bubble-other-default);
+  }
+
+  .progressBar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
   }
 
   .status {

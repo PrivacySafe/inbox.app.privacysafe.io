@@ -16,7 +16,7 @@
 */
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
-import { appContactsSrvProxy } from '@common/services/services-provider';
+import { contactsSrv } from '@common/services/services-provider';
 import type { Person, PersonView } from '@common/types';
 
 export const useContactsStore = defineStore('contacts', () => {
@@ -24,7 +24,7 @@ export const useContactsStore = defineStore('contacts', () => {
 
   async function getContactList() {
     try {
-      const data = await appContactsSrvProxy.getContactList();
+      const data = await (await contactsSrv()).getContactList();
       contactList.value = (data || []).map(contact => ({
         ...contact,
         displayName: contact.name || contact.mail || '',
@@ -50,7 +50,7 @@ export const useContactsStore = defineStore('contacts', () => {
       notice: '',
       phone: '',
     };
-    await appContactsSrvProxy.upsertContact(newContact);
+    await (await contactsSrv()).upsertContact(newContact);
     await getContactList();
   }
 

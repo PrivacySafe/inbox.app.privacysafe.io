@@ -29,6 +29,13 @@ export async function createThumbnail(
   const fileName = attachment.fileName;
   const fileExt = getFileExtension(fileName);
 
+  // Out first of all, so that no caller reads a null answer as "the file is
+  // deleted, moved or renamed": there is nothing wrong with a file sitting on
+  // the user's other device.
+  if (attachment.hasNoLocalSource) {
+    return null;
+  }
+
   const file3n = await getFileByInfoFromMsg(attachment, incomingMsgId);
   if (!file3n) {
     return null;

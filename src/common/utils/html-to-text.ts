@@ -15,10 +15,10 @@
   this program. If not, see <http://www.gnu.org/licenses/>.
 */
 export function htmlToText({ value, length = 150 }: { value?: string; length?: number }): string {
-  if (!value) return '';
+  if (!value) {return '';}
 
   const divEl = document.createElement('div');
   divEl.innerHTML = value;
-  const text = divEl.innerText;
+  const text = divEl.innerText || divEl.textContent || '';
   return text.slice(0, length);
 }
