@@ -66,6 +66,18 @@ export const GET_SYNC_VERSION_QUERY = `SELECT ts, deviceId, tombstonedAt
   FROM sync_versions
   WHERE entityType=$entityType AND entityId=$entityId AND aspect=$aspect`;
 
+/**
+ * The whole table, read in one go for a backup.
+ *
+ * Ordered so that an archive taken twice over an unchanged mailbox is
+ * byte-identical in this part: sqlite is free to answer an unordered SELECT in
+ * any order, and a diff of two archives is the cheapest way to see that a
+ * backup lost something.
+ */
+export const GET_ALL_SYNC_VERSIONS_QUERY = `SELECT entityType, entityId, aspect, ts, deviceId, tombstonedAt
+  FROM sync_versions
+  ORDER BY entityType ASC, entityId ASC, aspect ASC`;
+
 export const UPSERT_SYNC_VERSION_QUERY = `INSERT OR REPLACE INTO sync_versions (
     entityType, entityId, aspect, ts, deviceId, tombstonedAt
   ) VALUES ($entityType, $entityId, $aspect, $ts, $deviceId, $tombstonedAt)`;

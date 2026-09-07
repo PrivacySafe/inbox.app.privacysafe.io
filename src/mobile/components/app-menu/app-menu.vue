@@ -4,9 +4,10 @@
   import { useRouter, useRoute } from 'vue-router';
   import { storeToRefs } from 'pinia';
   import { useFoldersStore, useMessagesStore } from '@common/store';
+  import { useAppMenuItems } from '@common/composables/useAppMenu';
   import ContactIcon from '@common/components/contact-icon/contact-icon.vue';
-  import { Ui3nBadge, Ui3nIcon } from '@v1nt1248/3nclient-lib';
-  import type { MailFolder } from '@common/types';
+  import { Ui3nBadge, Ui3nButton, Ui3nIcon } from '@v1nt1248/3nclient-lib';
+  import type { AppMenuAction, MailFolder } from '@common/types';
   import { SYSTEM_FOLDERS } from '@common/constants';
   import size from 'lodash/size';
   import get from 'lodash/get';
@@ -18,6 +19,7 @@
   }>();
   const emits = defineEmits<{
     (event: 'close'): void;
+    (event: 'action', value: AppMenuAction): void;
   }>();
 
   const { t } = useI18n();
@@ -37,9 +39,21 @@
     return get(messagesByFolders.value, [folder.id, 'unread'], 0);
   }
 
+  const menuItems = useAppMenuItems();
+
   async function goToFolder(folder: MailFolder) {
     await router.push({ name: 'folder', params: { folderId: folder.id } });
     emits('close');
+  }
+
+  /**
+   * The drawer is closed BEFORE the action is passed on: every action here opens
+   * a dialog, and leaving the drawer up would put it behind the greyed-out panel
+   * this menu lays over the content.
+   */
+  function onMenuItemClick(id: AppMenuAction) {
+    emits('close');
+    emits('action', id);
   }
 </script>
 
@@ -92,8 +106,23 @@
         </div>
       </template>
 
-      <div :class="$style.appInfo">
-        v {{ appVersion }}
+      <div :class="$style.actions">
+        <ui3n-button
+          v-for="item in menuItems"
+          :key="item.id"
+          type="outline"
+          size="large"
+          block
+          :icon="item.icon"
+          icon-position="left"
+          @click="onMenuItemClick(item.id)"
+        >
+          {{ item.label }}
+        </ui3n-button>
+
+        <div :class="$style.appInfo">
+          v {{ appVersion }}
+        </div>
       </div>
     </div>
   </div>
@@ -150,13 +179,11 @@
     height: calc(100% - var(--app-menu-header-heigh));
     overflow-x: hidden;
     overflow-y: auto;
-    padding: var(--spacing-m) 0 64px;
+    padding: var(--spacing-m) 0 216px;
 
     .appInfo {
-      position: absolute;
+      position: relative;
       width: 100%;
-      left: 0;
-      bottom: 24px;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -165,6 +192,16 @@
       line-height: 1;
       color: var(--color-text-control-secondary-default);
     }
+  }
+
+  .actions {
+    position: absolute;
+    left: var(--spacing-m);
+    width: calc(100% - var(--spacing-l));
+    bottom: var(--spacing-m);
+    display: flex;
+    flex-direction: column;
+    row-gap: var(--spacing-s);
   }
 
   .systemFolder {

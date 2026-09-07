@@ -17,6 +17,7 @@
 import { CATCH_UP_REWIND_MS, INBOX_SCAN_FLOOR_MS } from '../../../shared/constants/sync.ts';
 import { makeLogger } from '../../../shared/utils/logger.ts';
 import { NamedProcs } from '../../../shared/utils/processes/named-procs.ts';
+import { SingleProc } from '../../../shared/utils/processes/single.ts';
 import type { DBProvider } from '../../dataset/index.ts';
 import { MAIL_SYNC_MSG_TYPE } from '../../types/mail-sync.types.ts';
 import type { InboxEmit } from '../inbox-service/events.ts';
@@ -40,6 +41,20 @@ export interface MailServiceDeps {
   activity?: SyncActivityTracker;
 }
 
+export interface MailService {
+  /** Detaches the subscriptions and puts out the outbox's retry timer. */
+  stop(): void;
+  /**
+   * Replays what the inbox holds since the watermark.
+   *
+   * Callable, and not only run at startup, because a restore resets the
+   * watermark to 0 and marks the messages it saw during the restore as
+   * unhandled: without a pass right after it, the mailbox would only come back
+   * in full at the next start of the component.
+   */
+  catchUp(): Promise<void>;
+}
+
 export async function mailService({
   db,
   emit,
@@ -47,8 +62,16 @@ export async function mailService({
   persistMail,
   handleSync,
   activity,
-}: MailServiceDeps): Promise<() => void> {
+}: MailServiceDeps): Promise<MailService> {
   const process = new NamedProcs();
+  /**
+   * One catch-up pass at a time.
+   *
+   * A pass used to happen once, at startup, so nothing could overlap it. It is
+   * callable now - a restore asks for one - and two passes over the same inbox
+   * would race each other over every message in it.
+   */
+  const catchUpProc = new SingleProc();
   const failureFloor = makeFailureFloor();
   const watermark = makeWatermarkCommitter(db, emit, failureFloor);
 
@@ -70,6 +93,18 @@ export async function mailService({
     msg: web3n.asmail.IncomingMessage,
     opts: { notify: boolean },
   ): Promise<void> {
+    // A restore rewrites what receiving mail writes, so instead of a lock of its
+    // own it uses the mechanism that is already here: the message counts as NOT
+    // handled, the watermark therefore does not advance, and the id is not marked
+    // as seen - so the catch-up pass that follows the restore takes it on again.
+    if (db.isRestoreInProgress()) {
+      failureFloor.recordFailure(msg.deliveryTS);
+      log.debug(
+        `Leaving incoming message ${msg.msgId} to the pass after the restore that is running.`,
+      );
+      return;
+    }
+
     if (seenMsgIds.has(msg.msgId)) {
       return;
     }
@@ -155,6 +190,7 @@ export async function mailService({
       let mail = 0;
       let phantoms = 0;
       let ownPhantoms = 0;
+      let alreadySeen = 0;
       let failed = 0;
 
       for (const item of listed) {
@@ -167,24 +203,40 @@ export async function mailService({
           continue;
         }
 
+        // Skipped BEFORE the fetch, and this is not only about saving a network
+        // call. A pass can now run while the live subscription is working - the
+        // one after a restore does (see MailService.catchUp) - and two concurrent
+        // getMsg calls for one message make the platform's own inbox cache throw
+        // EEXIST over the file it is writing. handleOne() would have skipped the
+        // message anyway.
+        if (seenMsgIds.has(item.msgId)) {
+          alreadySeen += 1;
+          continue;
+        }
+
         try {
-          const msg = await w3n.mail?.inbox.getMsg(item.msgId);
-          if (!msg) {
-            // An unavailable message has to be seen by the next scan too, so the
-            // watermark is not allowed past it.
-            failed += 1;
-            failureFloor.recordFailure(item.deliveryTS);
-            log.error(`getMsg(${item.msgId}) returned nothing (deliveryTS ${item.deliveryTS})`);
-            continue;
-          }
-          if (
-            (item.msgType === MAIL_SYNC_MSG_TYPE)
-            && ((msg as { jsonBody?: { sourceDeviceId?: string } }).jsonBody?.sourceDeviceId
-              === thisDeviceId)
-          ) {
-            ownPhantoms += 1;
-          }
-          await process.startOrChain(item.msgId, () => handleOne(msg, { notify: false }));
+          // The fetch INSIDE the per-message proc, for the same reason: the live
+          // subscription hands its messages to the same proc, so nothing else can
+          // be fetching this one at the same time.
+          await process.startOrChain(item.msgId, async () => {
+            const msg = await w3n.mail?.inbox.getMsg(item.msgId);
+            if (!msg) {
+              // An unavailable message has to be seen by the next scan too, so
+              // the watermark is not allowed past it.
+              failed += 1;
+              failureFloor.recordFailure(item.deliveryTS);
+              log.error(`getMsg(${item.msgId}) returned nothing (deliveryTS ${item.deliveryTS})`);
+              return;
+            }
+            if (
+              (item.msgType === MAIL_SYNC_MSG_TYPE)
+              && ((msg as { jsonBody?: { sourceDeviceId?: string } }).jsonBody?.sourceDeviceId
+                === thisDeviceId)
+            ) {
+              ownPhantoms += 1;
+            }
+            await handleOne(msg, { notify: false });
+          });
         } catch (err) {
           failed += 1;
           failureFloor.recordFailure(item.deliveryTS);
@@ -201,7 +253,7 @@ export async function mailService({
       log.info(
         `Catch-up: watermark ${watermarkTs}, listed ${listed.length} since ${scanFrom}, `
           + `${mail} mail, ${phantoms} sync (${ownPhantoms} of them from this device `
-          + `${thisDeviceId}), ${failed} failed`,
+          + `${thisDeviceId}), ${alreadySeen} handled earlier this session, ${failed} failed`,
       );
     } finally {
       activity?.endCatchUpScan();
@@ -235,9 +287,20 @@ export async function mailService({
 
   log.info('mail service started');
 
-  return () => {
-    unsubInbox?.();
-    unsubDelivery?.();
-    sync.stop();
+  return {
+    stop: () => {
+      unsubInbox?.();
+      unsubDelivery?.();
+      sync.stop();
+    },
+    // Serialized, and the set of ids handled this session is deliberately NOT
+    // cleared. A restore rolls the watermark back to 0 so that the pass covers
+    // the WHOLE inbox, but a message this session already handled needs nothing
+    // done to it: its record is in the database, and neither mode of a restore
+    // rewrites the content of an incoming record that is there. Clearing the set
+    // would make the pass re-fetch every message of the mailbox - minutes of
+    // network for no change - and put a second getMsg beside whatever the live
+    // subscription happens to be fetching.
+    catchUp: () => catchUpProc.startOrChain(() => catchUp()),
   };
 }

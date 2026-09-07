@@ -38,6 +38,18 @@ export interface AppState {
   lastReceivingTimestamp: number;
 }
 
+/**
+ * What the avatar menu can ask for. One list for the desktop menu and the phone
+ * drawer, so the two cannot drift apart in what they offer.
+ */
+export type AppMenuAction = 'make-backup' | 'restore-backup' | 'exit';
+
+export interface AppMenuItem {
+  id: AppMenuAction;
+  icon: string;
+  label: string;
+}
+
 export interface AppGlobalEvents {
   'resize-app': void;
   'run-create-message': { data: PreparedMessageData, isThisReplyOrForward?: boolean, sourceFolder?: string };

@@ -53,8 +53,11 @@ import type { DBProvider } from '../../dataset/index.ts';
 import {
   MAIL_SYNC_MSG_TYPE,
   type MailSyncEvent,
+  type MailSyncEventV2,
   type MailSyncLocalMeta,
+  type MailSyncMsg,
   type MailSyncMsgV1,
+  type MailSyncMsgV2,
 } from '../../types/mail-sync.types.ts';
 import type { PendingSyncMsgDbEntry, SyncToken, SyncVersionWrite } from '../../types/sync-types.ts';
 import {
@@ -134,6 +137,26 @@ export interface SyncOutbox {
      * be caught in review.
      */
     token?: SyncToken;
+  }): Promise<void>;
+  /**
+   * Journals one chunk of a restore snapshot.
+   *
+   * Unlike announce() it writes NO versions: the per-aspect tokens a snapshot
+   * carries are the archived ones, and the restore that produced the chunk has
+   * already written them.
+   *
+   * The journal is what a snapshot needs most: a chunk that could not go out
+   * because the server was unreachable is picked up by the next pass, including
+   * the one after a restart. Without it, the restoring device would be the only
+   * one that knows about the restore, and nothing would ever say so again.
+   */
+  announceSnapshotChunk(args: {
+    event: MailSyncEventV2;
+    /**
+     * A fresh token, taken once for the whole restore: it stamps the phantom's
+     * envelope, and the receiver's clock observes it.
+     */
+    token: SyncToken;
   }): Promise<void>;
   releasePending(): Promise<SyncPhantomReleaseResult>;
   noteDeliveryOutcome(
@@ -265,6 +288,34 @@ export async function makeSyncOutbox(db: DBProvider, ownAddr: string): Promise<S
     await releasePending();
   }
 
+  async function announceSnapshotChunk({
+    event,
+    token,
+  }: Parameters<SyncOutbox['announceSnapshotChunk']>[0]): Promise<void> {
+    const phantom: MailSyncMsgV2 = {
+      v: 2,
+      sourceDeviceId: token.deviceId,
+      timestamp: token.ts,
+      event,
+    };
+
+    await db.queueSyncPhantom({
+      // `entityId` is unique per part, so no two rows ever share an
+      // (entity, aspect) pair and isSupersedable() cannot drop a chunk in favour
+      // of a "newer" one. The 'snapshot' aspect is outside SUPERSEDABLE_ASPECTS
+      // as well, which says the same thing a second time on purpose - this is a
+      // row that must never be dropped unsent.
+      entityType: 'restore',
+      entityId: `${event.restoreId}#${event.part}`,
+      aspect: 'snapshot',
+      entityCount: (event.msgs?.length ?? 0) + (event.folders?.length ?? 0),
+      ts: token.ts,
+      payload: JSON.stringify(phantom),
+    });
+
+    await releasePending();
+  }
+
   /**
    * Hands journalled phantoms to delivery.
    *
@@ -365,9 +416,9 @@ export async function makeSyncOutbox(db: DBProvider, ownAddr: string): Promise<S
 
     let handed = 0;
     for (const row of releasable) {
-      let phantom: MailSyncMsgV1;
+      let phantom: MailSyncMsg;
       try {
-        phantom = JSON.parse(row.payload) as MailSyncMsgV1;
+        phantom = JSON.parse(row.payload) as MailSyncMsg;
       } catch (err) {
         log.error(`Unreadable payload of a queued sync phantom ${row.id}; dropping it.`, err);
         flights.forgetRow(row.id);
@@ -510,6 +561,7 @@ export async function makeSyncOutbox(db: DBProvider, ownAddr: string): Promise<S
 
   return {
     announce,
+    announceSnapshotChunk,
     releasePending,
     noteDeliveryOutcome,
     countAwaitingRelease,

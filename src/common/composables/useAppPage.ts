@@ -5,9 +5,17 @@ import { storeToRefs } from 'pinia';
 import { DIALOGS_KEY, DialogsPlugin, VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
 import { getRandomId } from '@v1nt1248/3nclient-lib/utils';
 import type { Ui3nDialogEvent } from '@v1nt1248/3nclient-lib';
-import type { AppGlobalEvents, PreparedMessageData } from '@common/types';
+import type { AppGlobalEvents, AppMenuAction, PreparedMessageData } from '@common/types';
 import type { InboxUpdateEvent, StartupEvent } from '@deno/types/inbox-srv.types';
-import { useAppStore, useContactsStore, useFoldersStore, useMessagesStore, useSendingStore } from '@common/store';
+import {
+  useAppStore,
+  useBackupStore,
+  useContactsStore,
+  useFoldersStore,
+  useMessagesStore,
+  useSendingStore,
+} from '@common/store';
+import { useBackupRestore } from '@common/composables/useBackupRestore';
 import { useCreateMsgActions } from '@common/composables/useCreateMsgActions';
 import { inboxSrv } from '@common/services/services-provider';
 import { SystemSettings } from '@common/utils';
@@ -62,8 +70,11 @@ export function useAppPage(mobileMode?: boolean) {
   const { getMessages, deleteMessages, applyMessageEvent } = messagesStore;
   const sendingStore = useSendingStore();
   const { applySendingEvent } = sendingStore;
+  const backupStore = useBackupStore();
+  const { onBackupProgress, onRestoreProgress } = backupStore;
 
   const { saveMsgToDraft } = useCreateMsgActions();
+  const { startBackupWorkflow, runRestoreWorkflow } = useBackupRestore();
 
   const connectivityStatusText = computed(() =>
     connectivityStatus.value === 'online' ? 'app.status.connected.online' : 'app.status.connected.offline',
@@ -107,6 +118,10 @@ export function useAppPage(mobileMode?: boolean) {
           await loadFolders();
         } else if (event.entity === 'sync') {
           applySyncActivity(event.view);
+        } else if (event.entity === 'backup') {
+          onBackupProgress(event.progress);
+        } else if (event.entity === 'restore') {
+          onRestoreProgress(event.progress);
         } else if (event.entity === 'lists') {
           // More changed than was worth reporting one by one - the backend's
           // start-up replay of a backlog of synchronization phantoms. Re-read
@@ -123,6 +138,19 @@ export function useAppPage(mobileMode?: boolean) {
 
   async function appExit() {
     w3n.closeSelf!();
+  }
+
+  async function runMenuAction(action: AppMenuAction) {
+    switch (action) {
+      case 'make-backup':
+        return startBackupWorkflow();
+      case 'restore-backup':
+        return void await runRestoreWorkflow();
+      case 'exit':
+        return appExit();
+      default:
+        return undefined;
+    }
   }
 
   async function openCreateMsgDialog(payload: {
@@ -377,5 +405,12 @@ export function useAppPage(mobileMode?: boolean) {
     }),
     appExit,
     setAppWindowSize,
+    /**
+     * What the avatar menu asks for, on both form factors. One switch rather
+     * than one exported callback per item: the desktop menu and the phone drawer
+     * are built from one list (see useAppMenuItems), and this is the other half
+     * of that - an item added there has exactly one place to be handled.
+     */
+    runMenuAction,
   };
 }

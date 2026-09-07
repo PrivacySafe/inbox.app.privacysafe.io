@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source "$(dirname "${BASH_SOURCE[0]}")/manifest-utils.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../utils/manifest-utils.sh"
 
 src_file=$(app_source_name manifest.json).zip
 

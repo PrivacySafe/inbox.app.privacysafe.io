@@ -30,9 +30,13 @@ import { makeLogger } from '../../../shared/utils/logger.ts';
 import type { DBProvider } from '../../dataset/index.ts';
 import type { InboxEmit } from '../inbox-service/events.ts';
 import {
-  isMailSyncMsgV1,
+  isMailSyncMsg,
+  isMailSyncMsgV2,
   type MailSyncEvent,
-  type MailSyncMsgV1,
+  type MailSyncEventV2,
+  type MailSyncMsg,
+  type MailSyncMsgV2,
+  type SnapshotMsgEntry,
 } from '../../types/mail-sync.types.ts';
 import type { SyncToken } from '../../types/sync-types.ts';
 import {
@@ -44,6 +48,7 @@ import {
 } from './msg-aspects.ts';
 import { applyRecordContent, msgFromSyncedRecord } from './record-mapping.ts';
 import { bufferOrphanedSync, drainOrphansFor } from './orphan-buffer.ts';
+import { applyRestoreSnapshot } from './restore-snapshot.ts';
 import { applyIfNewer, isDeletedLaterThan, recordDeletion } from './sync-versions.ts';
 
 const log = makeLogger('SyncIncoming');
@@ -75,6 +80,16 @@ export interface IncomingSyncCtx {
    * twice.
    */
   pulledMsgIds: Set<string>;
+  /**
+   * The window in which per-record changes are not reported one by one.
+   *
+   * Only a restore snapshot uses it: one chunk carries up to
+   * RESTORE_SNAPSHOT_CHUNK_BYTES of records, and reporting each of them walks a
+   * row through its history in front of the user. An ordinary phantom is one
+   * change and is reported as one.
+   */
+  beginBulkReplay?(): void;
+  endBulkReplay?(): void;
 }
 
 /**
@@ -103,7 +118,7 @@ export async function handleIncomingSyncEnvelope(
   }
 
   const body = (msg as { jsonBody?: unknown }).jsonBody;
-  if (!isMailSyncMsgV1(body)) {
+  if (!isMailSyncMsg(body)) {
     // Deferred removal rather than immediate, and here this deliberately
     // diverges from chat.app. The format is new, and its first extension (v2)
     // gives the situation "an older build on device A did not understand device
@@ -157,8 +172,14 @@ export async function handleIncomingSyncEnvelope(
  * buffer calls this one, and a replay must not observe the clock stamp a second
  * time nor schedule the inbox removal again.
  */
-export async function dispatchSync(syncMsg: MailSyncMsgV1, ctx: IncomingSyncCtx): Promise<void> {
+export async function dispatchSync(syncMsg: MailSyncMsg, ctx: IncomingSyncCtx): Promise<void> {
   const token: SyncToken = { ts: syncMsg.timestamp, deviceId: syncMsg.sourceDeviceId };
+
+  if (isMailSyncMsgV2(syncMsg)) {
+    await dispatchSyncV2(syncMsg, ctx);
+    return;
+  }
+
   const { event } = syncMsg;
 
   switch (event.kind) {
@@ -186,6 +207,122 @@ export async function dispatchSync(syncMsg: MailSyncMsgV1, ctx: IncomingSyncCtx)
     default:
       log.warn(`A synchronization phantom of an unknown kind: ${JSON.stringify(event)}`);
   }
+}
+
+/**
+ * The v2 events - today, one chunk of a restore snapshot.
+ *
+ * Applied by applyRestoreSnapshot(), the SAME function the restoring device
+ * runs. One function on both ends is the only real guarantee that `merge` here
+ * means what `merge` meant there; two implementations of one rule would part
+ * ways on the first case nobody thought of.
+ */
+async function dispatchSyncV2(syncMsg: MailSyncMsgV2, ctx: IncomingSyncCtx): Promise<void> {
+  const { event } = syncMsg;
+  if (event.kind !== 'restore-snapshot') {
+    log.warn(`A v2 synchronization phantom of an unknown kind: ${JSON.stringify(event)}`);
+    return;
+  }
+
+  ctx.beginBulkReplay?.();
+  try {
+    await applySnapshotChunk(syncMsg, event, ctx);
+  } finally {
+    ctx.endBulkReplay?.();
+  }
+}
+
+async function applySnapshotChunk(
+  syncMsg: MailSyncMsgV2,
+  event: Extract<MailSyncEventV2, { kind: 'restore-snapshot' }>,
+  ctx: IncomingSyncCtx,
+): Promise<void> {
+  const { db } = ctx;
+  const res = await applyRestoreSnapshot(
+    {
+      mode: event.mode,
+      snapshotTs: event.snapshotTs,
+      sourceDeviceId: syncMsg.sourceDeviceId,
+      msgs: event.msgs,
+      folders: event.folders,
+      deleted: event.deleted,
+    },
+    {
+      db,
+      emit: ctx.emit,
+      applyMsgChanges: changes => ctx.applyMsgChanges(changes),
+      deleteMessages: (msgIds, token) => ctx.deleteMessages(msgIds, token),
+      // A receiving device does not list the inbox for a snapshot: the sender
+      // already did, and what it found is in the entries themselves.
+      serverMsgIds: new Set<string>(),
+      serverListingAvailable: false,
+      ensureIncomingRecord: (msgId, entry) =>
+        ensureSnapshotRecordFor(msgId, entry, syncMsg, event, ctx),
+    },
+  );
+
+  log.info(
+    `Applied part ${event.part}/${event.of} of restore ${event.restoreId} (${event.mode}) from `
+      + `device ${syncMsg.sourceDeviceId}: ${res.created} created, ${res.updated} updated, `
+      + `${res.skipped} skipped, ${res.deletedMsgs} message(s) and ${res.deletedFolders} `
+      + `folder(s) deleted, ${res.onlyInArchive} kept only by the archive.`,
+  );
+}
+
+/**
+ * The record of an incoming message a snapshot entry did not carry.
+ *
+ * The entry says the message is in the shared inbox, so one `getMsg` is all it
+ * takes - the same reasoning as ensureRecordFor(). What differs is the failure:
+ * buffering the WHOLE chunk once per unreadable entry would put up to 192 KB in
+ * the orphan table per message, so what is buffered is a one-entry snapshot of
+ * the same restore. It drains when the message shows up, and it carries the same
+ * tokens, so it applies to exactly the same effect.
+ */
+async function ensureSnapshotRecordFor(
+  msgId: string,
+  entry: SnapshotMsgEntry,
+  syncMsg: MailSyncMsgV2,
+  event: Extract<MailSyncEventV2, { kind: 'restore-snapshot' }>,
+  ctx: IncomingSyncCtx,
+): Promise<MsgView | undefined> {
+  const { db } = ctx;
+  const existing = db.getMessageById(msgId);
+  if (existing) {
+    return existing;
+  }
+
+  if (!ctx.pulledMsgIds.has(msgId)) {
+    ctx.pulledMsgIds.add(msgId);
+    const raw = await w3n.mail?.inbox.getMsg(msgId).catch(err => {
+      log.warn(`Could not pull message ${msgId} out of the inbox for a restore snapshot`, err);
+      return undefined;
+    });
+    if (raw) {
+      await ctx.persistIncoming(raw as IncomingMessage);
+      const pulled = db.getMessageById(msgId);
+      if (pulled) {
+        return pulled;
+      }
+    }
+  }
+
+  const oneEntry: MailSyncMsgV2 = {
+    v: 2,
+    sourceDeviceId: syncMsg.sourceDeviceId,
+    timestamp: syncMsg.timestamp,
+    event: {
+      kind: 'restore-snapshot',
+      mode: event.mode,
+      snapshotTs: event.snapshotTs,
+      restoreId: event.restoreId,
+      part: event.part,
+      of: event.of,
+      msgs: [entry],
+    },
+  };
+  await bufferOrphanedSync(db, msgId, oneEntry);
+  return undefined;
 }
 
 // =============================================================================
@@ -276,7 +413,7 @@ async function applyMsgRecord(
 async function ensureRecordFor(
   msgId: string,
   isIncomingMessage: boolean,
-  syncMsg: MailSyncMsgV1,
+  syncMsg: MailSyncMsg,
   ctx: IncomingSyncCtx,
 ): Promise<IncomingMessageView | OutgoingMessageView | undefined> {
   const { db } = ctx;
@@ -307,7 +444,7 @@ async function ensureRecordFor(
 async function applyMsgRead(
   event: Extract<MailSyncEvent, { kind: 'msg-read' }>,
   token: SyncToken,
-  syncMsg: MailSyncMsgV1,
+  syncMsg: MailSyncMsg,
   ctx: IncomingSyncCtx,
 ): Promise<void> {
   const { db } = ctx;
@@ -336,7 +473,7 @@ async function applyMsgRead(
 async function applyMsgPlacement(
   event: Extract<MailSyncEvent, { kind: 'msg-placement' }>,
   token: SyncToken,
-  syncMsg: MailSyncMsgV1,
+  syncMsg: MailSyncMsg,
   ctx: IncomingSyncCtx,
 ): Promise<void> {
   const { db } = ctx;
@@ -365,7 +502,7 @@ async function applyMsgPlacement(
 async function applyMsgDelivery(
   event: Extract<MailSyncEvent, { kind: 'msg-delivery' }>,
   token: SyncToken,
-  syncMsg: MailSyncMsgV1,
+  syncMsg: MailSyncMsg,
   ctx: IncomingSyncCtx,
 ): Promise<void> {
   const { db } = ctx;

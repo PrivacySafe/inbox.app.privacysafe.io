@@ -14,7 +14,6 @@
  You should have received a copy of the GNU General Public License along with
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { setupGlobalReportingOfUnhandledErrors } from '../shared/utils/error-handling.ts';
 import { initDebugLogging, makeLogger, setLogUserAddress } from '../shared/utils/logger.ts';
 import { defer } from '../shared/utils/processes/deferred.ts';
@@ -101,6 +100,12 @@ try {
     delivery: outcome => activity.noteOutboundDeliveryOutcome(outcome),
   });
 
+  // Filled in below, once the mail service exists. A restore resets the
+  // watermark to 0 and asks for a pass over the inbox right afterwards, and only
+  // the mail service can make one - which is built after the inbox service that
+  // holds the backup service.
+  const rescan = { run: async () => {} };
+
   const {
     inboxSrv,
     emit,
@@ -108,7 +113,7 @@ try {
     endBulkReplay,
     persistMail,
     handleSync,
-  } = await inboxService(db, fileStore, sync, ownAddr, startup.watch, activity);
+  } = await inboxService(db, fileStore, sync, ownAddr, startup.watch, activity, rescan);
   activity.onChange(view => emit({ entity: 'sync', event: 'activity', view }));
   inboxSrvDeferred.resolve(inboxSrv);
   phaseDone('service-ready');
@@ -120,13 +125,14 @@ try {
   //
   // The indicator's own events are not held back, which is what lets the GUI say
   // "Synchronizing…" through all of it.
-  let stopMailService: () => void;
+  let mail: Awaited<ReturnType<typeof mailService>>;
   beginBulkReplay();
   try {
-    stopMailService = await mailService({ db, emit, sync, persistMail, handleSync, activity });
+    mail = await mailService({ db, emit, sync, persistMail, handleSync, activity });
   } finally {
     endBulkReplay();
   }
+  rescan.run = () => mail.catchUp();
   phaseDone('mail-service');
 
   await ensureDefaultAnonSenderMaxMsgSize(MAX_ATTACHMENT_SIZE);

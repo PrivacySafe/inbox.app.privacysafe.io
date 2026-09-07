@@ -25,6 +25,17 @@ type ReadonlyFS = web3n.files.ReadonlyFS;
 
 export interface LabelledFileStore {
   addBlob(blob: Blob, info?: ItemAttrs): Promise<string>;
+  /**
+   * Same as addBlob, without a Blob.
+   *
+   * This exists because of where this component runs: on Android a
+   * `runtime: "deno"` component is executed by androidx.javascriptengine - a
+   * bare V8 isolate with no Web APIs, where `Blob` is as absent as `crypto`.
+   * Restoring an attachment out of a backup archive has nothing but bytes, and
+   * wrapping them in a Blob just to unwrap them inside would put the one path
+   * that writes archived bytes on an API that is not there.
+   */
+  addBytes(bytes: Uint8Array, type: string, info?: ItemAttrs): Promise<string>;
   addFile(file: web3n.files.ReadonlyFile, info?: ItemAttrs): Promise<string>;
   /**
    * Takes a reference to a file that stays where it is, instead of a copy of it.
@@ -181,24 +192,27 @@ export async function makeLabelledFileStore(localFS: WritableFS): Promise<Labell
     return `${bucket}/${generateFastRandomString(FILE_NAME_LEN)}`;
   }
 
-  async function addBlob(blob: Blob, info?: ItemAttrs): Promise<string> {
+  async function addBytes(bytes: Uint8Array, type: string, info?: ItemAttrs): Promise<string> {
     try {
       const id = await generateId();
-      const bytes = new Uint8Array(await blob.arrayBuffer());
       await dataFS.writeBytes(id, bytes, { create: true, exclusive: true });
       bucketCount += 1;
       const attrsChanges = info && Object.keys(info).length > 0 ? infoToAttrChanges(info) : { set: {} };
       attrsChanges.set![ID_ATTR_NAME] = id;
-      attrsChanges.set![TYPE_ATTR_NAME] = blob.type;
+      attrsChanges.set![TYPE_ATTR_NAME] = type;
       await dataFS.updateXAttrs(id, attrsChanges);
       return id;
     } catch (exc) {
       if ((exc as FileException).alreadyExists || (exc as FileException).isDirectory) {
-        return addBlob(blob, info);
+        return addBytes(bytes, type, info);
       } else {
         throw wrapErr(exc, `Fail to save file`);
       }
     }
+  }
+
+  async function addBlob(blob: Blob, info?: ItemAttrs): Promise<string> {
+    return addBytes(new Uint8Array(await blob.arrayBuffer()), blob.type, info);
   }
 
   async function addFile(file: web3n.files.ReadonlyFile, info?: ItemAttrs): Promise<string> {
@@ -493,6 +507,7 @@ export async function makeLabelledFileStore(localFS: WritableFS): Promise<Labell
   // so nothing can be chained onto it yet.
   return {
     addBlob,
+    addBytes,
     addFile,
     addLink,
     addFolder,

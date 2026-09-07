@@ -142,6 +142,37 @@ export function applyDelivery<T extends MsgView>(msg: T, d: MsgDeliveryState): T
   return (wasAt.at === 'home') ? { ...next, mailFolder: d.home } : next;
 }
 
+/**
+ * The stored record's `cTime` and `deliveryTS`, kept over whatever a save
+ * carries.
+ *
+ * Both are stamps of EVENTS - the record coming into being, and its delivery -
+ * and a later save is neither of those events. The GUI cannot make this
+ * distinction itself: `preparedMsgDataToOutgoingMsgView` stamps both with
+ * `Date.now()` every time it turns a form into a record, and it does not know
+ * whether the record already exists. The write point does.
+ *
+ * Without this, a draft merely LOOKED AT produced a change: the form saves as it
+ * opens, the fresh `cTime` read as a content diff and the fresh `deliveryTS` as
+ * a delivery diff, so every open cost a phantom and a delivery. Worse than the
+ * waste was what that phantom carried - the attachment list in its marked form,
+ * which is how a device came to lose the id of a file it was holding (see
+ * mergeAttachmentAvailability).
+ *
+ * The delivery's own stamp still lands: handleDeliveryProgress writes through
+ * `db.updateMessage`, not through the GUI's write point.
+ *
+ * A stamp the stored record does not have is not invented here - a record from
+ * before either column carried a value takes the incoming one.
+ */
+export function preserveEventStamps<T extends MsgView>(stored: MsgView, next: T): T {
+  return {
+    ...next,
+    ...(stored.cTime !== undefined && { cTime: stored.cTime }),
+    ...(stored.deliveryTS !== undefined && { deliveryTS: stored.deliveryTS }),
+  };
+}
+
 function sameJson(a: unknown, b: unknown): boolean {
   return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 }

@@ -29,7 +29,7 @@
 
 import { makeLogger } from '../../../shared/utils/logger.ts';
 import type { DBProvider } from '../../dataset/index.ts';
-import type { MailSyncMsgV1 } from '../../types/mail-sync.types.ts';
+import type { MailSyncMsg } from '../../types/mail-sync.types.ts';
 import type { OrphanedSyncDbEntry } from '../../types/sync-types.ts';
 
 const log = makeLogger('SyncOrphans');
@@ -47,7 +47,7 @@ export function orderedByChangeTime<T extends { ts: number; id: number }>(entrie
 export async function bufferOrphanedSync(
   db: DBProvider,
   targetMsgId: string,
-  syncMsg: MailSyncMsgV1,
+  syncMsg: MailSyncMsg,
 ): Promise<void> {
   // A failure to buffer must not stop the rest of the inbox from being
   // processed: the phantom is lost, and the state stays as it was.
@@ -77,7 +77,7 @@ export async function bufferOrphanedSync(
 export async function drainOrphansFor(
   db: DBProvider,
   msgId: string,
-  apply: (syncMsg: MailSyncMsgV1) => Promise<void>,
+  apply: (syncMsg: MailSyncMsg) => Promise<void>,
 ): Promise<number> {
   const buffered = db.getOrphanedSyncsFor(msgId);
   if (buffered.length === 0) {
@@ -87,7 +87,7 @@ export async function drainOrphansFor(
   let applied = 0;
   for (const entry of orderedByChangeTime<OrphanedSyncDbEntry>(buffered)) {
     try {
-      const syncMsg = JSON.parse(entry.rawPayload) as MailSyncMsgV1;
+      const syncMsg = JSON.parse(entry.rawPayload) as MailSyncMsg;
       await apply(syncMsg);
       applied += 1;
     } catch (err) {

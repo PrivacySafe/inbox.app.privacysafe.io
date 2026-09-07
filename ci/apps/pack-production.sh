@@ -1,7 +1,7 @@
 #!/bin/bash
 
 this_dir="$(dirname "${BASH_SOURCE[0]}")"
-source "$this_dir/manifest-utils.sh"
+source "$this_dir/../utils/manifest-utils.sh"
 
 if [ -n "$1" ]
 then

@@ -16,7 +16,31 @@
 */
 import type { SYSTEM_FOLDERS } from '../../src/common/constants/mail-folders-default.ts';
 
-export type SyncEntityType = 'msg' | 'folder';
+/**
+ * What a journal row and a `sync_versions` row are about.
+ *
+ * `'restore'` is the odd one out: it names a chunk of a restore snapshot, and it
+ * is NEVER written into `sync_versions`. It exists so that such a chunk gets a
+ * journal row of its own - with `entityId` of `'<restoreId>#<part>'`, which is
+ * unique per part and hence never collides with another row of the same
+ * (entity, aspect) pair.
+ */
+export type SyncEntityType = 'msg' | 'folder' | 'restore';
+
+/**
+ * Which of the two rules a restore applies.
+ *
+ * Travels in a snapshot phantom, so that the receiving device applies the same
+ * rule as the device the archive was restored on:
+ *
+ * - `replace` - the archive states what the mailbox is. Every aspect is applied
+ *   under its own archived token (a newer local change still wins), and a local
+ *   entity the archive does not have, and that is older than the archive, is
+ *   deleted.
+ * - `merge` - the archive fills gaps. An entity that is here, or that has a
+ *   tombstone, is not touched at all; nothing is deleted.
+ */
+export type RestoreMode = 'replace' | 'merge';
 
 /**
  * Which part of an entity a change is about.
@@ -45,7 +69,16 @@ export type SyncAspect =
   /** folder: name, icon, colour, position, path. */
   | 'folderProps'
   /** Tombstone of an entity. */
-  | 'deleted';
+  | 'deleted'
+  /**
+   * One chunk of a restore snapshot. Describes a JOURNAL row only and is never
+   * written into `sync_versions`: the aspect tokens a snapshot carries are the
+   * archived ones, and the restore itself has already written them.
+   *
+   * Deliberately absent from SUPERSEDABLE_ASPECTS - a chunk carries entities its
+   * own columns do not name, so a newer chunk is not a superset of an older one.
+   */
+  | 'snapshot';
 
 /**
  * Ordering token of a change, used to resolve conflicts between the user's own
@@ -61,6 +94,14 @@ export interface SyncToken {
 
 export interface SyncVersionDbEntry extends SyncToken {
   /** Set only for the 'deleted' aspect: these rows outlive the entity. */
+  tombstonedAt?: number | null;
+}
+
+/** A whole row of `sync_versions`, as a full read of the table gives it. */
+export interface SyncVersionRow extends SyncToken {
+  entityType: SyncEntityType;
+  entityId: string;
+  aspect: SyncAspect;
   tombstonedAt?: number | null;
 }
 
@@ -118,8 +159,21 @@ export type MsgPlacement =
   | { at: 'trash' }
   | { at: 'folder'; folderId: string };
 
-/** The 'home' folder of an outgoing record, as its author sees it. */
-export type MsgHomeFolder = SYSTEM_FOLDERS.draft | SYSTEM_FOLDERS.outbox | SYSTEM_FOLDERS.sent;
+/**
+ * The 'home' folder of a record, as the device that wrote it sees it.
+ *
+ * `inbox` is in the list, and it was not until an archive came along: an
+ * ordinary phantom never carries an incoming record, so `home` could only ever
+ * be one of the three folders of outgoing mail. A backup DOES carry incoming
+ * records - the archive may end up being their only carrier - and
+ * folderFromRecord() reads `home` for a record placed at home, so an incoming
+ * one has to be able to say `inbox` rather than reach the type through a cast.
+ */
+export type MsgHomeFolder =
+  | SYSTEM_FOLDERS.draft
+  | SYSTEM_FOLDERS.outbox
+  | SYSTEM_FOLDERS.sent
+  | SYSTEM_FOLDERS.inbox;
 
 export interface MsgDeliveryState {
   status: 'draft' | 'sending' | 'sent' | 'error' | 'canceled';

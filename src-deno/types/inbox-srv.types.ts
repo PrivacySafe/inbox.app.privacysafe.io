@@ -22,6 +22,15 @@ import type {
   OutgoingMessageView,
 } from '../../src/common/types/mail.types.ts';
 import type { SyncActivityView } from '../services/sync/sync-activity.ts';
+import type {
+  BackupCreationResult,
+  BackupMetadataContent,
+  BackupProgress,
+  BackupValidationResult,
+  RestoreOutcome,
+  RestoreProgress,
+} from './backup.types.ts';
+import type { RestoreMode } from './sync-types.ts';
 
 export interface ItemAttrs {
   fileName?: string;
@@ -84,6 +93,21 @@ export type InboxUpdateEvent =
       entity: 'sync';
       event: 'activity';
       view: SyncActivityView;
+    }
+  | {
+      /**
+       * How far the archive being packed has got. Deliberately outside
+       * COALESCED_ENTITIES (see events.ts): a restore opens the bulk-replay
+       * window, and its own progress must not be the thing that window swallows.
+       */
+      entity: 'backup';
+      event: 'progress';
+      progress: BackupProgress;
+    }
+  | {
+      entity: 'restore';
+      event: 'progress';
+      progress: RestoreProgress;
     }
   | {
       /**
@@ -218,6 +242,48 @@ export interface InboxSrv {
    */
   handleIncomingSyncMsg(msg: web3n.asmail.IncomingMessage): Promise<boolean>;
 
+  /**
+   * Packs a backup archive and hands its bytes back.
+   *
+   * Bytes across the IPC, and not a file, because the manifest gives the GUI
+   * `shell.fileDialog` and no `storage`, and this component the other way round.
+   * BACKUP_MAX_BYTES is the fuse on that: the size is estimated before anything
+   * is packed, and an oversized mailbox is refused with a reason the user can
+   * act on rather than by running the device out of memory.
+   *
+   * @param opts.forEncryption leaves the metadata file out, because the GUI
+   *        encrypts this archive whole and puts the metadata into the container
+   *        around it - where it stays readable without a passphrase.
+   * @param opts.withAttachments false packs records only. The way out of
+   *        `archive_too_large`.
+   */
+  createBackupArchive(opts?: {
+    forEncryption?: boolean;
+    withAttachments?: boolean;
+  }): Promise<BackupCreationResult>;
+  /** @returns whether there was a backup to cancel. */
+  cancelBackupArchive(): Promise<boolean>;
+  /**
+   * @param outerMetadata the metadata of an ENCRYPTED archive, which lives in
+   *        the container the GUI opened rather than inside the archive itself.
+   */
+  validateBackupArchive(
+    archiveBytes: Uint8Array,
+    outerMetadata?: BackupMetadataContent,
+  ): Promise<BackupValidationResult>;
+  /**
+   * Applies an archive, already decrypted by the GUI when it was protected.
+   *
+   * @param mode `replace` lets the archive state what the mailbox is; `merge`
+   *        only fills gaps. Both go through one function, which is also the one
+   *        a receiving device runs on the snapshot - see applyRestoreSnapshot().
+   */
+  restoreBackupArchive(
+    archiveBytes: Uint8Array,
+    mode: RestoreMode,
+    outerMetadata?: BackupMetadataContent,
+  ): Promise<RestoreOutcome>;
+
   watch(obs: web3n.Observer<InboxUpdateEvent>): () => void;
   watchStartup(obs: web3n.Observer<StartupEvent>): () => void;
 }
@@ -255,6 +321,10 @@ export const INBOX_SRV_REQ_REPLY_METHODS: (keyof InboxSrv)[] = [
   'getIncomingAttachmentsFS',
   'getThumbnails',
   'saveThumbnail',
+  'createBackupArchive',
+  'cancelBackupArchive',
+  'validateBackupArchive',
+  'restoreBackupArchive',
 ];
 
 export const INBOX_SRV_OBSERVABLE_METHODS: (keyof InboxSrv)[] = ['watch', 'watchStartup'];

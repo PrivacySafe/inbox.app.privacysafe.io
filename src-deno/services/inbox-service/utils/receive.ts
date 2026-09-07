@@ -63,6 +63,20 @@ export async function persistIncomingMail(
   const msgData = await incomingMsgToIncomingMsgView(msg);
 
   if (existing) {
+    // `status` and `mailFolder` carry the two aspects that belong to the USER
+    // rather than to the server - whether the message has been read, and where
+    // they put it (see doc/multi-device-sync.md). Everything else here is the
+    // message's content, for which the server is the source of truth.
+    //
+    // A re-derivation is therefore not entitled to speak for those two, and it
+    // would: incomingMsgToIncomingMsgView() always answers 'received' and
+    // Inbox, and UPSERT_MESSAGE_QUERY writes every column. The catch-up scan
+    // lists the inbox from CATCH_UP_REWIND_MS before the watermark, and the
+    // watermark is the GREATEST processed deliveryTS - so the newest message is
+    // always in that window, and without this it would come back unread, and
+    // out of the trash, on every start of this component.
+    msgData.status = existing.status;
+    msgData.mailFolder = existing.mailFolder;
     await db.updateMessage(msgData);
     emit({ entity: 'message', event: 'updated', msg: msgData, msgId: msgData.msgId });
   } else {

@@ -45,6 +45,7 @@
     commonLoading,
     startupStatusText,
     isSyncing,
+    runMenuAction,
   } = useAppPage(true);
   const { messagesByFolders } = storeToRefs(useMessagesStore());
 
@@ -106,6 +107,7 @@
           :user="me"
           :connectivity-status-text="connectivityStatusText"
           @close="isMenuOpen = false"
+          @action="runMenuAction"
         />
       </div>
     </transition>

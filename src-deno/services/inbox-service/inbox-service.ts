@@ -24,6 +24,7 @@ import type {
 } from '../../../src/common/types/mail.types.ts';
 import type { InboxSrv } from '../../types/inbox-srv.types.ts';
 import type { DBProvider } from '../../dataset/index.ts';
+import { inboxBackupSrv } from '../../inbox-backup-srv.ts';
 import type { SyncAspect } from '../../types/sync-types.ts';
 import type { LabelledFileStore } from '../file-store/labelled-file-store.ts';
 import {
@@ -33,6 +34,7 @@ import {
   isIncomingMsg,
   isMsgRead,
   placementOf,
+  preserveEventStamps,
   type MsgAspect,
   type MsgView,
 } from '../sync/msg-aspects.ts';
@@ -107,6 +109,14 @@ export async function inboxService(
   ownAddr: string,
   watchStartup: InboxSrv['watchStartup'],
   activity?: SyncActivityTracker,
+  /**
+   * Replays the shared inbox from the watermark. A restore resets that watermark
+   * to 0 and needs a pass right after itself, and the only thing that can make
+   * such a pass is the mail service - which is built AFTER this one. So the hook
+   * arrives as a box index.ts fills in once both exist, rather than as a
+   * dependency that cannot be satisfied in this order.
+   */
+  rescan?: { run: () => Promise<void> },
 ): Promise<{
   inboxSrv: InboxSrv;
   emit: InboxEmit;
@@ -222,8 +232,11 @@ export async function inboxService(
    */
   async function upsertMessage(msg: IncomingMessageView | OutgoingMessageView): Promise<void> {
     const existing = db.getMessageById(msg.msgId);
-    const aspects = diffMsgAspects(existing ?? undefined, msg);
-    await applyMsgChanges([msg], () => announceMsgAspects(msg, aspects));
+    // The event stamps of the stored record survive the save - see
+    // preserveEventStamps for why this is the only place that can do it.
+    const next = existing ? preserveEventStamps(existing, msg) : msg;
+    const aspects = diffMsgAspects(existing ?? undefined, next);
+    await applyMsgChanges([next], () => announceMsgAspects(next, aspects));
   }
 
   /**
@@ -263,6 +276,19 @@ export async function inboxService(
       entityCount: movedIds.length,
     }));
   }
+
+  const backup = inboxBackupSrv({
+    db,
+    fileStore,
+    sync,
+    emit,
+    applyMsgChanges: changes => applyMsgChanges(changes),
+    deleteMessages: (msgIds, token) =>
+      deleteMessagesWithGc(db, fileStore, emit, msgIds, { sync: { token } }),
+    beginBulkReplay,
+    endBulkReplay,
+    rescanInbox: () => rescan?.run() ?? Promise.resolve(),
+  });
 
   const srv: InboxSrv = {
     async getAppState() {
@@ -468,6 +494,13 @@ export async function inboxService(
       return handleIncomingSyncEnvelope(msg, syncCtx);
     },
 
+    createBackupArchive: opts => backup.createBackupArchive(opts),
+    cancelBackupArchive: () => backup.cancelBackupArchive(),
+    validateBackupArchive: (bytes, outerMetadata) =>
+      backup.validateBackupArchive(bytes, outerMetadata),
+    restoreBackupArchive: (bytes, mode, outerMetadata) =>
+      backup.restoreBackupArchive(bytes, mode, outerMetadata),
+
     watch,
     watchStartup,
   };
@@ -481,6 +514,8 @@ export async function inboxService(
       deleteMessagesWithGc(db, fileStore, emit, msgIds, { sync: { token } }),
     persistIncoming: msg => persistMail(msg, { notify: false }),
     pulledMsgIds,
+    beginBulkReplay,
+    endBulkReplay,
   };
 
   async function persistMail(msg: IncomingMessage, opts?: { notify?: boolean }): Promise<void> {

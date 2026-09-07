@@ -15,6 +15,7 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
 export * from './app.store';
+export * from './backup.store';
 export * from './folders.store';
 export * from './contacts.store';
 export * from './messages.store';

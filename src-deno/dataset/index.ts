@@ -35,6 +35,7 @@ import type {
   SyncEntityType,
   SyncToken,
   SyncVersionDbEntry,
+  SyncVersionRow,
   SyncVersionWrite,
 } from '../types/sync-types.ts';
 import {
@@ -58,6 +59,7 @@ import {
   GET_SYNC_DEVICE_QUERY,
   UPSERT_SYNC_DEVICE_QUERY,
   GET_SYNC_VERSION_QUERY,
+  GET_ALL_SYNC_VERSIONS_QUERY,
   UPSERT_SYNC_VERSION_QUERY,
   DELETE_SYNC_VERSIONS_OF_QUERY,
   GC_SYNC_VERSIONS_QUERY,
@@ -181,6 +183,22 @@ export interface DBProvider {
     aspect: SyncAspect,
     version: SyncToken & { tombstonedAt?: number },
   ): Promise<void>;
+  /**
+   * Every row of `sync_versions`, tombstones included. What a backup exports
+   * alongside the records: an archive carries entities together with their
+   * per-aspect tokens, which is what lets a restore be expressed in the rules
+   * that already exist rather than inventing merge rules of its own.
+   */
+  getAllSyncVersions(): SyncVersionRow[];
+  /**
+   * Writes several versions with ONE scheduled file write.
+   *
+   * A restore writes a token per aspect per message; going through
+   * setSyncVersion() would arm the batching writer once per token, and on a
+   * mailbox of a few thousand messages that is thousands of rewrites of the
+   * whole database file.
+   */
+  setSyncVersions(versions: SyncVersionWrite[]): Promise<void>;
   /** Drops an entity's versions, except its tombstones. */
   deleteSyncVersionsOf(entityType: SyncEntityType, entityId: string): Promise<void>;
   /** Collects tombstones past TOMBSTONE_TTL_MS, and nothing else. */
@@ -229,6 +247,27 @@ export interface DBProvider {
   getExpiredInboxRemovals(now: number): string[];
   dropInboxRemovals(msgIds: string[], noDiskWrite?: boolean): Promise<void>;
   countPendingInboxRemovals(): number;
+
+  // ---------------------------------------------------------------------------
+  // Restoration from a backup archive
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Whether a restore is going on right now.
+   *
+   * In memory rather than in a column, and deliberately: the flag exists to keep
+   * the background tracts from rewriting what a restore is writing, and both of
+   * those live in this process. A persisted flag would have to be cleared at
+   * every start, and a flag whose only correct start-up action is "clear" is a
+   * liability.
+   *
+   * What it changes is one branch of the mail service: while it is raised
+   * handleOne() answers "not handled", so the WATERMARK DOES NOT ADVANCE and the
+   * catch-up scan lists those messages again once the restore is over. That is
+   * why no new lock is needed here.
+   */
+  isRestoreInProgress(): boolean;
+  setRestoreInProgress(value: boolean): void;
 }
 
 export async function dataset(): Promise<DBProvider> {
@@ -245,6 +284,12 @@ export async function dataset(): Promise<DBProvider> {
   let lastSyncClockTs = 0;
   let otherDeviceSeenId: string | undefined = undefined;
   let otherDeviceSeenAt: number | undefined = undefined;
+
+  /**
+   * Whether a restore is going on. In memory - see isRestoreInProgress() on the
+   * interface for why it is not a column.
+   */
+  let restoreInProgress = false;
 
   /**
    * Whether this start put any schema in. getRowsModified() is
@@ -769,6 +814,23 @@ export async function dataset(): Promise<DBProvider> {
     writer.scheduleSave();
   }
 
+  function getAllSyncVersions(): SyncVersionRow[] {
+    const [sqlValue] = sqlite.db.exec(GET_ALL_SYNC_VERSIONS_QUERY);
+    return sqlValue ? objectFromQueryExecResult<SyncVersionRow>(sqlValue) : [];
+  }
+
+  async function setSyncVersions(versions: SyncVersionWrite[]): Promise<void> {
+    if (versions.length === 0) {
+      return;
+    }
+    for (const version of versions) {
+      writeSyncVersion(version);
+    }
+    // Once, after all of them: the batching writer is armed by the call, not by
+    // the row, so one save here is thousands of file rewrites saved on a restore.
+    writer.scheduleSave();
+  }
+
   async function deleteSyncVersionsOf(entityType: SyncEntityType, entityId: string): Promise<void> {
     sqlite.db.exec(DELETE_SYNC_VERSIONS_OF_QUERY, {
       $entityType: entityType,
@@ -954,6 +1016,8 @@ export async function dataset(): Promise<DBProvider> {
 
     getSyncVersion,
     setSyncVersion,
+    getAllSyncVersions,
+    setSyncVersions,
     deleteSyncVersionsOf,
     collectGarbageInSyncVersions,
 
@@ -974,5 +1038,10 @@ export async function dataset(): Promise<DBProvider> {
     getExpiredInboxRemovals,
     dropInboxRemovals,
     countPendingInboxRemovals,
+
+    isRestoreInProgress: () => restoreInProgress,
+    setRestoreInProgress: value => {
+      restoreInProgress = value;
+    },
   };
 }

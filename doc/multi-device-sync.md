@@ -25,7 +25,7 @@ Every local change the app shows the user is synchronized. What is **not** sent:
 
 | Not synchronized | Why |
 |---|---|
-| the record of an *incoming* message | its `msgId` is issued by the ASMail server and the inbox is shared, so every device derives the same record from the same message on its own. Sending it would duplicate bytes and risk two derivations of one record drifting apart |
+| the record of an *incoming* message | its `msgId` is issued by the ASMail server and the inbox is shared, so every device derives the same record from the same message on its own. Sending it would duplicate bytes and risk two derivations of one record drifting apart. **One exception**, and it is about the carrier rather than the direction — a message deleted from the server after a backup was taken; see [backup-and-restore.md](./backup-and-restore.md) |
 | attachment previews (`thumbnails`) | a local cache; 10–40 KB of dataURL per attachment would treble the size of a phantom for something another device rebuilds in milliseconds — and for a file that is on some other device, never needs at all |
 | bytes in `mail-app-files` | local by definition. Only the *record* of such an attachment travels, marked so that the receiving device can say where the file actually is |
 | `AppState.lastReceivingTimestamp` | this device's own watermark over the shared inbox |
@@ -55,13 +55,40 @@ So each is split by aspect ([sync-types.ts](../src-deno/types/sync-types.ts)):
 - `placement` — where the user put it;
 - `delivery` — the outcome of sending, for an outgoing message;
 - `folderProps` — a folder's name, icon, colour, position, path;
-- `deleted` — a tombstone.
+- `deleted` — a tombstone;
+- `snapshot` — one chunk of a restore. It describes a JOURNAL row only and is
+  never written into `sync_versions`, the tokens a snapshot carries being the
+  archived ones (see [backup-and-restore.md](./backup-and-restore.md)).
 
 Every aspect is a function of the record and of nothing else. That is what lets
 `diffMsgAspects()` work out what a change was about without the caller saying so
 — which matters because the whole GUI writes through one `upsertMessage()`:
 saving a draft, marking as read, cancelling a send, restoring from the trash. An
 aspect picked by who is calling would silently miss the next caller.
+
+### The stamps a save is not entitled to rewrite
+
+Every aspect is a function of the record — which cuts both ways: a field that
+changes for no reason becomes a change for no reason. Two fields did.
+
+`preparedMsgDataToOutgoingMsgView()` stamps `cTime` **and** `deliveryTS` with
+`Date.now()` every time it turns the compose form into a record, and the form
+saves **as it opens**. So `diffMsgAspects()` read a fresh `cTime` as a content
+change and a fresh `deliveryTS` as a delivery change, and a draft merely *looked
+at* cost a phantom and a delivery. Worse than the waste was what that phantom
+carried — the attachment list in its marked form, which is how a device came to
+lose the id of a file it was holding (see *Attachments between devices*).
+
+Both are stamps of **events** — the record coming into being, and its delivery —
+and a later save is neither. The GUI cannot make that distinction: it does not
+know whether the record already exists. The write point does, so
+`upsertMessage()` puts an update through `preserveEventStamps()`
+([msg-aspects.ts](../src-deno/services/sync/msg-aspects.ts)) and the stored
+stamps survive.
+
+The delivery's own stamp still lands: `handleDeliveryProgress()` writes through
+`db.updateMessage`, not through the GUI's write point. And a record that is new
+here keeps the stamps it arrives with — creation *is* the event they are about.
 
 ### Placement in a reduced alphabet
 
@@ -184,6 +211,20 @@ message that is not there does not appear because it was asked for twice.
 The one case it cannot cover is a message already removed from the server, where
 a resync would not have helped either.
 
+### The second version of the body
+
+`isMailSyncMsg()` reads both `v: 1` and `v: 2`
+([mail-sync.types.ts](../src-deno/types/mail-sync.types.ts)). `v: 2` carries one
+kind of event today — `restore-snapshot`, a bulk announcement of a restore from a
+backup archive, applied by the very function the restoring device runs. Its
+format, and the rule deciding which records travel in it, are in
+[backup-and-restore.md](./backup-and-restore.md).
+
+`v: 2` was chosen rather than a new `kind` under `v: 1` deliberately: a build
+that predates it does not recognize the body, and step 2 above then leaves the
+message alone with a **deferred** removal instead of taking a change away from a
+third device.
+
 ### The orphan buffer
 
 What is left for the buffer is three cases: `getMsg` failed on the network; a
@@ -244,6 +285,29 @@ Bytes do not travel. Three cases, and only one of them is fully available
 says so instead of reporting a broken file. `id` is cut out in all three: it
 points into another device's file store, where it can *collide* with a local id
 and hand the user someone else's file.
+
+**A phantom is authoritative about WHICH attachments a message has, and not
+about whether they can be read here.** The two are easy to confuse, and doing so
+destroys files:
+
+1. A saves a draft with a file, so A holds the id of a copy in its store;
+2. B gets the record — marked, no id, which is right for B;
+3. anything that changes `content` on B announces the record **back**, still
+   marked — and it used to need no editing at all, see *The stamps a save is not
+   entitled to rewrite* below;
+4. A applies it under a newer token — and A's id is gone. The file **A has** is
+   now unopenable on A, unsendable, and absent from any backup taken there.
+
+That is how it was found: a live backup produced an archive whose small
+attachment was simply missing. So `applyRecordContent()` merges through
+`mergeAttachmentAvailability()` — the list comes from the phantom, and an entry
+the local record can still read keeps its own `id`. Availability is not a
+synchronized property, and should not be: an aspect is something two devices can
+disagree about, and no other device can claim the bytes are not on **this** one.
+
+Matched on name **and** size, because the author may have replaced a file under
+the same name and the phantom carries no id to tell the two apart. A different
+size takes the phantom's marked entry — "not here" beats stale bytes.
 
 Availability is decided in one place,
 [attachment-availability.ts](../shared/utils/attachment-availability.ts), and the

@@ -22,11 +22,144 @@ export const en = {
       // breakage.
       stalled: 'Changes are waiting to be sent',
     },
-    exit: 'Exit',
     select: 'Select',
     ok: 'Ok',
     new: {
       mail: 'New Mail',
+    },
+    menu: {
+      makeBackup: 'Create a backup',
+      restoreBackup: 'Restore from a backup',
+      exit: 'Exit',
+    },
+    btn: {
+      cancel: 'Cancel',
+      save: 'Save',
+    },
+  },
+
+  backup: {
+    // One set of lines for both places the same fact is told: after a backup,
+    // and before a restore of one.
+    skipped: {
+      onAnotherDevice:
+        '{count} file(s) were attached on another of your devices, and file bytes never travel '
+        + 'between devices.',
+      notRequested: '{count} file(s) were left out because you asked for an archive without them.',
+      external:
+        '{count} file(s) are too big to be copied and were attached by reference, so the '
+        + 'archive points at them rather than holding them.',
+      origin: '{count} file(s) belong to received messages and stay on the server.',
+      unreadable: '{count} file(s) could not be read.',
+      noLocalSource: '{count} file(s) have no readable file on this device.',
+    },
+    passphrase: {
+      createTitle: 'Protect the backup',
+      openTitle: 'Passphrase required',
+      createHint:
+        'A passphrase encrypts the archive. Leave both fields empty to save it unencrypted.',
+      openHint: 'This backup archive is encrypted. Enter the passphrase it was created with.',
+      label: 'Passphrase',
+      repeatLabel: 'Repeat passphrase',
+      placeholder: 'Leave empty for no encryption',
+      openBtn: 'Open',
+      show: 'Show passphrase',
+      hide: 'Hide passphrase',
+      wrong: 'That passphrase does not open this archive.',
+      mismatch: 'The two passphrases do not match.',
+      tooShort: 'A passphrase has to be at least {count} characters long.',
+      noRecovery: 'A forgotten passphrase cannot be recovered: the archive stays unreadable.',
+      optional:
+        'Without a passphrase the archive is only as private as the place you keep it in.',
+    },
+    create: {
+      dialogTitle: 'Creating backup',
+      fileDialogTitle: 'Save backup',
+      fileDialogBtn: 'Save',
+      text: {
+        scanning: 'Reading the mailbox',
+        compressing: 'Packing {number} of {total}',
+        encrypting: 'Encrypting the archive',
+        saving: 'Saving the backup file',
+      },
+      // A permanent explanation rather than a warning to confirm: it is not
+      // about the risk of this action but about the boundary of what an archive
+      // can ever bring back.
+      attachmentsNotice:
+        'Attachments of received messages are kept on the server and do not go into the '
+        + 'archive. Delete such a message from the server and its attachments are lost — the '
+        + 'messages themselves will still be restored.',
+      // The line a live run went without: an archive came out with no
+      // attachments at all, because the files had been attached on another
+      // device and file bytes never travel between devices.
+      thisDeviceNotice:
+        'Only files that are on this device go into the archive. A message whose file was '
+        + 'attached on another of your devices is backed up without it, so take the backup '
+        + 'where the files are.',
+      success: 'The backup {filename} was saved.',
+      skippedTitle: 'Some files did not go into the archive.',
+      empty: 'There is nothing to back up.',
+      cancel: 'Creating the backup was stopped.',
+      error: 'The backup could not be created.',
+      errorTooLarge:
+        'This mailbox is too big to be carried into an archive whole. Take a backup without '
+        + 'attachments instead.',
+    },
+    restore: {
+      dialogTitle: 'Restoring backup',
+      fileDialogTitle: 'Select backup file',
+      fileDialogBtn: 'Open',
+      confirmTitle: 'Restore from a backup',
+      confirmBtn: 'Restore',
+      confirmWarningText:
+        'This archive was written by version {archiveVersion}, and this app is version '
+        + '{appVersion}, or the archive carries no version at all. Restoring it may damage the '
+        + 'mailbox. Proceed at your own risk.',
+      unknownVersion: 'unknown',
+      unknownDate: 'unknown',
+      skippedTitle: 'This archive does not hold every file:',
+      summary: {
+        createdAt: 'Backup taken',
+        messages: 'Messages in the archive',
+        attachments: 'Attachments in the archive',
+        current: 'Messages here now',
+      },
+      mode: {
+        mergeTitle: 'Add what is missing',
+        mergeHint:
+          'Messages and folders that are not here are put back. Nothing that is here is '
+          + 'changed, and nothing is deleted. A message deleted after the backup stays deleted.',
+        replaceTitle: 'Make the mailbox match the archive',
+        replaceHint:
+          'The archive states what the mailbox is. Anything you changed after the backup was '
+          + 'taken still wins over it.',
+        replaceWarning:
+          'Messages and folders that are not in the archive, and that are older than it, will '
+          + 'be deleted — on this device and on your other ones.',
+      },
+      devicesNotice:
+        'Whatever you choose here is what every device of yours will do: the restore is sent '
+        + 'to them and applied by the same rule.',
+      text: {
+        unpacking: 'Reading the archive',
+        decrypting: 'Decrypting the archive',
+        listingInbox: 'Checking which messages are still on the server',
+        restoringAttachments: 'Restoring attachment {number} of {total}',
+        restoringMessages: 'Restoring {number} of {total}',
+        announcing: 'Telling your other devices',
+        completed: 'Restoration completed',
+      },
+      success: 'The backup was restored: {created} added, {updated} updated, {deleted} deleted.',
+      offlineNotice:
+        'The server could not be reached, so it is not known which received messages are still '
+        + 'there. Some attachments may turn out to be unavailable.',
+      error: 'The backup could not be restored.',
+      errorCorruptedArchive: 'This file is damaged or is not a ZIP archive.',
+      errorForeignArchive: 'This archive is a backup of another app, not of the mailbox.',
+      errorNoMessages: 'This archive holds no messages. It may be a backup of another app.',
+      errorUnreadableRecords: 'The messages in this archive cannot be read.',
+      errorPassphraseRequired: 'This archive is encrypted and needs its passphrase.',
+      errorEncryptionUnsupported: 'This archive is encrypted, and this app cannot decrypt it here.',
     },
   },
 
