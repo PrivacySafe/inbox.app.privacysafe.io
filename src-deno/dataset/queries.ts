@@ -144,3 +144,10 @@ export const DELETE_INBOX_REMOVAL_QUERY = 'DELETE FROM pending_inbox_removals WH
 
 export const COUNT_PENDING_INBOX_REMOVALS_QUERY =
   'SELECT COUNT(*) AS num FROM pending_inbox_removals';
+
+export const GET_CONTACT_BLACKLIST_QUERY = 'SELECT address FROM contact_blacklist';
+
+export const CLEAR_CONTACT_BLACKLIST_QUERY = 'DELETE FROM contact_blacklist';
+
+export const INSERT_CONTACT_BLACKLIST_QUERY =
+  'INSERT OR IGNORE INTO contact_blacklist (address) VALUES ($address)';

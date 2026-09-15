@@ -26,6 +26,7 @@
 
 import type { IncomingMessage } from '../../../src/common/types/mail.types.ts';
 import { makeLogger } from '../../../shared/utils/logger.ts';
+import { sameAddress } from '../../../shared/utils/address-utils.ts';
 import { MAIL_SYNC_MSG_TYPE } from '../../types/mail-sync.types.ts';
 
 const log = makeLogger('InboxRouter');
@@ -37,6 +38,39 @@ export interface IncomingRouterCtx {
   handleSync(msg: web3n.asmail.IncomingMessage): Promise<boolean>;
   /** Whether the user is to be notified of a new message. */
   notify: boolean;
+  /** This user's own address. Mail to oneself is never dropped. */
+  ownAddr: string;
+  /** Whether the user has blocked this sender. */
+  isBlockedSender(address: string): boolean;
+  /** Whether this message is already in the database, from before a blocking. */
+  isAlreadyStored(msgId: string): boolean;
+  /** Takes a message off the server. Only ever called for a blocked sender. */
+  dropFromInbox(msgId: string): Promise<void>;
+}
+
+/**
+ * Whether this message is one the user has chosen not to receive.
+ *
+ * Asked ONLY inside the 'mail' branch below. A synchronization phantom comes
+ * from this very user's address, and must never be put to this question - the
+ * own-address check here is a second line for a future caller, not the first.
+ *
+ * Mail that is already in the database was received BEFORE the blocking, and
+ * only the user deletes that. The check is not theoretical: a restore rewinds
+ * the watermark to 0 and asks for a pass over the whole inbox, so the scan does
+ * come back round to mail from years ago.
+ */
+function isFromBlockedSender(
+  msg: web3n.asmail.IncomingMessage,
+  ctx: IncomingRouterCtx,
+): boolean {
+  const { sender } = msg;
+  return (
+    !!sender
+    && !sameAddress(sender, ctx.ownAddr)
+    && ctx.isBlockedSender(sender)
+    && !ctx.isAlreadyStored(msg.msgId)
+  );
 }
 
 /**
@@ -51,6 +85,13 @@ export async function routeIncomingMsg(
   ctx: IncomingRouterCtx,
 ): Promise<boolean> {
   if (msg.msgType === 'mail') {
+    if (isFromBlockedSender(msg, ctx)) {
+      log.info(`Dropping incoming ${msg.msgId}: its sender is blocked.`);
+      await ctx.dropFromInbox(msg.msgId);
+      // HANDLED, and this matters: answering "not handled" holds the watermark,
+      // and every later scan would re-list a message that is no longer there.
+      return true;
+    }
     await ctx.persistMail(msg as IncomingMessage, { notify: ctx.notify });
     return true;
   }

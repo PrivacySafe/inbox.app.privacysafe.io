@@ -56,6 +56,24 @@ ensure_git_env_vars() {
 	fi
 }
 
+config_git_user_here() {
+	git config user.name $GIT_USER || return $?
+	git config user.email $GIT_EMAIL || return $?
+	git config credential.helper '!f() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_TOKEN}"; }; f' || return $?
+}
+
+push_repo_in() {
+	ensure_git_env_vars || return $?
+	local repo_dir="$1"
+	local commit_msg="$2"
+	(cd $repo_dir || exit $?
+		config_git_user_here || exit $?
+		git add . || exit $?
+		git commit --message="$commit_msg" || exit $?
+		git push || exit $?
+	) || return $?
+}
+
 push_repo_version_in() {
 	ensure_git_env_vars || return $?
 	local version="$1"
@@ -63,9 +81,7 @@ push_repo_version_in() {
 	local commit_msg="$3"
 	local tag_msg="$4"
 	(cd $repo_dir || exit $?
-		git config user.name $GIT_USER || exit $?
-		git config user.email $GIT_EMAIL || exit $?
-		git config credential.helper '!f() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_TOKEN}"; }; f'
+		config_git_user_here || exit $?
 		git add . || exit $?
 		git commit --message="$commit_msg" || exit $?
 		git tag -a "v$version" -m "$tag_msg" || exit $?
@@ -88,7 +104,7 @@ push_content_into_repo() {
 	done
 	mv $src_dir/* $src_dir/.[!.]* $repo_dir/ || return $?
 
-	push_repo_version_in "$version" $repo_dir "v.$version" "Version $version" || return $?
+	push_repo_version_in "$version" $repo_dir "v$version" "Version $version" || return $?
 
 	rm -r $repo_dir
 }

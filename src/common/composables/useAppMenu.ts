@@ -30,6 +30,12 @@ export function useAppMenuItems() {
   return computed<AppMenuItem[]>(() => [
     // Note that the icon set is not open-ended: a name it does not define
     // renders as nothing at all, and silently.
+    {
+      id: 'manage-blocks',
+      icon: 'settings-account-box',
+      label: t('app.menu.manageBlocks'),
+      isAccent: true,
+    },
     { id: 'make-backup', icon: 'outline-file-download', label: t('app.menu.makeBackup') },
     { id: 'restore-backup', icon: 'outline-file-upload', label: t('app.menu.restoreBackup') },
     { id: 'exit', icon: 'round-logout', label: t('app.menu.exit') },

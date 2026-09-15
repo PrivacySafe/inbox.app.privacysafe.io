@@ -53,6 +53,7 @@
           :key="item.id"
           :class="[
             $style.menuItem,
+            item.isAccent && $style.accent,
             index === 0 && $style.first,
             index === menuItems.length - 1 && $style.last,
           ]"
@@ -60,7 +61,8 @@
         >
           <ui3n-icon
             :icon="item.icon"
-            :class="$style.icon"
+            :color="item.isAccent ? 'var(--warning-content-default)' : 'var(--color-icon-control-primary-default)'"
+            :class="[$style.icon, item.isAccent && $style.iconAccent]"
           />
 
           <span>{{ item.label }}</span>
@@ -125,8 +127,28 @@
     }
   }
 
+  // After .menuItem, and that matters: its own :hover paints the row and the
+  // icon in the accent blue, which would take this item's warning colour away
+  // at the very moment the pointer is on it.
+  .menuItem.accent {
+    color: var(--warning-content-default);
+
+    &:hover {
+      background-color: var(--warning-fill-hover);
+      color: var(--warning-content-default);
+
+      & > div {
+        color: var(--warning-content-default);
+      }
+    }
+  }
+
   .icon {
     color: var(--color-icon-control-secondary-default);
+  }
+
+  .iconAccent {
+    color: var(--warning-content-default);
   }
 
   @keyframes bounce-once {

@@ -115,6 +115,8 @@
           block
           :icon="item.icon"
           icon-position="left"
+          :icon-color="item.isAccent ? 'var(--warning-content-default)' : undefined"
+          :class="item.isAccent && $style.accentBtn"
           @click="onMenuItemClick(item.id)"
         >
           {{ item.label }}
@@ -202,6 +204,14 @@
     display: flex;
     flex-direction: column;
     row-gap: var(--spacing-s);
+  }
+
+  .accentBtn {
+    color: var(--warning-content-default);
+
+    &:hover {
+      background-color: var(--warning-fill-hover);
+    }
   }
 
   .systemFolder {

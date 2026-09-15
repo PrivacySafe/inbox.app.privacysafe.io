@@ -14,7 +14,7 @@
  You should have received a copy of the GNU General Public License along with
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
-import { computed, onBeforeMount, ref } from 'vue';
+import { computed, inject, onBeforeMount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Squire from 'squire-rte';
 import isEmpty from 'lodash/isEmpty';
@@ -22,6 +22,7 @@ import cloneDeep from 'lodash/cloneDeep';
 import debounce from 'lodash/debounce';
 import { getRandomId } from '@v1nt1248/3nclient-lib/utils';
 import type { Nullable } from '@v1nt1248/3nclient-lib';
+import { NOTIFICATIONS_KEY, type NotificationsPlugin } from '@v1nt1248/3nclient-lib/plugins';
 import { useContactsStore } from '@common/store';
 import { useCreateMsgActions } from '@common/composables/useCreateMsgActions';
 import type { AttachmentInfo, ContactListItem, PreparedMessageData } from '@common/types';
@@ -40,7 +41,10 @@ export function useCreateMsg({
 }) {
   const { t } = useI18n();
 
-  const { getContactList } = useContactsStore();
+  const $notifications = inject<NotificationsPlugin>(NOTIFICATIONS_KEY)!;
+
+  const contactsStore = useContactsStore();
+  const { getContactList, isBlacklisted } = contactsStore;
   const { saveMsgToDraft, openSendMessageUI, runMessageSending } = useCreateMsgActions();
 
   const isLoading = ref(false);
@@ -63,6 +67,51 @@ export function useCreateMsg({
   let textEditor: Nullable<Squire> = null;
 
   const isFormDisabled = computed(() => isEmpty(msgData.value.recipients));
+
+  /**
+   * Whether the autocomplete refuses to pick this contact.
+   *
+   * A blocked contact is still listed, greyed out and marked, rather than left
+   * out: an absence explains nothing, and the user would be left wondering why
+   * somebody they have in their address book is not there.
+   */
+  function isContactBlocked(contact: ContactListItem): boolean {
+    return isBlacklisted(contact.mail);
+  }
+
+  /**
+   * Takes blocked addresses out of the recipients.
+   *
+   * Typing an address by hand goes past the list entirely, and a blocking made
+   * on another device can land while this form is open.
+   *
+   * @returns the addresses that were removed, for the notice to name.
+   */
+  function dropBlockedRecipients(): string[] {
+    const blocked = msgData.value.recipients.filter(isBlacklisted);
+    if (blocked.length > 0) {
+      msgData.value.recipients = msgData.value.recipients.filter(r => !isBlacklisted(r));
+    }
+    return blocked;
+  }
+
+  function dropBlockedRecipientsAndTell(): void {
+    const dropped = dropBlockedRecipients();
+    if (dropped.length === 0) {
+      return;
+    }
+    // Said, not done quietly: an address that vanished on its own reads as
+    // input this app has swallowed.
+    $notifications.$createNotice({
+      type: 'error',
+      content: t('msg.create.recipient.blocked', { mail: dropped.join(', ') }),
+      duration: 4000,
+    });
+  }
+
+  // A blocking can happen while this form is open - from another device, or from
+  // Manage blocks in this window.
+  watch(() => contactsStore.blockedAddresses, () => dropBlockedRecipientsAndTell());
 
   function filterContactList(value: ContactListItem, query: string): boolean {
     const { name, mail } = value;
@@ -88,6 +137,9 @@ export function useCreateMsg({
   }
 
   async function onMsgDataUpdate() {
+    // Before the draft is saved, so that a blocked address never reaches the
+    // stored record - which is what Outbox sends by, without this form.
+    dropBlockedRecipientsAndTell();
     if (isMobileMode && emits) {
       emits('action', { event: 'update', data: { msgData: msgData.value } });
     }
@@ -144,6 +196,13 @@ export function useCreateMsg({
       return;
     }
 
+    // Last check before the message leaves: the blacklist could have changed
+    // between the last edit of the recipients and this click.
+    dropBlockedRecipientsAndTell();
+    if (isEmpty(msgData.value.recipients)) {
+      return;
+    }
+
     // Held across preflight and handover to delivery: without it a second click
     // starts the whole thing again while the first one is still in the dialog.
     isLoading.value = true;
@@ -172,6 +231,7 @@ export function useCreateMsg({
     dialogEl,
     textEditor,
     contactList,
+    isContactBlocked,
     msgData,
     withoutSave,
     showEditorToolbar,

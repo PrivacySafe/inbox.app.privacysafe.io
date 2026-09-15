@@ -1,7 +1,7 @@
 {
   "name": "Inbox",
   "appDomain": "inbox.app.privacysafe.io",
-  "version": "0.3.41",
+  "version": "0.3.42",
   "description": "Send and receive encrypted messages with an improved version of email.",
   "icon": "logo.png",
   "components": {
@@ -113,6 +113,12 @@
           "receivingFrom": "all",
           "config": "all"
         },
+        "otherAppsRPC": [
+          {
+            "app": "contacts.app.privacysafe.io",
+            "service": "AppContacts"
+          }
+        ],
         "storage": {
           "appFS": "default"
         },

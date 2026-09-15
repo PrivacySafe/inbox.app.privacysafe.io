@@ -22,6 +22,7 @@ import type { DBProvider } from '../../dataset/index.ts';
 import { MAIL_SYNC_MSG_TYPE } from '../../types/mail-sync.types.ts';
 import type { InboxEmit } from '../inbox-service/events.ts';
 import { handleDeliveryProgress, isMailSyncDelivery } from '../inbox-service/utils/send.ts';
+import type { BlacklistTracker } from '../contacts-service/contacts-blacklist.ts';
 import type { SyncActivityTracker } from '../sync/sync-activity.ts';
 import type { SyncOutbox } from '../sync/sync-outbox.ts';
 import { routeIncomingMsg, type IncomingRouterCtx } from './route-incoming.ts';
@@ -38,6 +39,10 @@ export interface MailServiceDeps {
   persistMail: IncomingRouterCtx['persistMail'];
   /** The receiving tract of synchronization. */
   handleSync: IncomingRouterCtx['handleSync'];
+  /** This user's own address, to tell their own phantoms from other senders. */
+  ownAddr: string;
+  /** Who the user has blocked; mail from them is dropped, never stored. */
+  blacklist: BlacklistTracker;
   activity?: SyncActivityTracker;
 }
 
@@ -61,6 +66,8 @@ export async function mailService({
   sync,
   persistMail,
   handleSync,
+  ownAddr,
+  blacklist,
   activity,
 }: MailServiceDeps): Promise<MailService> {
   const process = new NamedProcs();
@@ -87,7 +94,39 @@ export async function mailService({
    */
   const seenMsgIds = new Set<string>();
 
-  const routerCtx = (notify: boolean): IncomingRouterCtx => ({ persistMail, handleSync, notify });
+  /**
+   * Takes mail from a blocked sender off the server.
+   *
+   * Immediate, not deferred, and that is this app's own rule rather than a
+   * decision made here: an ordinary message leaves the server at once, only
+   * phantoms wait (see doc/multi-device-sync.md). Nothing is lost for the user's
+   * other devices - they read the same blacklist and would drop it too.
+   */
+  async function dropFromInbox(msgId: string): Promise<void> {
+    try {
+      await w3n.mail!.inbox.removeMsg(msgId);
+    } catch (err) {
+      const exc = err as web3n.asmail.InboxException | undefined;
+      if (exc?.msgNotFound) {
+        return;
+      }
+      // The server could not be reached. Due at once, so the next maintenance
+      // pass and the next start take it on - the same net that ordinary removal
+      // failures already fall into.
+      log.warn(`Could not remove blocked message ${msgId}; scheduling a retry.`, err);
+      await db.scheduleInboxMsgRemoval(msgId, false, 0);
+    }
+  }
+
+  const routerCtx = (notify: boolean): IncomingRouterCtx => ({
+    persistMail,
+    handleSync,
+    notify,
+    ownAddr,
+    isBlockedSender: addr => blacklist.isBlacklisted(addr),
+    isAlreadyStored: msgId => !!db.getMessageById(msgId),
+    dropFromInbox,
+  });
 
   async function handleOne(
     msg: web3n.asmail.IncomingMessage,

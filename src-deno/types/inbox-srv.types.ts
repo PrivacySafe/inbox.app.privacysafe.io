@@ -159,6 +159,18 @@ export interface InboxSrv {
    * the GUI subscribes. The monotonic `seq` settles the race between the two.
    */
   getSyncActivityState(): Promise<SyncActivityView>;
+  /**
+   * Addresses this component is dropping mail from, right now.
+   *
+   * Answers at once - the tracker is warm from a cache before any RPC - while
+   * the contacts app takes up to 13 s of retries to reach from the window. Until
+   * it answers, the message list would show no locks and a live Reply button on
+   * mail from somebody the user has blocked.
+   *
+   * Addresses only: names are not needed to decide who is blocked, and the real
+   * list, with them, replaces this one as soon as it arrives.
+   */
+  getBlacklistedAddresses(): Promise<string[]>;
   getFolderList(): Promise<MailFolder[]>;
   /**
    * Creates or updates a folder of the user's.
@@ -292,6 +304,7 @@ export const INBOX_SRV_REQ_REPLY_METHODS: (keyof InboxSrv)[] = [
   'getAppState',
   'getAppDeviceId',
   'getSyncActivityState',
+  'getBlacklistedAddresses',
   'getFolderList',
   'addFolder',
   'deleteFolder',

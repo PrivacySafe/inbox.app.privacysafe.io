@@ -28,6 +28,7 @@
     isLoading,
     msgData,
     contactList,
+    isContactBlocked,
     getDisplayItem,
     filterContactList,
     onMsgDataUpdate,
@@ -66,6 +67,7 @@
           :placeholder="t('msg.create.placeholder.contacts')"
           :items="contactList"
           :custom-filter="filterContactList"
+          :item-disabled="isContactBlocked"
           chips
           clear-on-select
           hide-selected
@@ -84,6 +86,14 @@
                 v-ui3n-html="markSearch(getDisplayItem(item), query || '')"
                 :class="$style.itemName"
               />
+
+              <!-- As on the desktop: the row is inert, and this says why. -->
+              <span
+                v-if="isContactBlocked(item)"
+                :class="$style.itemBlocked"
+              >
+                {{ t('contact.blocked.mark') }}
+              </span>
             </div>
           </template>
 
@@ -198,6 +208,13 @@
     font-weight: 500;
     color: var(--color-text-control-primary-default);
     @include mixins.text-overflow-ellipsis();
+  }
+
+  .itemBlocked {
+    flex-shrink: 0;
+    font-size: var(--font-12);
+    color: var(--warning-content-default);
+    white-space: nowrap;
   }
 
   .chipText {

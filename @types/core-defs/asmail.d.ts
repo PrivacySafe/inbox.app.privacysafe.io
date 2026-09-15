@@ -34,6 +34,8 @@ declare namespace web3n.asmail {
 
 		config: ASMailConfigService;
 
+		getReportAddressForDomain(domain: string): Promise<string>;
+
 	}
 
 	interface PreFlightOnlyService {

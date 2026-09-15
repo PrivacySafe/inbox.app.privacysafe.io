@@ -28,6 +28,7 @@ export const en = {
       mail: 'New Mail',
     },
     menu: {
+      manageBlocks: 'Manage blocks',
       makeBackup: 'Create a backup',
       restoreBackup: 'Restore from a backup',
       exit: 'Exit',
@@ -177,6 +178,9 @@ export const en = {
         contacts: 'Enter 3NWeb or standard email',
         editor: 'Enter the message text ...',
       },
+      recipient: {
+        blocked: '{mail} is blocked, and was removed from the recipients.',
+      },
       btn: {
         attach: 'Attach Files',
         editor_formating: 'Formating',
@@ -203,6 +207,7 @@ export const en = {
         domainNotFound: 'this domain is not found',
         noServiceRecord: 'this domain does not support 3N',
         recipientPubKeyFailsValidation: 'the public key is not valid',
+        blocked: 'you have blocked this address',
         noDescription: 'No description',
       },
       progress: 'Complete {percent} ({currentValue} of {totalValue})',
@@ -211,6 +216,8 @@ export const en = {
       preflight_error: 'The message could not be sent to the specified recipients.',
       sending_on_another_device: 'This message is being sent from another of your devices.',
       add_address: 'Add address to the Contacts',
+      blocked_sender: 'You have blocked this address',
+      blocked_reply: 'You cannot reply to a blocked address. Unblock it first.',
       btn: {
         moveToTrash: 'Move to Trash',
         deleteForever: 'Delete Forever',
@@ -349,6 +356,51 @@ export const en = {
   dialog: {
     'open-file': {
       'image-type': 'Images',
+    },
+    // Worded as in chat.app: one blacklist, told about in one voice, whichever
+    // app the user happens to be blocking from.
+    label: {
+      warning: 'Warning',
+    },
+    button: {
+      block: 'Block',
+      unblock: 'Unblock',
+      cancel: 'Cancel',
+      close: 'Close',
+    },
+    text: {
+      block: 'Block the user {mail}?',
+      unblock: 'Unblock the user {mail}?',
+    },
+    additionalText: {
+      block:
+        'They will no longer be able to send you messages or call you through PrivacySafe.'
+        + '<br>Existing messages will remain in your mailbox.',
+      unblock: 'They will be able to send you messages and call you through PrivacySafe again.',
+    },
+  },
+
+  manageBlocks: {
+    dialog: {
+      title: 'Manage blocks',
+      search_placeholder: 'Search by name or address',
+      section: {
+        contacts: 'Contacts',
+        used: 'Not in contacts',
+      },
+      nobody: 'Nothing matches the search',
+    },
+  },
+
+  contact: {
+    // Said on a row the recipient list shows but refuses to pick, as chat.app
+    // says it on a contact it will not start a chat with.
+    blocked: {
+      mark: 'Blocked',
+    },
+    error: {
+      block: 'Failed to block the contact',
+      unblock: 'Failed to unblock the contact',
     },
   },
 

@@ -2,7 +2,8 @@
 stages:
   - collect items
   - publish
-  - channels and bundling
+  - app channels
+  - bundling platform
 
 
 variables:
@@ -56,10 +57,11 @@ publish nightly:
 
 
 test channel:
-  stage: channels and bundling
+  stage: app channels
   when: manual
   needs:
     - publish nightly
+    - collect items
   variables:
     CHANNEL: test
   script:
@@ -72,9 +74,13 @@ latest channel:
 
 
 bundle nightly:
-  stage: channels and bundling
+  stage: bundling platform
   image: node-24
-  when: manual
+  rules:
+    - if: $APP_DOMAIN == "startup.app.privacysafe.io"
+      when: manual
+    - if: $APP_DOMAIN == "launcher.app.privacysafe.io"
+      when: manual
   needs:
     - publish nightly
   variables:

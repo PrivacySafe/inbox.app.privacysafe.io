@@ -1,4 +1,5 @@
 export * from './ui-settings';
+export * from './blockable-addresses';
 export * from './transform-message';
 export * from './handle-sending-error';
 export * from './get-message-status-ui-data';

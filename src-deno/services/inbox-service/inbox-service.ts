@@ -26,6 +26,7 @@ import type { InboxSrv } from '../../types/inbox-srv.types.ts';
 import type { DBProvider } from '../../dataset/index.ts';
 import { inboxBackupSrv } from '../../inbox-backup-srv.ts';
 import type { SyncAspect } from '../../types/sync-types.ts';
+import type { BlacklistTracker } from '../contacts-service/contacts-blacklist.ts';
 import type { LabelledFileStore } from '../file-store/labelled-file-store.ts';
 import {
   applyPlacement,
@@ -74,6 +75,31 @@ function incomingAttachmentMissingExc(
 }
 
 /**
+ * The message names a recipient the user has blocked.
+ *
+ * The window drops blocked addresses long before this, so in ordinary use this
+ * is unreachable. It is the net under the two ways round the window: a draft
+ * saved before the blocking and sent afterwards from Outbox, which goes by the
+ * recipients stored in the record rather than by the form; and a blocking made
+ * on another device that has reached this component but not yet the window.
+ */
+export interface BlockedRecipientsException extends web3n.RuntimeException {
+  type: 'inbox';
+  blockedRecipients: true;
+  addresses: string[];
+}
+
+function blockedRecipientsExc(addresses: string[]): BlockedRecipientsException {
+  return {
+    runtimeException: true,
+    type: 'inbox',
+    blockedRecipients: true,
+    addresses,
+    message: `Message is addressed to blocked recipient(s): ${addresses.join(', ')}`,
+  };
+}
+
+/**
  * The file was attached on another device of the user, and only the record
  * travelled here. Distinct from a missing or broken file: nothing is wrong with
  * it, it is simply somewhere else.
@@ -108,6 +134,7 @@ export async function inboxService(
   sync: SyncOutbox,
   ownAddr: string,
   watchStartup: InboxSrv['watchStartup'],
+  blacklist: BlacklistTracker,
   activity?: SyncActivityTracker,
   /**
    * Replays the shared inbox from the watermark. A restore resets that watermark
@@ -303,6 +330,10 @@ export async function inboxService(
       return activity?.snapshot() ?? { seq: 0, syncing: false, pending: 0, phase: 'idle', stalled: false };
     },
 
+    async getBlacklistedAddresses() {
+      return blacklist.getBlacklist();
+    },
+
     async getFolderList() {
       return db.getFolderList();
     },
@@ -375,6 +406,15 @@ export async function inboxService(
     },
 
     async sendMessage(msg) {
+      // Refused whole, not quietly stripped of the blocked addresses: outcomeOf()
+      // counts a delivery's result against msg.recipients, so a partial send
+      // would leave the record claiming a recipient nothing was ever sent to.
+      // Checked before upsertMessage, so a refused message is not marked
+      // 'sending' on the way out either.
+      const blocked = (msg.recipients ?? []).filter(addr => blacklist.isBlacklisted(addr));
+      if (blocked.length > 0) {
+        throw blockedRecipientsExc(blocked);
+      }
       // No phantom of its own: upsertMessage on the line above has already
       // announced content and delivery(status 'sending').
       await upsertMessage(msg);

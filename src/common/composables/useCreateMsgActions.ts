@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import { DialogsPlugin, DIALOGS_KEY } from '@v1nt1248/3nclient-lib/plugins';
 import { getRandomId } from '@v1nt1248/3nclient-lib/utils';
 import { inboxSrv } from '@common/services/services-provider';
-import { useAppStore, useMessagesStore, useSendingStore } from '@common/store';
+import { useAppStore, useContactsStore, useMessagesStore, useSendingStore } from '@common/store';
 import { handleSendingError, preparedMsgDataToOutgoingMsgView } from '@common/utils';
 import { SYSTEM_FOLDERS } from '@common/constants';
 import type { IncomingMessageView, OutgoingMessageView, PreparedMessageData } from '@common/types';
@@ -15,6 +15,7 @@ export function useCreateMsgActions() {
   const appStore = useAppStore();
   const { sendMessage } = useSendingStore();
   const { upsertMessage } = useMessagesStore();
+  const { isBlacklisted } = useContactsStore();
 
   async function saveMsgToDraft(msgData: PreparedMessageData): Promise<string> {
     const preparedMsgData = preparedMsgDataToOutgoingMsgView(msgData, SYSTEM_FOLDERS.draft, 'draft');
@@ -33,6 +34,14 @@ export function useCreateMsgActions() {
 
     const recipientsVerificationResult = {} as Record<string, number | string | null>;
     for (const recipient of msgData.recipients) {
+      if (isBlacklisted(recipient)) {
+        // A string rather than a size, so the reduce below counts it among the
+        // unavailable - which is what both callers of openSendMessageUI already
+        // drop before sending. The server is not asked about somebody this user
+        // has refused to hear from.
+        recipientsVerificationResult[recipient] = 'blocked';
+        continue;
+      }
       try {
         recipientsVerificationResult[recipient] = await inboxSrv.preFlight(recipient);
       } catch (err) {

@@ -41,11 +41,18 @@ async function connectToContactsApp(): Promise<AppContacts> {
     }
     try {
       const srvConn = await w3n.rpc!.otherAppsRPC!('contacts.app.privacysafe.io', 'AppContacts');
-      return makeServiceCaller<AppContacts>(srvConn, [
-        'getContact',
-        'getContactList',
-        'upsertContact',
-      ]) as AppContacts;
+      return makeServiceCaller<AppContacts>(
+        srvConn,
+        [
+          'getContact',
+          'getContactByMail',
+          'getContactList',
+          'upsertContact',
+          'getContactBlacklist',
+          'changeContactBlockingSettings',
+        ],
+        ['watchContactBlacklistChanging'],
+      ) as AppContacts;
     } catch (err) {
       lastErr = err;
       log.info(

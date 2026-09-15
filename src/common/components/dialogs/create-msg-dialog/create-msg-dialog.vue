@@ -36,6 +36,7 @@
     isLoading,
     dialogEl,
     contactList,
+    isContactBlocked,
     msgData,
     withoutSave,
     showEditorToolbar,
@@ -86,6 +87,7 @@
               :placeholder="t('msg.create.placeholder.contacts')"
               :items="contactList"
               :custom-filter="filterContactList"
+              :item-disabled="isContactBlocked"
               chips
               clear-on-select
               hide-selected
@@ -103,6 +105,18 @@
                     v-ui3n-html="markSearch(getDisplayItem(item), query || '')"
                     :class="$style.itemName"
                   />
+
+                  <!--
+                    Says why the row cannot be picked. The row itself is inert
+                    through `item-disabled`; without this mark its being greyed
+                    out would be the only clue.
+                  -->
+                  <span
+                    v-if="isContactBlocked(item)"
+                    :class="$style.itemBlocked"
+                  >
+                    {{ t('contact.blocked.mark') }}
+                  </span>
                 </div>
               </template>
 
@@ -261,6 +275,13 @@
     font-weight: 500;
     color: var(--color-text-control-primary-default);
     @include mixins.text-overflow-ellipsis();
+  }
+
+  .itemBlocked {
+    flex-shrink: 0;
+    font-size: var(--font-12);
+    color: var(--warning-content-default);
+    white-space: nowrap;
   }
 
   .chipText {

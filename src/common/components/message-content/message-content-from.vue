@@ -19,8 +19,8 @@
   import { useI18n } from 'vue-i18n';
   import { storeToRefs } from 'pinia';
   import get from 'lodash/get';
-  import { Ui3nIcon, Ui3nMenu } from '@v1nt1248/3nclient-lib';
-  import { useAppStore } from '@common/store';
+  import { Ui3nIcon, Ui3nMenu, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
+  import { useAppStore, useContactsStore } from '@common/store';
   import { useContactInMessage } from '@common/composables/useContactInMessage';
   import { ContactListItem, IncomingMessageView, OutgoingMessageView } from '@common/types';
   import AddressChip from '@common/components/address-chip/address-chip.vue';
@@ -32,6 +32,7 @@
 
   const { t } = useI18n();
   const { user } = storeToRefs(useAppStore());
+  const { isBlacklisted } = useContactsStore();
 
   const { addressMenuData, openAddressMenu, addNewContact } = useContactInMessage();
 
@@ -56,7 +57,13 @@
     return contact?.name || contact?.mail || (props.message as IncomingMessageView).sender;
   });
 
-  const allowAddingContact = computed(() => !props.contactList.find(c => c.mail === senderAddress.value));
+  const isSenderBlocked = computed(() =>
+    isIncomingMessage.value && !!senderAddress.value && isBlacklisted(senderAddress.value));
+
+  // Nothing to add: blocking has made the contact already, and offering it here
+  // would read as though the blocking had not taken.
+  const allowAddingContact = computed(() =>
+    !isSenderBlocked.value && !props.contactList.find(c => c.mail === senderAddress.value));
 </script>
 
 <template>
@@ -71,6 +78,20 @@
       :allow-adding="allowAddingContact"
       @select="() => openAddressMenu(senderAddress)"
     />
+
+    <ui3n-tooltip
+      v-if="isSenderBlocked"
+      :content="t('msg.content.blocked_sender')"
+      position-strategy="fixed"
+      placement="top-start"
+    >
+      <ui3n-icon
+        icon="round-lock"
+        :width="16"
+        :height="16"
+        color="var(--warning-content-default)"
+      />
+    </ui3n-tooltip>
 
     <ui3n-menu
       v-model="addressMenuData.isOpen"

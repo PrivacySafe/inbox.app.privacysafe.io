@@ -25,7 +25,8 @@ get_from_json() {
 	node -e "
 		const json = JSON.parse($json_str_src);
 		const val = json$fields;
-		if ((typeof val === 'string') && (val.length > 0)) {
+		if ((typeof val === 'number')
+		|| ((typeof val === 'string') && (val.length > 0))) {
 			console.log(val);
 		} else if (Array.isArray(val)) {
 			console.log(val.join(' '));

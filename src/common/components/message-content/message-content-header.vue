@@ -19,6 +19,7 @@
   import { useI18n } from 'vue-i18n';
   import size from 'lodash/size';
   import { Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
+  import { useContactsStore } from '@common/store';
   import type { IncomingMessageView, MessageAction, OutgoingMessageView } from '@common/types';
   import { SYSTEM_FOLDERS } from '@common/constants';
 
@@ -30,11 +31,21 @@
   }>();
 
   const { t } = useI18n();
+  const { isBlacklisted } = useContactsStore();
 
   const isMessageIncoming = computed(() => !!(props.message as IncomingMessageView).sender);
 
-  const isReplyBtnShow = computed(() => isMessageIncoming.value);
-  const isReplyAllBtnShow = computed(() => isMessageIncoming.value && size(props.message.recipients) > 1);
+  const isSenderBlocked = computed(() => {
+    const sender = (props.message as IncomingMessageView).sender;
+    return isMessageIncoming.value && !!sender && isBlacklisted(sender);
+  });
+
+  // Replying is writing to them, so it goes; forwarding is writing to somebody
+  // else, and whether this message is worth passing on is the user's call.
+  // Deleting is not touched either - mail already received is theirs to keep.
+  const isReplyBtnShow = computed(() => isMessageIncoming.value && !isSenderBlocked.value);
+  const isReplyAllBtnShow = computed(() =>
+    isMessageIncoming.value && !isSenderBlocked.value && size(props.message.recipients) > 1);
   const isRestoreBtnShow = computed(() => props.message?.mailFolder === SYSTEM_FOLDERS.trash);
 </script>
 

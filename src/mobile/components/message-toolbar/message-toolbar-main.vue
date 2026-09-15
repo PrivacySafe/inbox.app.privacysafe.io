@@ -2,6 +2,7 @@
   import { computed } from 'vue';
   import size from 'lodash/size';
   import { Ui3nButton } from '@v1nt1248/3nclient-lib';
+  import { useContactsStore } from '@common/store';
   import type { IncomingMessageView, MessageAction, OutgoingMessageView } from '@common/types';
   import { SYSTEM_FOLDERS } from '@common/constants';
 
@@ -12,9 +13,19 @@
     (event: 'action', value: MessageAction): void;
   }>();
 
+  const { isBlacklisted } = useContactsStore();
+
   const isMessageIncoming = computed(() => !!(props.message as IncomingMessageView).sender);
-  const isReplyBtnShow = computed(() => isMessageIncoming.value);
-  const isReplyAllBtnShow = computed(() => isMessageIncoming.value && size(props.message.recipients) > 1);
+
+  const isSenderBlocked = computed(() => {
+    const sender = (props.message as IncomingMessageView).sender;
+    return isMessageIncoming.value && !!sender && isBlacklisted(sender);
+  });
+
+  // As on the desktop: replying goes, forwarding and deleting stay.
+  const isReplyBtnShow = computed(() => isMessageIncoming.value && !isSenderBlocked.value);
+  const isReplyAllBtnShow = computed(() =>
+    isMessageIncoming.value && !isSenderBlocked.value && size(props.message.recipients) > 1);
   const isRestoreBtnShow = computed(() => props.message?.mailFolder === SYSTEM_FOLDERS.trash);
   const isMoveToTrashBtnShow = computed(() => props.message?.mailFolder !== SYSTEM_FOLDERS.trash);
 </script>

@@ -21,6 +21,7 @@ import { MAX_ATTACHMENT_SIZE } from '../shared/constants/attachment-limits.ts';
 import { ensureDefaultAnonSenderMaxMsgSize } from './utils/workarounds.ts';
 import { migrateAppDataToLocalFS } from './utils/migrate-to-local-fs.ts';
 import { dataset } from './dataset/index.ts';
+import { createBlacklistTracker } from './services/contacts-service/contacts-blacklist.ts';
 import { makeLabelledFileStoreIn } from './services/file-store/labelled-file-store.ts';
 import { createStartupEvents } from './services/inbox-service/events.ts';
 import { inboxService } from './services/inbox-service/inbox-service.ts';
@@ -85,6 +86,12 @@ try {
   ]);
   phaseDone('db+file-store');
 
+  // Warm from its cache the moment it is made, so that the catch-up scan below
+  // already knows who is blocked; the connection to the contacts app catches up
+  // behind it, taking seconds of retries it is not worth waiting for.
+  const blacklist = createBlacklistTracker(db);
+  blacklist.start();
+
   const ownAddr = await userIdPromise;
   const sync = await makeSyncOutbox(db, ownAddr);
   const activity = makeSyncActivityTracker({
@@ -113,7 +120,7 @@ try {
     endBulkReplay,
     persistMail,
     handleSync,
-  } = await inboxService(db, fileStore, sync, ownAddr, startup.watch, activity, rescan);
+  } = await inboxService(db, fileStore, sync, ownAddr, startup.watch, blacklist, activity, rescan);
   activity.onChange(view => emit({ entity: 'sync', event: 'activity', view }));
   inboxSrvDeferred.resolve(inboxSrv);
   phaseDone('service-ready');
@@ -128,7 +135,16 @@ try {
   let mail: Awaited<ReturnType<typeof mailService>>;
   beginBulkReplay();
   try {
-    mail = await mailService({ db, emit, sync, persistMail, handleSync, activity });
+    mail = await mailService({
+      db,
+      emit,
+      sync,
+      persistMail,
+      handleSync,
+      ownAddr,
+      blacklist,
+      activity,
+    });
   } finally {
     endBulkReplay();
   }

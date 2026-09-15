@@ -22,6 +22,7 @@ import { SystemSettings } from '@common/utils';
 import { SingleProc } from '@shared/utils/processes/single';
 import { makeLogger } from '@shared/utils/logger';
 import CreateMsgDialog from '@common/components/dialogs/create-msg-dialog/create-msg-dialog.vue';
+import ManageBlocksDialog from '@common/components/dialogs/manage-blocks-dialog/manage-blocks-dialog.vue';
 
 const log = makeLogger('AppPage');
 
@@ -65,7 +66,13 @@ export function useAppPage(mobileMode?: boolean) {
     setCommonLoading,
   } = appStore;
   const { loadFolders } = useFoldersStore();
-  const { getContactList } = useContactsStore();
+  const {
+    getContactList,
+    fetchBlacklist,
+    primeBlacklistFromBackend,
+    startBlacklistWatch,
+    stopWatching: stopBlacklistWatch,
+  } = useContactsStore();
   const messagesStore = useMessagesStore();
   const { getMessages, deleteMessages, applyMessageEvent } = messagesStore;
   const sendingStore = useSendingStore();
@@ -140,8 +147,22 @@ export function useAppPage(mobileMode?: boolean) {
     w3n.closeSelf!();
   }
 
+  function openManageBlocksDialog() {
+    $dialogs.$openDialog<void>(ManageBlocksDialog, {
+      isMobileMode: isMobileMode.value,
+      dialogProps: {
+        title: t('manageBlocks.dialog.title'),
+        icon: { icon: 'settings-account-box', color: 'var(--warning-content-default)' },
+        confirmButton: false,
+        cancelButton: false,
+      },
+    });
+  }
+
   async function runMenuAction(action: AppMenuAction) {
     switch (action) {
+      case 'manage-blocks':
+        return openManageBlocksDialog();
       case 'make-backup':
         return startBackupWorkflow();
       case 'restore-backup':
@@ -316,10 +337,19 @@ export function useAppPage(mobileMode?: boolean) {
         getSyncActivityState().catch(err => log.error('Failed to read the sync state', err)),
       ]);
       phaseDone('app-data');
+      // The blacklist BEFORE the message list is drawn, and from the backend:
+      // it answers at once, while the contacts app takes the same 13 s as below.
+      // Without it, mail from a blocked sender would briefly show no lock and a
+      // live Reply button.
+      await primeBlacklistFromBackend().catch(err =>
+        log.error('Failed to prime the blacklist', err));
       // Reaching the contacts app can take up to 13 s of retries when it is not
       // running, and nothing below needs it: names show as addresses until it
       // answers. See contactsSrv() in initializationServices.
       getContactList().catch(err => log.error('Failed to get the contact list', err));
+      fetchBlacklist()
+        .then(() => startBlacklistWatch())
+        .catch(err => log.error('Failed to read the contact blacklist', err));
       await loadFolders();
       phaseDone('folders');
       await getMessages();
@@ -375,6 +405,7 @@ export function useAppPage(mobileMode?: boolean) {
     unsub.value && unsub.value();
     unsubWatch.value && unsubWatch.value();
     unsubStartup.value && unsubStartup.value();
+    stopBlacklistWatch();
 
     $bus.$emitter.off('run-create-message', openCreateMsgDialog);
   });

@@ -24,8 +24,8 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   import difference from 'lodash/difference';
   import uniq from 'lodash/uniq';
   import { prepareDateAsSting } from '@v1nt1248/3nclient-lib/utils';
-  import { Ui3nBadge, Ui3nCheckbox, Ui3nIcon } from '@v1nt1248/3nclient-lib';
-  import { useAppStore } from '@common/store';
+  import { Ui3nBadge, Ui3nCheckbox, Ui3nIcon, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
+  import { useAppStore, useContactsStore } from '@common/store';
   import { getMessageStatusUiData, htmlToText } from '@common/utils';
   import { SYSTEM_FOLDERS, MARKED_MESSAGES_INJECTION_KEY } from '@common/constants';
   import type { IncomingMessageView, MessageThread, OutgoingMessageView } from '@common/types';
@@ -40,6 +40,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   const { t } = useI18n();
   const { markedMessages, setMarkedMessages } = inject(MARKED_MESSAGES_INJECTION_KEY)!;
   const { isMobileMode } = storeToRefs(useAppStore());
+  const { isBlacklisted } = useContactsStore();
 
   const isExpanded = ref(!!props.item.isExpanded);
 
@@ -48,6 +49,13 @@ this program. If not, see <http://www.gnu.org/licenses/>.
       msg => !!(msg as IncomingMessageView).sender && props.item.lastIncomingTS === msg.deliveryTS,
     ),
   ) as ComputedRef<IncomingMessageView | undefined>;
+
+  // The thread is marked for the sender the row is showing - the one whose name
+  // is on it - rather than for anybody who ever wrote into it.
+  const isSenderBlocked = computed(() => {
+    const senderAddr = lastIncomingMessage.value?.sender;
+    return !!senderAddr && isBlacklisted(senderAddr);
+  });
   // @ts-ignore
   const lastOutgoingMessage = computed(() =>
     props.item.messages.find(
@@ -201,6 +209,21 @@ this program. If not, see <http://www.gnu.org/licenses/>.
           />
         </div>
       </template>
+
+      <ui3n-tooltip
+        v-if="isSenderBlocked"
+        :content="t('msg.content.blocked_sender')"
+        position-strategy="fixed"
+        placement="top-start"
+      >
+        <ui3n-icon
+          icon="round-lock"
+          :width="14"
+          :height="14"
+          color="var(--warning-content-default)"
+          :class="$style.blockedMark"
+        />
+      </ui3n-tooltip>
     </div>
 
     <div
@@ -357,6 +380,13 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     height: 36px;
     left: var(--spacing-s);
     top: 12px;
+  }
+
+  .blockedMark {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    z-index: 1;
   }
 
   .content {

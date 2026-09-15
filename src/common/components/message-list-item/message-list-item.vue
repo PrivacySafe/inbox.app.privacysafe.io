@@ -41,8 +41,16 @@ this program. If not, see <http://www.gnu.org/licenses/>.
   const { markedMessages, markMessage, resetMarkMessages } = inject(MARKED_MESSAGES_INJECTION_KEY)!;
   const { isMobileMode } = storeToRefs(useAppStore());
   const { contactList } = storeToRefs(useContactsStore());
+  const { isBlacklisted } = useContactsStore();
 
   const isIncomingMessage = computed(() => hasIn(props.item, 'sender'));
+
+  // Mail that arrived before the blocking stays where it is - only the user
+  // deletes mail - so it is marked rather than hidden.
+  const isSenderBlocked = computed(() => {
+    const senderAddr = (props.item as IncomingMessageView).sender;
+    return isIncomingMessage.value && !!senderAddr && isBlacklisted(senderAddr);
+  });
   const isUnread = computed(() => isIncomingMessage.value && props.item?.status === 'received');
   const isMessageMarked = computed(() => markedMessages.value.includes(props.item.msgId));
 
@@ -119,6 +127,21 @@ this program. If not, see <http://www.gnu.org/licenses/>.
           <ui3n-checkbox :model-value="isMessageMarked" />
         </div>
       </template>
+
+      <ui3n-tooltip
+        v-if="isSenderBlocked"
+        :content="t('msg.content.blocked_sender')"
+        position-strategy="fixed"
+        placement="top-start"
+      >
+        <ui3n-icon
+          icon="round-lock"
+          :width="14"
+          :height="14"
+          color="var(--warning-content-default)"
+          :class="$style.blockedMark"
+        />
+      </ui3n-tooltip>
     </div>
 
     <div
@@ -253,6 +276,13 @@ this program. If not, see <http://www.gnu.org/licenses/>.
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
+  }
+
+  .blockedMark {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    z-index: 1;
   }
 
   .content {

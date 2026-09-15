@@ -21,7 +21,7 @@ export function useFolderContent() {
   const { t } = useI18n();
   const $notifications = inject<NotificationsPlugin>(NOTIFICATIONS_KEY)!;
 
-  const { getContactList } = useContactsStore();
+  const { getContactList, isBlacklisted } = useContactsStore();
   const messagesStore = useMessagesStore();
   const { moveToTrash, deleteMessagesUi, bulkMoveToTrash, bulkRestore, upsertMessage } = messagesStore;
   const { openSendMessageUI, runMessageSending, prepareReplyMsgBody, prepareForwardMsgBody } =
@@ -47,6 +47,30 @@ export function useFolderContent() {
 
   function resetMarkMessages() {
     markedMessages.value = [];
+  }
+
+  /**
+   * Whether a reply to this message is refused because its sender is blocked.
+   *
+   * The buttons for it are hidden already, but hidden is not forbidden: they are
+   * drawn off a list another app changes under them, and the action also arrives
+   * from the message view without passing a button at all.
+   *
+   * @returns true when the reply was refused and the caller is to stop.
+   */
+  function refuseReplyToBlocked(
+    message: IncomingMessageView | OutgoingMessageView,
+  ): boolean {
+    const sender = (message as IncomingMessageView).sender;
+    if (!sender || !isBlacklisted(sender)) {
+      return false;
+    }
+    $notifications.$createNotice({
+      type: 'error',
+      content: t('msg.content.blocked_reply'),
+      duration: 4000,
+    });
+    return true;
   }
 
   async function handleMessageAction({
@@ -115,12 +139,18 @@ export function useFolderContent() {
       }
 
       case 'reply': {
+        if (refuseReplyToBlocked(message)) {
+          break;
+        }
         const replyMsgData = prepareReplyMsgBody(message as IncomingMessageView, t);
         $bus.$emitter.emit('run-create-message', { data: replyMsgData, isThisReplyOrForward: true, sourceFolder });
         break;
       }
 
       case 'reply-all': {
+        if (refuseReplyToBlocked(message)) {
+          break;
+        }
         const replyMsgData = prepareReplyMsgBody(message as IncomingMessageView, t, true);
         $bus.$emitter.emit('run-create-message', { data: replyMsgData, isThisReplyOrForward: true, sourceFolder });
         break;

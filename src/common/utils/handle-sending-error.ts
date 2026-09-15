@@ -29,6 +29,12 @@ export function prepareErrorText({
 }): string {
   const domain = address.includes('@') ? address.split('@')[1] : '';
 
+  // Not a failure of the send: this recipient was never asked about, because the
+  // user has blocked them (see runPreFlightProcess).
+  if (errorFlag === 'blocked') {
+    return `[${address}] ${t('msg.sending.error.blocked')}`;
+  }
+
   if (errorFlag === 'unknownRecipient') {
     return `[${address}] ${t('msg.sending.error.unknownRecipient')}`;
   }

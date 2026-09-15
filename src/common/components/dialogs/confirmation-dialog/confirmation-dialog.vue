@@ -1,7 +1,16 @@
 <script lang="ts" setup>
   import { computed } from 'vue';
   import { useI18n } from 'vue-i18n';
-  import { Ui3nDialog, type Ui3nDialogEvent, type Ui3nDialogComponentProps } from '@v1nt1248/3nclient-lib';
+  import {
+    Ui3nDialog,
+    Ui3nHtml,
+    type Ui3nDialogEvent,
+    type Ui3nDialogComponentProps,
+  } from '@v1nt1248/3nclient-lib';
+
+  // Markup, and not only decoration: a confirmation names the address it is
+  // about, and the address has to stand out from the sentence around it.
+  const vUi3nHtml = Ui3nHtml;
 
   const props = defineProps<{
     dialogText?: string;
@@ -25,8 +34,11 @@
   >
     <template #body>
       <div :class="$style.confirmationDialog">
-        {{ text }}
-        <span v-if="additionalDialogText">{{ additionalDialogText }}</span>
+        <div v-ui3n-html="text" />
+        <span
+          v-if="additionalDialogText"
+          v-ui3n-html="additionalDialogText"
+        />
       </div>
     </template>
   </ui3n-dialog>

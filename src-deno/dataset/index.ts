@@ -79,6 +79,9 @@ import {
   GET_EXPIRED_INBOX_REMOVALS_QUERY,
   DELETE_INBOX_REMOVAL_QUERY,
   COUNT_PENDING_INBOX_REMOVALS_QUERY,
+  GET_CONTACT_BLACKLIST_QUERY,
+  CLEAR_CONTACT_BLACKLIST_QUERY,
+  INSERT_CONTACT_BLACKLIST_QUERY,
 } from './queries.ts';
 import {
   folderValueToSqlInsertParams,
@@ -249,6 +252,20 @@ export interface DBProvider {
   countPendingInboxRemovals(): number;
 
   // ---------------------------------------------------------------------------
+  // Cached copy of the contacts app's blacklist
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Canonical addresses, as of the last time the contacts app answered.
+   *
+   * Read synchronously at start-up, before any RPC, so that mail from a blocked
+   * sender is filtered from the first message of the session.
+   */
+  getCachedBlacklist(): string[];
+  /** Replaces the cache whole - the contacts app sends the list entire. */
+  setCachedBlacklist(addresses: string[]): Promise<void>;
+
+  // ---------------------------------------------------------------------------
   // Restoration from a backup archive
   // ---------------------------------------------------------------------------
 
@@ -394,6 +411,19 @@ export async function dataset(): Promise<DBProvider> {
     // ADD COLUMN as long as there is no NOT NULL and no DEFAULT.
     ensureColumn('messages', 'originDeviceId', `--sql
       ALTER TABLE messages ADD COLUMN originDeviceId TEXT`);
+
+    // A cached copy of the list that belongs to the contacts app - never a
+    // source of truth. It is here so that the incoming filter is armed from the
+    // first second of a start: reaching the contacts app takes seconds of
+    // retries, and the catch-up scan of the inbox waits for nobody.
+    //
+    // A table of its own rather than a field of AppState, for the reason spelled
+    // out over sync_device below, and one more: AppState travels to the window
+    // in `app-state` events, and another app's cache has no business there.
+    ensureTable('contact_blacklist', `--sql
+      CREATE TABLE IF NOT EXISTS contact_blacklist (
+      address TEXT PRIMARY KEY
+    ) STRICT`);
 
     initializeSyncTables();
     loadSyncDeviceRow();
@@ -985,6 +1015,23 @@ export async function dataset(): Promise<DBProvider> {
     return countRows(COUNT_PENDING_INBOX_REMOVALS_QUERY);
   }
 
+  function getCachedBlacklist(): string[] {
+    const [sqlValue] = sqlite.db.exec(GET_CONTACT_BLACKLIST_QUERY);
+    return sqlValue
+      ? objectFromQueryExecResult<{ address: string }>(sqlValue).map(r => r.address)
+      : [];
+  }
+
+  async function setCachedBlacklist(addresses: string[]): Promise<void> {
+    // Replaced whole: the contacts app always announces the list entire, so a
+    // merge here would keep an address that has just been unblocked.
+    sqlite.db.exec(CLEAR_CONTACT_BLACKLIST_QUERY);
+    for (const address of addresses) {
+      sqlite.db.exec(INSERT_CONTACT_BLACKLIST_QUERY, { $address: address });
+    }
+    writer.scheduleSave();
+  }
+
   await initialization();
 
   return {
@@ -1038,6 +1085,8 @@ export async function dataset(): Promise<DBProvider> {
     getExpiredInboxRemovals,
     dropInboxRemovals,
     countPendingInboxRemovals,
+    getCachedBlacklist,
+    setCachedBlacklist,
 
     isRestoreInProgress: () => restoreInProgress,
     setRestoreInProgress: value => {
