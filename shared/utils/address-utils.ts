@@ -29,6 +29,15 @@ export function ensureIsAddressString(address: string): void {
   }
 }
 
+export function parseAddress(address: string): { user: string; domain: string } {
+  const parsedData = address.split('@');
+  if (parsedData.length === 1) {
+    return { user: '', domain: address };
+  }
+
+  return { user: parsedData[0].replaceAll(whiteSpace, ''), domain: parsedData[1] };
+}
+
 /**
  * The one spelling of an address that this app compares and stores.
  *
@@ -37,19 +46,7 @@ export function ensureIsAddressString(address: string): void {
  */
 export function toCanonicalAddress(address: string): string {
   ensureIsAddressString(address);
-
-  const indOfAt = address.indexOf('@');
-  let user: string;
-  let domain: string;
-
-  if (indOfAt < 0) {
-    domain = address;
-    user = '';
-  } else {
-    domain = address.substring(indOfAt + 1);
-    user = address.substring(0, indOfAt).replace(whiteSpace, '');
-  }
-
+  const { user, domain } = parseAddress(address);
   return `${user}@${domain}`.toLowerCase().trim();
 }
 

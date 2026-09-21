@@ -143,8 +143,8 @@ export function applyDelivery<T extends MsgView>(msg: T, d: MsgDeliveryState): T
 }
 
 /**
- * The stored record's `cTime` and `deliveryTS`, kept over whatever a save
- * carries.
+ * The stored record's `cTime`, `deliveryTS` and `originDeviceId`, kept over
+ * whatever a save carries.
  *
  * Both are stamps of EVENTS - the record coming into being, and its delivery -
  * and a later save is neither of those events. The GUI cannot make this
@@ -164,17 +164,49 @@ export function applyDelivery<T extends MsgView>(msg: T, d: MsgDeliveryState): T
  *
  * A stamp the stored record does not have is not invented here - a record from
  * before either column carried a value takes the incoming one.
+ *
+ * `originDeviceId` travels with them for the same reason, though it is no stamp:
+ * it says which device a record arrived from, the form never sets it, and the
+ * row is rewritten whole - so a save would silently drop it. diffMsgAspects()
+ * leaves it out of the diff deliberately, which means nothing downstream would
+ * have noticed the loss either.
  */
 export function preserveEventStamps<T extends MsgView>(stored: MsgView, next: T): T {
   return {
     ...next,
     ...(stored.cTime !== undefined && { cTime: stored.cTime }),
     ...(stored.deliveryTS !== undefined && { deliveryTS: stored.deliveryTS }),
+    ...(stored.originDeviceId !== undefined && { originDeviceId: stored.originDeviceId }),
   };
 }
 
+/**
+ * Empty and absent are the same value here, because they are the same value in
+ * the table: msgValueToSqlInsertParams() writes NULL for an empty list or an
+ * empty description, and the read back omits the field. So a record straight
+ * from the form, whose `recipients` is `[]`, and the stored one it was saved
+ * as, which has no `recipients` at all, describe the same message - and telling
+ * them apart made every save of a draft with no recipients yet, the ordinary
+ * state of one being composed, look like a change of content.
+ */
+function emptyAsAbsent(value: unknown): unknown {
+  if ((value === undefined) || (value === null)) {
+    return null;
+  }
+  if (Array.isArray(value)) {
+    return (value.length === 0) ? null : value;
+  }
+  // The same for an empty statusDescription, which the mapper nulls too. An
+  // empty jsonBody is not affected: its column is NOT NULL, so both sides of
+  // any comparison are the object that was stored.
+  if ((typeof value === 'object') && (Object.keys(value).length === 0)) {
+    return null;
+  }
+  return value;
+}
+
 function sameJson(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  return JSON.stringify(emptyAsAbsent(a)) === JSON.stringify(emptyAsAbsent(b));
 }
 
 function samePlacement(a: MsgPlacement, b: MsgPlacement): boolean {

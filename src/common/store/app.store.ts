@@ -17,8 +17,9 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
 import { inboxSrv } from '@common/services/services-provider';
-import { SystemSettings } from '@common/utils/ui-settings';
-import type { AvailableLanguage, AvailableColorTheme, ConnectivityStatus, AppConfigs, AppState, AppConfig } from '@common/types';
+import { SystemSettings, getActiveTheme } from '@common/utils/ui-settings';
+import type { ThemeId } from '@v1nt1248/3nclient-lib/plugins';
+import type { AvailableLanguage, ConnectivityStatus, AppState, AppConfig } from '@common/types';
 import type { SyncActivityView } from '@deno/services/sync/sync-activity';
 import { blobFromDataURL } from '../utils/image-files';
 
@@ -27,7 +28,7 @@ export const useAppStore = defineStore('app', () => {
   const connectivityStatus = ref<string>('offline');
   const user = ref<string>('');
   const lang = ref<AvailableLanguage>('en');
-  const colorTheme = ref<AvailableColorTheme>('dark2');
+  const colorTheme = ref<ThemeId>('dark');
   const customLogoSrc = ref<string>();
   const appWindowSize = ref<{ width: number; height: number }>({
     width: 0,
@@ -114,17 +115,8 @@ export const useAppStore = defineStore('app', () => {
     lang.value = value;
   }
 
-  function setColorTheme(theme: AvailableColorTheme) {
-    const prevColorThemeCssClass = `${colorTheme.value}-theme`;
+  function setColorTheme(theme: ThemeId) {
     colorTheme.value = theme;
-    const curColorThemeCssClass = `${colorTheme.value}-theme`;
-    const htmlEl = document.querySelector('html');
-    if (!htmlEl) {
-      return;
-    }
-
-    htmlEl.classList.remove(prevColorThemeCssClass);
-    htmlEl.classList.add(curColorThemeCssClass);
   }
 
   async function setCustomLogo(dataURL: AppConfig['customLogo']): Promise<void> {
@@ -140,18 +132,38 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function getAppConfig(): Promise<AppConfigs | undefined> {
+  /**
+   * Held here rather than in the page: the config is read and watched in one
+   * place, so a value arriving later goes through the same setters as the first
+   * read, and the subscription has an owner that can end it.
+   */
+  let unsubFromConfigWatch: (() => void) | undefined = undefined;
+
+  async function readAndStartWatchingAppConfig(): Promise<void> {
     try {
       const config = await SystemSettings.makeResourceReader();
       const { lang, colorTheme, customLogo } = await config.getAll();
       setLang(lang);
-      setColorTheme(colorTheme);
+      setColorTheme(getActiveTheme(colorTheme));
       setCustomLogo(customLogo);
 
-      return config;
+      unsubFromConfigWatch?.();
+      unsubFromConfigWatch = config.watchConfig({
+        next: appConfig => {
+          const { lang, colorTheme, customLogo } = appConfig;
+          setLang(lang);
+          setColorTheme(getActiveTheme(colorTheme));
+          setCustomLogo(customLogo);
+        },
+      });
     } catch (e) {
       console.error('Load the app config error: ', e);
     }
+  }
+
+  function stopWatchingAppConfig(): void {
+    unsubFromConfigWatch?.();
+    unsubFromConfigWatch = undefined;
   }
 
   async function setAppState(state: Partial<AppState>) {
@@ -183,7 +195,8 @@ export const useAppStore = defineStore('app', () => {
     setLang,
     setColorTheme,
     setCustomLogo,
-    getAppConfig,
+    readAndStartWatchingAppConfig,
+    stopWatchingAppConfig,
     setAppState,
   };
 });

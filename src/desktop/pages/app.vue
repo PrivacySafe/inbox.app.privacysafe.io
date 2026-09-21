@@ -191,12 +191,6 @@
     min-width: 0;
   }
 
-  // !important, and it is not decoration: ui3n-progress-linear sets
-  // `position: relative` on its own root with one class of specificity, exactly
-  // as this rule has, so the winner is decided by stylesheet order - and the
-  // library's style.css is imported after this component's CSS module (see
-  // main.ts). Without it the bar stays a flex item of the toolbar, and with
-  // `width: 100%` of its own it squeezes the user's name out of place.
   .syncBar {
     position: absolute !important;
     left: 0;

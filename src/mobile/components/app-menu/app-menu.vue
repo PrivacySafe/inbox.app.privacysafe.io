@@ -115,7 +115,7 @@
           block
           :icon="item.icon"
           icon-position="left"
-          :icon-color="item.isAccent ? 'var(--warning-content-default)' : undefined"
+          :icon-color="item.isAccent ? 'var(--warning-content-default)' : 'var(--color-icon-control-accent-default)'"
           :class="item.isAccent && $style.accentBtn"
           @click="onMenuItemClick(item.id)"
         >
@@ -207,7 +207,7 @@
   }
 
   .accentBtn {
-    color: var(--warning-content-default);
+    --ui3n-button-text-color: var(--warning-content-default);
 
     &:hover {
       background-color: var(--warning-fill-hover);

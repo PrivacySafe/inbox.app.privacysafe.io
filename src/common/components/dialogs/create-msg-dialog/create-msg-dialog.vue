@@ -44,7 +44,6 @@
     filterContactList,
     getDisplayItem,
     onEditorInit,
-    onMsgDataUpdate,
     onMsgDataUpdateDebounced,
     removeRecipient,
     updateAttachments,
@@ -53,6 +52,16 @@
     discardMsg,
     send,
   } = useCreateMsg({ props, emits });
+
+  /**
+   * Esc is the only `cancel` the dialog itself can raise here: its own cancel
+   * button is off, and Discard emits one of its own without passing through.
+   * Closing is not discarding - the draft stays, as it does for the X button
+   * beside it, which raises `close` and which nothing acts on.
+   */
+  function onDialogAction(value: { event: string; data?: unknown }) {
+    emits('action', (value.event === 'cancel' ? { event: 'close' } : value) as never);
+  }
 </script>
 
 <template>
@@ -60,7 +69,7 @@
     v-bind="dialogProps"
     :data="{ msgData, withoutSave }"
     :class="$style.createMsgDialog"
-    @action="emits('action', $event)"
+    @action="onDialogAction"
   >
     <template #body>
       <div
@@ -97,7 +106,7 @@
               add-new-value
               :new-value-validator="(v: string) => v.includes('@')"
               :disabled="isLoading"
-              @update:model-value="onMsgDataUpdate"
+              @update:model-value="onMsgDataUpdateDebounced"
             >
               <template #item="{ item, query }">
                 <div :class="$style.item">

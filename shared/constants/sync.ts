@@ -66,6 +66,22 @@ export const CATCH_UP_REWIND_MS = 60_000;
  */
 export const INBOX_SCAN_FLOOR_MS = 10_000_000;
 
+/**
+ * How many messages a catch-up scan fetches at once.
+ *
+ * A scan over a backlog is almost entirely waiting for the fetches, and the
+ * measurement says so plainly: over 240 messages it waited 107 s on them and
+ * spent 2.5 s applying what came back. So the fetches overlap, while messages
+ * are still APPLIED one by one, in the order the listing gives.
+ *
+ * The window is small because the platform serves inbox calls all but serially:
+ * one at a time a message cost 0.69 s, six at a time 0.45 s - about 1.5x, not
+ * 6x. Past that the gain is noise while every fetch in flight is another message
+ * body held in memory. A backlog this size is a fault to be fixed where it comes
+ * from, not to be out-fetched.
+ */
+export const CATCH_UP_FETCH_WINDOW = 6;
+
 /** Spacing between phantoms of one release pass over the journal. */
 export const PHANTOM_SEND_SPACING_MS = 200;
 

@@ -18,6 +18,7 @@ import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router';
 import { SYSTEM_FOLDERS } from '@common/constants';
 import MailFolder from '@mobile/pages/mail-folder/mail-folder.vue';
 import Message from '@mobile/pages/message/message.vue';
+import Report from '@mobile/pages/report/report.vue';
 
 const routes: RouteRecordRaw[] = [
   { path: '/', redirect: `/folder/${SYSTEM_FOLDERS.inbox}` },
@@ -31,6 +32,11 @@ const routes: RouteRecordRaw[] = [
     path: '/message/:msgId',
     name: 'message',
     component: Message,
+  },
+  {
+    path: '/report/:msgId',
+    name: 'report',
+    component: Report,
   }
 ];
 

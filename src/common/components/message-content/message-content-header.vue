@@ -19,7 +19,8 @@
   import { useI18n } from 'vue-i18n';
   import size from 'lodash/size';
   import { Ui3nButton, Ui3nTooltip } from '@v1nt1248/3nclient-lib';
-  import { useContactsStore } from '@common/store';
+  import { useAppStore, useContactsStore } from '@common/store';
+  import { sameAddress } from '@shared/utils/address-utils';
   import type { IncomingMessageView, MessageAction, OutgoingMessageView } from '@common/types';
   import { SYSTEM_FOLDERS } from '@common/constants';
 
@@ -32,20 +33,33 @@
 
   const { t } = useI18n();
   const { isBlacklisted } = useContactsStore();
+  const appStore = useAppStore();
 
   const isMessageIncoming = computed(() => !!(props.message as IncomingMessageView).sender);
 
-  const isSenderBlocked = computed(() => {
-    const sender = (props.message as IncomingMessageView).sender;
-    return isMessageIncoming.value && !!sender && isBlacklisted(sender);
-  });
+  const senderAddress = computed(() => (props.message as IncomingMessageView).sender);
+
+  const isSenderBlocked = computed(
+    () => isMessageIncoming.value && !!senderAddress.value && isBlacklisted(senderAddress.value),
+  );
+
+  // Blocking and reporting are both about somebody else. A message from one's
+  // own address - a copy of a sync phantom above all - is neither: a blocked own
+  // address would stop this mailbox's own traffic, and there is nobody to report.
+  const isSenderSomebodyElse = computed(
+    () => isMessageIncoming.value && !!senderAddress.value && !sameAddress(senderAddress.value, appStore.user),
+  );
+
+  const isBlockBtnShow = computed(() => isSenderSomebodyElse.value && !isSenderBlocked.value);
+  const isUnblockBtnShow = computed(() => isSenderSomebodyElse.value && isSenderBlocked.value);
 
   // Replying is writing to them, so it goes; forwarding is writing to somebody
   // else, and whether this message is worth passing on is the user's call.
   // Deleting is not touched either - mail already received is theirs to keep.
   const isReplyBtnShow = computed(() => isMessageIncoming.value && !isSenderBlocked.value);
-  const isReplyAllBtnShow = computed(() =>
-    isMessageIncoming.value && !isSenderBlocked.value && size(props.message.recipients) > 1);
+  const isReplyAllBtnShow = computed(
+    () => isMessageIncoming.value && !isSenderBlocked.value && size(props.message.recipients) > 1,
+  );
   const isRestoreBtnShow = computed(() => props.message?.mailFolder === SYSTEM_FOLDERS.trash);
 </script>
 
@@ -117,6 +131,61 @@
         {{ t('msg.content.tooltip.restore') }}
       </ui3n-button>
     </ui3n-tooltip>
+
+    <ui3n-tooltip
+      v-if="isBlockBtnShow"
+      :content="t('msg.content.tooltip.block')"
+      position-strategy="fixed"
+      placement="top-start"
+    >
+      <ui3n-button
+        type="custom"
+        color="var(--color-bg-block-primary-default)"
+        text-color="var(--warning-content-default)"
+        icon="outline-account-off-circle"
+        icon-color="var(--warning-content-default)"
+        icon-position="left"
+        @click.stop.prevent="emits('action', { action: 'block', message })"
+      >
+        {{ t('msg.content.tooltip.block') }}
+      </ui3n-button>
+    </ui3n-tooltip>
+
+    <ui3n-tooltip
+      v-if="isUnblockBtnShow"
+      :content="t('msg.content.tooltip.unblock')"
+      position-strategy="fixed"
+      placement="top-start"
+    >
+      <ui3n-button
+        type="custom"
+        color="var(--color-bg-block-primary-default)"
+        text-color="var(--warning-content-default)"
+        icon="outline-account-circle"
+        icon-color="var(--warning-content-default)"
+        icon-position="left"
+        @click.stop.prevent="emits('action', { action: 'unblock', message })"
+      >
+        {{ t('msg.content.tooltip.unblock') }}
+      </ui3n-button>
+    </ui3n-tooltip>
+
+    <ui3n-tooltip
+      v-if="isSenderSomebodyElse"
+      :content="t('msg.content.tooltip.report')"
+      position-strategy="fixed"
+      placement="top-start"
+    >
+      <ui3n-button
+        type="secondary"
+        icon="outline-report-problem"
+        icon-color="var(--color-icon-button-secondary-default)"
+        icon-position="left"
+        @click.stop.prevent="emits('action', { action: 'report', message })"
+      >
+        {{ t('msg.content.tooltip.report') }}
+      </ui3n-button>
+    </ui3n-tooltip>
   </div>
 </template>
 
@@ -128,7 +197,7 @@
     display: flex;
     justify-content: flex-start;
     align-items: center;
-    column-gap: var(--spacing-s);
+    column-gap: var(--spacing-xs);
     padding-left: var(--spacing-s);
   }
 </style>

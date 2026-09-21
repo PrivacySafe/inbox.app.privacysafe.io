@@ -192,6 +192,7 @@ export interface InboxSrv {
   sendMessage(msg: OutgoingMessageView): Promise<void>;
   cancelSendMessage(msgId: string): Promise<void>;
   preFlight(recipient: string): Promise<number>;
+  getReportAddressForDomain(domain: string): Promise<string>;
 
   addFile(file: web3n.files.ReadonlyFile, info?: ItemAttrs): Promise<string>;
   /**
@@ -224,10 +225,7 @@ export interface InboxSrv {
    * Copies what it can and says how much it left out. A silent skip would put
    * "Attachments have saved" over a folder some of the files never reached.
    */
-  copyFilesTo(
-    ids: Array<string | undefined>,
-    fs: web3n.files.WritableFS,
-  ): Promise<{ skipped: number }>;
+  copyFilesTo(ids: Array<string | undefined>, fs: web3n.files.WritableFS): Promise<{ skipped: number }>;
   getIncomingAttachment(msgId: string, fileName: string): Promise<web3n.files.ReadonlyFile | null>;
   getIncomingAttachmentsFS(msgId: string): Promise<web3n.files.ReadonlyFS | null>;
 
@@ -319,6 +317,7 @@ export const INBOX_SRV_REQ_REPLY_METHODS: (keyof InboxSrv)[] = [
   'deleteMessages',
   'sendMessage',
   'cancelSendMessage',
+  'getReportAddressForDomain',
   'preFlight',
   'addFile',
   'addLink',

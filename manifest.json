@@ -1,10 +1,18 @@
 {
   "name": "Inbox",
   "appDomain": "inbox.app.privacysafe.io",
-  "version": "0.3.43",
+  "version": "0.3.44",
   "description": "Send and receive encrypted messages with an improved version of email.",
   "icon": "logo.png",
-  "tags": ["beta"],
+
+  "publisher": "Ivy Cyber",
+  "website": "https://privacysafe.app",
+  "contact": "support@ivycyber.com",
+  "policy": "https://ivycyber.com/privacy",
+  "terms": "https://ivycyber.com/terms",
+  "license": "AGPL-3.0-or-later",
+  "source": "https://github.com/PrivacySafe/inbox.app.privacysafe.io",
+
   "components": {
     "/index.html": {
       "startedBy": "user",
@@ -110,6 +118,7 @@
         "logToPlatform": true,
         "mailerid": true,
         "mail": {
+          "preflightsTo": "all",
           "sendingTo": "all",
           "receivingFrom": "all",
           "config": "all"

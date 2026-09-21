@@ -183,7 +183,7 @@
   .label {
     padding-top: var(--spacing-s);
     font-size: var(--font-14);
-    font-weight: 500;
+    font-weight: 600;
     color: var(--color-text-control-primary-default);
   }
 

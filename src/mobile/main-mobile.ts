@@ -20,6 +20,7 @@ import { router } from './router';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
+  theme,
   dialogs,
   notifications,
   storeDialogs,
@@ -67,7 +68,15 @@ const init = () => {
 
     dayjs.extend(relativeTime);
 
-    app.use(pinia).use(i18n).use(vueBus).use(dialogs).use(notifications).use(router).mount('#mobile');
+    app
+      .use(theme, { theme: 'dark' })
+      .use(pinia)
+      .use(i18n)
+      .use(vueBus)
+      .use(dialogs)
+      .use(notifications)
+      .use(router)
+      .mount('#mobile');
   }).catch(err => {
     // Without this the failure is an unhandled rejection and a splash animating
     // over a window that will never load: nothing on screen says why.

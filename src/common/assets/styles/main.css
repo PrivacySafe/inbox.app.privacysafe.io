@@ -71,6 +71,7 @@ html {
 
 body {
   position: relative;
+  font-family: var(--ui3n-font-family);
 }
 
 section,
@@ -82,7 +83,11 @@ div {
 #mobile {
   position: fixed;
   inset: 0;
+  font-family: Inter, system-ui, sans-serif;
   background-color: var(--color-bg-block-primary-default);
+}
+
+#ui3n-notifications-container {
   font-family: Inter, system-ui, sans-serif;
 }
 

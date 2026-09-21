@@ -1,6 +1,6 @@
 {
   "name": "inbox.app.privacysafe.io",
-  "version": "0.3.43",
+  "version": "0.3.44",
   "description": "Inbox App",
   "author": "3NSoft, Inc.",
   "license": "GPL-3.0",
@@ -30,7 +30,7 @@
     "test:report:view": "vite preview --outDir tests/report"
   },
   "dependencies": {
-    "@v1nt1248/3nclient-lib": "0.3.49",
+    "@v1nt1248/3nclient-lib": "0.4.0",
     "dayjs": "1.11.23",
     "fflate": "0.8.3",
     "lodash": "4.18.1",

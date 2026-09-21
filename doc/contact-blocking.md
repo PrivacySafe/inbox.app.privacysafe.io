@@ -115,11 +115,23 @@ Everything below lives in `src/common/`, so both form factors get the same.
 |---|---|
 | the **Manage blocks** menu item, first in the avatar menu | [useAppMenu.ts](../src/common/composables/useAppMenu.ts) |
 | the dialog it opens | [manage-blocks-dialog/](../src/common/components/dialogs/manage-blocks-dialog/) |
+| **Block** / **Unblock** on an open message | [message-content-header.vue](../src/common/components/message-content/message-content-header.vue), [message-toolbar-main.vue](../src/mobile/components/message-toolbar/message-toolbar-main.vue) |
 | the act itself: confirm → change → report a failure | [useContactBlocking.ts](../src/common/composables/useContactBlocking.ts) |
 | reaching the contacts app | [contacts.store.ts](../src/common/store/contacts.store.ts) |
 
 The item is drawn in the warning colour (`--warning-content-default`), as the same action is in
 chat: it is about a person, not about this app's own data.
+
+**The buttons on a message go through `MessageAction`**, as every other button of those two
+toolbars does, and `handleMessageAction` ([useFolderContent.ts](../src/common/composables/useFolderContent.ts))
+is where they meet `runContactBlocking`. Only one of the pair is ever drawn, off the same
+`isBlacklisted` the lock beside the address is drawn off, and the pair is offered only where
+blocking means anything: the message is incoming **and** its sender is not this user. An address
+of one's own arrives on a copy of a sync phantom, and blocking it would stop this mailbox's own
+traffic — so the check is made again in the dispatcher, for the same reason Reply is refused
+there as well as hidden. On the mobile page the action does not navigate away
+([message.vue](../src/mobile/pages/message/message.vue)): blocking changes what that very page
+draws.
 
 **The dialog lists more than the address book.** Blocking is not a privilege of contacts — most of
 what one wants to block was never added to one — so it shows every contact **and** every address met

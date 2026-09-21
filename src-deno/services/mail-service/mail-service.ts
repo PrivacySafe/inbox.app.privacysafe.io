@@ -14,7 +14,11 @@
  You should have received a copy of the GNU General Public License along with
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
-import { CATCH_UP_REWIND_MS, INBOX_SCAN_FLOOR_MS } from '../../../shared/constants/sync.ts';
+import {
+  CATCH_UP_FETCH_WINDOW,
+  CATCH_UP_REWIND_MS,
+  INBOX_SCAN_FLOOR_MS,
+} from '../../../shared/constants/sync.ts';
 import { makeLogger } from '../../../shared/utils/logger.ts';
 import { NamedProcs } from '../../../shared/utils/processes/named-procs.ts';
 import { SingleProc } from '../../../shared/utils/processes/single.ts';
@@ -232,6 +236,7 @@ export async function mailService({
       let alreadySeen = 0;
       let failed = 0;
 
+      const toFetch: web3n.asmail.MsgInfo[] = [];
       for (const item of listed) {
         if (item.msgType === 'mail') {
           mail += 1;
@@ -253,34 +258,85 @@ export async function mailService({
           continue;
         }
 
+        toFetch.push(item);
+      }
+
+      // Fetched a window at a time, applied one at a time. The round trip to the
+      // server is what a scan over a backlog spends its time on, so the fetches
+      // overlap; the ORDER of application stays the order of the listing, which
+      // is what the sync tract resolves competing phantoms by. See
+      // CATCH_UP_FETCH_WINDOW.
+      const fetched: Promise<{ msg?: web3n.asmail.IncomingMessage; err?: unknown }>[] = [];
+      const startFetch = (index: number): void => {
+        if (index >= toFetch.length) {
+          return;
+        }
+        const { msgId } = toFetch[index];
+        // Still INSIDE the per-message proc: the live subscription hands its
+        // messages to the same one, so this message is not being fetched twice at
+        // once. Different messages are free to be in flight together.
+        // The rejection is turned into a value here rather than awaited later:
+        // a fetch that fails while its turn is still a window away would
+        // otherwise go unhandled.
+        fetched.push(
+          process
+            .startOrChain(msgId, async () => w3n.mail?.inbox.getMsg(msgId))
+            .then(
+              msg => ({ msg: msg ?? undefined }),
+              err => ({ err: err ?? new Error(`getMsg(${msgId}) failed`) }),
+            ),
+        );
+      };
+
+      for (let i = 0; i < Math.min(CATCH_UP_FETCH_WINDOW, toFetch.length); i += 1) {
+        startFetch(i);
+      }
+
+      // Where a long scan's time actually goes, told apart rather than guessed
+      // at: waiting for a fetch that the window did not cover in time, against
+      // applying what came back.
+      let fetchWaitMs = 0;
+      let applyMs = 0;
+
+      for (let i = 0; i < toFetch.length; i += 1) {
+        const item = toFetch[i];
+        const waitedFrom = Date.now();
+        const { msg, err } = await fetched[i];
+        fetchWaitMs += Date.now() - waitedFrom;
+        // Kept full while this one is applied.
+        startFetch(i + CATCH_UP_FETCH_WINDOW);
+
+        if (err) {
+          failed += 1;
+          failureFloor.recordFailure(item.deliveryTS);
+          log.error(`Failed to catch up message ${item.msgId}`, err);
+          continue;
+        }
+        if (!msg) {
+          // An unavailable message has to be seen by the next scan too, so the
+          // watermark is not allowed past it.
+          failed += 1;
+          failureFloor.recordFailure(item.deliveryTS);
+          log.error(`getMsg(${item.msgId}) returned nothing (deliveryTS ${item.deliveryTS})`);
+          continue;
+        }
+        if (
+          (item.msgType === MAIL_SYNC_MSG_TYPE)
+          && ((msg as { jsonBody?: { sourceDeviceId?: string } }).jsonBody?.sourceDeviceId
+            === thisDeviceId)
+        ) {
+          ownPhantoms += 1;
+        }
+
+        const appliedFrom = Date.now();
         try {
-          // The fetch INSIDE the per-message proc, for the same reason: the live
-          // subscription hands its messages to the same proc, so nothing else can
-          // be fetching this one at the same time.
-          await process.startOrChain(item.msgId, async () => {
-            const msg = await w3n.mail?.inbox.getMsg(item.msgId);
-            if (!msg) {
-              // An unavailable message has to be seen by the next scan too, so
-              // the watermark is not allowed past it.
-              failed += 1;
-              failureFloor.recordFailure(item.deliveryTS);
-              log.error(`getMsg(${item.msgId}) returned nothing (deliveryTS ${item.deliveryTS})`);
-              return;
-            }
-            if (
-              (item.msgType === MAIL_SYNC_MSG_TYPE)
-              && ((msg as { jsonBody?: { sourceDeviceId?: string } }).jsonBody?.sourceDeviceId
-                === thisDeviceId)
-            ) {
-              ownPhantoms += 1;
-            }
-            await handleOne(msg, { notify: false });
-          });
+          await process.startOrChain(item.msgId, () => handleOne(msg, { notify: false }));
         } catch (err) {
           failed += 1;
           failureFloor.recordFailure(item.deliveryTS);
           log.error(`Failed to catch up message ${item.msgId}`, err);
         }
+        applyMs += Date.now() - appliedFrom;
       }
 
       await watermark.commit().catch(err => log.error(`Final watermark commit failed`, err));
@@ -292,7 +348,8 @@ export async function mailService({
       log.info(
         `Catch-up: watermark ${watermarkTs}, listed ${listed.length} since ${scanFrom}, `
           + `${mail} mail, ${phantoms} sync (${ownPhantoms} of them from this device `
-          + `${thisDeviceId}), ${alreadySeen} handled earlier this session, ${failed} failed`,
+          + `${thisDeviceId}), ${alreadySeen} handled earlier this session, ${failed} failed; `
+          + `waited ${fetchWaitMs}ms on fetches, spent ${applyMs}ms applying`,
       );
     } finally {
       activity?.endCatchUpScan();

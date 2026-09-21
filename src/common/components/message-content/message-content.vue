@@ -98,6 +98,7 @@
         <ui3n-menu
           position-strategy="fixed"
           :offset-y="4"
+          :content-border-radius="8"
         >
           <ui3n-tooltip
             :content="t('msg.content.tooltip.delete')"
@@ -107,9 +108,8 @@
             <ui3n-button
               type="icon"
               icon="outline-delete"
-              icon-color="var(--color-icon-button-secondary-default)"
+              icon-color="var(--error-content-default)"
               color="var(--color-bg-block-primary-default)"
-              :class="$style.deleteBtn"
             />
           </ui3n-tooltip>
 
@@ -198,10 +198,6 @@
     height: var(--spacing-l);
     top: var(--spacing-xs);
     right: var(--spacing-m);
-  }
-
-  .deleteBtn {
-    --ui3n-button-bg-color-custom: var(--color-bg-block-primary-default) !important;
   }
 
   .menu {

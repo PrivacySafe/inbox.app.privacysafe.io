@@ -31,8 +31,8 @@
     isContactBlocked,
     getDisplayItem,
     filterContactList,
-    onMsgDataUpdate,
     onMsgDataUpdateDebounced,
+    cancelPendingSave,
     removeRecipient,
     updateAttachments,
     showEditorToolbar,
@@ -43,6 +43,12 @@
   const isBusy = computed(() => isLoading.value || hasBlockingAttachments.value);
 
   watch(isBusy, value => emits('update:busy', value), { immediate: true });
+
+  // Send and Discard sit in the page's toolbar rather than in this form, so the
+  // page is the one that has to drop a save still waiting: after a deletion it
+  // would bring the draft back, and after a handover to delivery it would write
+  // the message out as a draft again.
+  defineExpose({ cancelPendingSave });
 </script>
 
 <template>
@@ -78,7 +84,7 @@
           :new-value-validator="(v: string) => v.includes('@')"
           :disabled="isLoading"
           :class="isEmpty(msgData.recipients) && $style.noRecipients"
-          @update:model-value="onMsgDataUpdate"
+          @update:model-value="onMsgDataUpdateDebounced"
         >
           <template #item="{ item, query }">
             <div :class="$style.item">

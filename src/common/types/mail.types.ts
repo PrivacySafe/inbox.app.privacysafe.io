@@ -192,6 +192,9 @@ export type MessageAction =
   | 'forward'
   | 'restore'
   | 'discard'
-  | 'cancel';
+  | 'cancel'
+  | 'block'
+  | 'unblock'
+  | 'report';
 
 export type MessageBulkActions = 'select-all' | 'deselect-all' | 'cancel' | 'move-to-trash' | 'delete' | 'restore';

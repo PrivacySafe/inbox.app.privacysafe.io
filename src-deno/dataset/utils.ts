@@ -123,7 +123,12 @@ export function msgValueToSqlInsertParams(
     $threadId: msgData.threadId!,
     $msgType: 'mail',
     $cTime: msgData.cTime || null,
-    $deliveryTS: isMsgIncoming ? (msgData as IncomingMessageView).deliveryTS : null,
+    // Kept for an outgoing record too, and not only for an incoming one. Three
+    // things read it back expecting it to be there: preserveEventStamps(), which
+    // cannot keep a stamp the stored record does not carry - so every draft save
+    // went out as a delivery change; deliveryStateOf(), which builds that diff;
+    // and message-list.vue, which sorts the Draft folder strictly by it.
+    $deliveryTS: msgData.deliveryTS ?? null,
     $subject: msgData.subject || null,
     $plainTxtBody: msgData.plainTxtBody || null,
     $htmlTxtBody: msgData.htmlTxtBody || null,
@@ -136,6 +141,22 @@ export function msgValueToSqlInsertParams(
     $attachmentsInfo: isEmpty(msgData.attachmentsInfo) ? null : JSON.stringify(msgData.attachmentsInfo),
     $originDeviceId: msgData.originDeviceId || null,
   };
+}
+
+/**
+ * Whether two records would be stored as the very same row.
+ *
+ * The comparison is made on the insert parameters rather than on the records:
+ * that flat object IS what goes into the table, its keys are in a fixed order,
+ * and it leaves out whatever the row does not carry. Comparing the records
+ * themselves would answer wrongly for two that were built by different paths and
+ * differ only in key order or in a field the table has no column for.
+ */
+export function sameStoredMsgRow(
+  a: IncomingMessageView | OutgoingMessageView,
+  b: IncomingMessageView | OutgoingMessageView,
+): boolean {
+  return JSON.stringify(msgValueToSqlInsertParams(a)) === JSON.stringify(msgValueToSqlInsertParams(b));
 }
 
 export function msgDbValueToMsgValue(

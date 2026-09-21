@@ -1,14 +1,13 @@
+import type { ThemeId } from '@v1nt1248/3nclient-lib/plugins';
 import type { PreparedMessageData } from './mail.types';
 
 export type AvailableLanguage = 'en';
-
-export type AvailableColorTheme = 'default' | 'dark' | 'dark2';
 
 export type ConnectivityStatus = 'offline' | 'online';
 
 export interface AppConfig {
   lang: AvailableLanguage;
-  colorTheme: AvailableColorTheme;
+  colorTheme: ThemeId;
   customLogo?: string;
 }
 
@@ -16,18 +15,18 @@ export interface AppConfigsInternal {
   getSettingsFile: () => Promise<AppSettings>;
   saveSettingsFile: (data: AppSettings) => Promise<void>;
   getCurrentLanguage: () => Promise<AvailableLanguage>;
-  getCurrentColorTheme: () => Promise<AvailableColorTheme>;
+  getCurrentColorTheme: () => Promise<ThemeId>;
 }
 
 export interface AppConfigs {
   getCurrentLanguage: () => Promise<AvailableLanguage>;
-  getCurrentColorTheme: () => Promise<AvailableColorTheme>;
+  getCurrentColorTheme: () => Promise<ThemeId>;
   watchConfig(obs: web3n.Observer<AppConfig>): () => void;
 }
 
 export interface SettingsJSON {
   lang: AvailableLanguage;
-  colorTheme: AvailableColorTheme;
+  colorTheme: ThemeId;
 }
 
 export interface AppSettings {

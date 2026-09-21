@@ -153,7 +153,8 @@
   }
 
   .btn {
-    --ui3n-button-bg-color-custom: var(--color-bg-block-primary-default) !important;
+    /* the buttons sit on the header, so they take its background */
+    --ui3n-button-bg-color: var(--color-bg-block-primary-default);
   }
 
   .info {

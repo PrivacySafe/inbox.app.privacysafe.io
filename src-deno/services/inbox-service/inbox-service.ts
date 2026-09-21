@@ -24,6 +24,7 @@ import type {
 } from '../../../src/common/types/mail.types.ts';
 import type { InboxSrv } from '../../types/inbox-srv.types.ts';
 import type { DBProvider } from '../../dataset/index.ts';
+import { sameStoredMsgRow } from '../../dataset/utils.ts';
 import { inboxBackupSrv } from '../../inbox-backup-srv.ts';
 import type { SyncAspect } from '../../types/sync-types.ts';
 import type { BlacklistTracker } from '../contacts-service/contacts-blacklist.ts';
@@ -263,6 +264,16 @@ export async function inboxService(
     // preserveEventStamps for why this is the only place that can do it.
     const next = existing ? preserveEventStamps(existing, msg) : msg;
     const aspects = diffMsgAspects(existing ?? undefined, next);
+
+    // A save that changes nothing stops here. The empty set of aspects already
+    // kept it off the wire; without this it still cost a full-row rewrite, a
+    // dirty database file, and a `message` event that replaces the record in the
+    // window's store and invalidates every list computed over it. The draft form
+    // saves as it opens, so this is the common case rather than a corner one.
+    if (existing && (aspects.size === 0) && sameStoredMsgRow(existing, next)) {
+      return;
+    }
+
     await applyMsgChanges([next], () => announceMsgAspects(next, aspects));
   }
 
@@ -429,6 +440,10 @@ export async function inboxService(
 
     async preFlight(recipient) {
       return w3n.mail!.delivery.preFlight(recipient);
+    },
+
+    async getReportAddressForDomain(domain: string): Promise<string> {
+      return w3n.mail!.getReportAddressForDomain(domain);
     },
 
     addFile: (file, info) => fileStore.addFile(file, info),

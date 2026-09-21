@@ -90,6 +90,71 @@ The delivery's own stamp still lands: `handleDeliveryProgress()` writes through
 `db.updateMessage`, not through the GUI's write point. And a record that is new
 here keeps the stamps it arrives with — creation *is* the event they are about.
 
+`originDeviceId` travels with the stamps, though it is no stamp. The form never
+sets it, the row is rewritten whole, and `diffMsgAspects()` leaves it out of the
+diff deliberately — so a save silently dropped it, and nothing downstream would
+have noticed.
+
+### A save that changes nothing writes nothing
+
+The set of aspects gates the phantom, not the write: `applyMsgChanges()` rewrote
+the row and told the window about it regardless, and the draft form saves as it
+opens, so that was the common case rather than a corner one. `upsertMessage()`
+now stops before it — `sameStoredMsgRow()`
+([dataset/utils.ts](../src-deno/dataset/utils.ts)) asks the question on the
+**insert parameters** rather than on the records: that flat object is what the
+table would hold, its keys are in a fixed order, and it leaves out whatever the
+row has no column for. Comparing the records themselves answers wrongly for two
+that were built by different paths.
+
+### A save the form has not made yet
+
+Every field of the compose form now takes one path
+([useCreateMsg.ts](../src/common/components/dialogs/create-msg-dialog/useCreateMsg.ts)): what a
+change does **at once** — taking out a blocked address and naming it, and telling
+the mobile page what the form holds, which is what its Send button is enabled by
+and what a send on that form factor goes out with — is separate from the **write**,
+which waits out `DRAFT_SAVE_DELAY_MS`. Before this the recipients wrote on every
+change while everything else waited, and the immediate half waited with it.
+
+A pending write is not left to its timer, because the timer outlives the form and
+lands on a record the close has already acted on:
+
+- **Discard** and **Send** cancel it. A save arriving after a deletion brings the
+  discarded draft back — tombstone, then a fresh record, both announced — and one
+  arriving after `runMessageSending()` has written the record as `outbox`/`sending`
+  rewrites it as `draft`/`draft`, walking a message already handed to delivery back
+  out of the outbox, as a change of placement and of delivery on every device.
+- Every other way out **flushes** it, so the last edit is written while the form is
+  still there. On the mobile page Send and Discard come from the toolbar rather than
+  from the form, so the page cancels through the form's `cancelPendingSave`.
+
+Related: Esc used to raise the dialog's `cancel`, which is what the Discard button
+raises and what the caller answers by deleting the record — so the key discarded
+the draft being edited, while the X button beside it left it alone. Both now close.
+
+### Two ways the stored record differs from the one in hand
+
+Both were found by a save that changed nothing and announced something anyway,
+and both are the same mistake: comparing what the GUI holds against what the
+table kept, without asking what the table does to a value on the way in.
+
+- **`deliveryTS` of an outgoing record was never stored.**
+  `msgValueToSqlInsertParams()` wrote NULL for anything without a `sender`, so
+  `preserveEventStamps()` had no stamp to keep and the fresh `Date.now()` went
+  through as a delivery change — on every save, including the one that merely
+  opens the form. The column is now filled for both directions;
+  `message-list.vue` sorts the Draft folder strictly by it, so the order also
+  stopped changing across a restart.
+- **An empty list is stored as NULL and read back as absent.** A record straight
+  from the form carries `recipients: []` — the ordinary state of a message being
+  composed — and the stored one it was saved as carries no `recipients` at all.
+  `sameJson()` read that as a change of content. Empty and absent are now the
+  same value there, as they are in the table.
+
+Neither was visible to the tests: `fake-db` kept the object it was handed
+instead of putting it through the two mappers. It no longer does.
+
 ### Placement in a reduced alphabet
 
 `placement` **never names the system folder of outgoing mail**. It says one of

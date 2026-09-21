@@ -40,6 +40,7 @@
 
   const sourceFolder = ref<string | undefined>();
   const isFormBusy = ref(false);
+  const messageFormEl = ref<InstanceType<typeof MessageForm> | null>(null);
   const currentMessage = ref<Nullable<IncomingMessageView | OutgoingMessageView>>(null);
   const messageInitialData =
     ref<Nullable<{ data: PreparedMessageData; isThisReplyOrForward?: boolean; sourceFolder?: string }>>(null);
@@ -76,6 +77,14 @@
 
   async function handleAction(action: MessageAction) {
     const folderId = currentMessage.value!.mailFolder;
+
+    // Before either of the two that make this record something other than the
+    // draft the form holds: a save still waiting would undo the deletion, or
+    // write a message already handed to delivery back out as a draft.
+    if ((action === 'discard') || (action === 'send')) {
+      messageFormEl.value?.cancelPendingSave();
+    }
+
     switch (action) {
       case 'edit':
         messageInitialData.value = { data: msgViewToPreparedMsgData(currentMessage.value!) };
@@ -91,6 +100,15 @@
         await router.push({ name: 'folder', params: { folderId } });
         break;
       }
+      case 'report':
+        await router.push({
+          name: 'report',
+          params: { msgId: currentMessage.value!.msgId },
+          query: { ...(sourceFolder.value && { sourceFolder: sourceFolder.value }) },
+        });
+        break;
+      case 'block':
+      case 'unblock':
       case 'reply':
       case 'reply-all':
       case 'forward':
@@ -167,6 +185,7 @@
     <div :class="$style.messageBody">
       <message-form
         v-if="editMode && messageInitialData"
+        ref="messageFormEl"
         :data="messageInitialData.data"
         :is-this-reply-or-forward="messageInitialData?.isThisReplyOrForward"
         @action="handleMessageFormAction"

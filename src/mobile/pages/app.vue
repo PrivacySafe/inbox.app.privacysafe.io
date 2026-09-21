@@ -75,7 +75,7 @@
     return get(messagesByFolders.value, [currentFolder.value.id, 'unread'], 0);
   });
 
-  const isCreateBtnShow = computed(() => route.name !== 'message');
+  const isCreateBtnShow = computed(() => route.name === 'folder');
 
   function toggleMenu() {
     isMenuOpen.value = !isMenuOpen.value;

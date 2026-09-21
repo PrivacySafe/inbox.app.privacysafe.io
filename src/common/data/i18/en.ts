@@ -36,6 +36,9 @@ export const en = {
     btn: {
       cancel: 'Cancel',
       save: 'Save',
+      back: 'Back',
+      continue: 'Continue',
+      send: 'Send',
     },
   },
 
@@ -44,12 +47,12 @@ export const en = {
     // and before a restore of one.
     skipped: {
       onAnotherDevice:
-        '{count} file(s) were attached on another of your devices, and file bytes never travel '
-        + 'between devices.',
+        '{count} file(s) were attached on another of your devices, and file bytes never travel ' +
+        'between devices.',
       notRequested: '{count} file(s) were left out because you asked for an archive without them.',
       external:
-        '{count} file(s) are too big to be copied and were attached by reference, so the '
-        + 'archive points at them rather than holding them.',
+        '{count} file(s) are too big to be copied and were attached by reference, so the ' +
+        'archive points at them rather than holding them.',
       origin: '{count} file(s) belong to received messages and stay on the server.',
       unreadable: '{count} file(s) could not be read.',
       noLocalSource: '{count} file(s) have no readable file on this device.',
@@ -57,8 +60,7 @@ export const en = {
     passphrase: {
       createTitle: 'Protect the backup',
       openTitle: 'Passphrase required',
-      createHint:
-        'A passphrase encrypts the archive. Leave both fields empty to save it unencrypted.',
+      createHint: 'A passphrase encrypts the archive. Leave both fields empty to save it unencrypted.',
       openHint: 'This backup archive is encrypted. Enter the passphrase it was created with.',
       label: 'Passphrase',
       repeatLabel: 'Repeat passphrase',
@@ -70,8 +72,7 @@ export const en = {
       mismatch: 'The two passphrases do not match.',
       tooShort: 'A passphrase has to be at least {count} characters long.',
       noRecovery: 'A forgotten passphrase cannot be recovered: the archive stays unreadable.',
-      optional:
-        'Without a passphrase the archive is only as private as the place you keep it in.',
+      optional: 'Without a passphrase the archive is only as private as the place you keep it in.',
     },
     create: {
       dialogTitle: 'Creating backup',
@@ -87,24 +88,24 @@ export const en = {
       // about the risk of this action but about the boundary of what an archive
       // can ever bring back.
       attachmentsNotice:
-        'Attachments of received messages are kept on the server and do not go into the '
-        + 'archive. Delete such a message from the server and its attachments are lost — the '
-        + 'messages themselves will still be restored.',
+        'Attachments of received messages are kept on the server and do not go into the ' +
+        'archive. Delete such a message from the server and its attachments are lost — the ' +
+        'messages themselves will still be restored.',
       // The line a live run went without: an archive came out with no
       // attachments at all, because the files had been attached on another
       // device and file bytes never travel between devices.
       thisDeviceNotice:
-        'Only files that are on this device go into the archive. A message whose file was '
-        + 'attached on another of your devices is backed up without it, so take the backup '
-        + 'where the files are.',
+        'Only files that are on this device go into the archive. A message whose file was ' +
+        'attached on another of your devices is backed up without it, so take the backup ' +
+        'where the files are.',
       success: 'The backup {filename} was saved.',
       skippedTitle: 'Some files did not go into the archive.',
       empty: 'There is nothing to back up.',
       cancel: 'Creating the backup was stopped.',
       error: 'The backup could not be created.',
       errorTooLarge:
-        'This mailbox is too big to be carried into an archive whole. Take a backup without '
-        + 'attachments instead.',
+        'This mailbox is too big to be carried into an archive whole. Take a backup without ' +
+        'attachments instead.',
     },
     restore: {
       dialogTitle: 'Restoring backup',
@@ -113,9 +114,9 @@ export const en = {
       confirmTitle: 'Restore from a backup',
       confirmBtn: 'Restore',
       confirmWarningText:
-        'This archive was written by version {archiveVersion}, and this app is version '
-        + '{appVersion}, or the archive carries no version at all. Restoring it may damage the '
-        + 'mailbox. Proceed at your own risk.',
+        'This archive was written by version {archiveVersion}, and this app is version ' +
+        '{appVersion}, or the archive carries no version at all. Restoring it may damage the ' +
+        'mailbox. Proceed at your own risk.',
       unknownVersion: 'unknown',
       unknownDate: 'unknown',
       skippedTitle: 'This archive does not hold every file:',
@@ -128,19 +129,19 @@ export const en = {
       mode: {
         mergeTitle: 'Add what is missing',
         mergeHint:
-          'Messages and folders that are not here are put back. Nothing that is here is '
-          + 'changed, and nothing is deleted. A message deleted after the backup stays deleted.',
+          'Messages and folders that are not here are put back. Nothing that is here is ' +
+          'changed, and nothing is deleted. A message deleted after the backup stays deleted.',
         replaceTitle: 'Make the mailbox match the archive',
         replaceHint:
-          'The archive states what the mailbox is. Anything you changed after the backup was '
-          + 'taken still wins over it.',
+          'The archive states what the mailbox is. Anything you changed after the backup was ' +
+          'taken still wins over it.',
         replaceWarning:
-          'Messages and folders that are not in the archive, and that are older than it, will '
-          + 'be deleted — on this device and on your other ones.',
+          'Messages and folders that are not in the archive, and that are older than it, will ' +
+          'be deleted — on this device and on your other ones.',
       },
       devicesNotice:
-        'Whatever you choose here is what every device of yours will do: the restore is sent '
-        + 'to them and applied by the same rule.',
+        'Whatever you choose here is what every device of yours will do: the restore is sent ' +
+        'to them and applied by the same rule.',
       text: {
         unpacking: 'Reading the archive',
         decrypting: 'Decrypting the archive',
@@ -152,8 +153,8 @@ export const en = {
       },
       success: 'The backup was restored: {created} added, {updated} updated, {deleted} deleted.',
       offlineNotice:
-        'The server could not be reached, so it is not known which received messages are still '
-        + 'there. Some attachments may turn out to be unavailable.',
+        'The server could not be reached, so it is not known which received messages are still ' +
+        'there. Some attachments may turn out to be unavailable.',
       error: 'The backup could not be restored.',
       errorCorruptedArchive: 'This file is damaged or is not a ZIP archive.',
       errorForeignArchive: 'This archive is a backup of another app, not of the mailbox.',
@@ -186,6 +187,9 @@ export const en = {
         editor_formating: 'Formating',
         discard: 'Discard',
         send: 'Send',
+      },
+      report: {
+        subject: 'PrivacySafe Inbox report',
       },
     },
     text: {
@@ -237,6 +241,10 @@ export const en = {
         replyAll: 'Reply All',
         forward: 'Forward',
         restore: 'Restore',
+        // Worded as in chat.app, for the reason given over `dialog.label`.
+        block: 'Block User',
+        unblock: 'Unblock User',
+        report: 'Report',
       },
       editor: {
         fontSize: 'Font size',
@@ -318,8 +326,7 @@ export const en = {
       unavailable:
         'The file {fileName} cannot be read — it looks like it was deleted, moved or renamed. Attach it again to send this message.',
       link_broken: 'The file {fileName} cannot be shown — it looks like it was deleted, moved or renamed.',
-      on_another_device:
-        'The file {fileName} was attached on another of your devices and is not available here.',
+      on_another_device: 'The file {fileName} was attached on another of your devices and is not available here.',
       on_another_device_short: 'On another device',
       loading: '{done} of {total}',
       loading_cancel: 'Cancel',
@@ -374,9 +381,52 @@ export const en = {
     },
     additionalText: {
       block:
-        'They will no longer be able to send you messages or call you through PrivacySafe.'
-        + '<br>Existing messages will remain in your mailbox.',
+        'They will no longer be able to send you messages or call you through PrivacySafe.' +
+        '<br>Existing messages will remain in your mailbox.',
       unblock: 'They will be able to send you messages and call you through PrivacySafe again.',
+    },
+
+    'report-dialog': {
+      title: 'Report a message or a sender',
+      // On the phone the form is a page, and the line above does not fit
+      // between the arrow back and the button that sends.
+      pageTitle: 'Report',
+      content: {
+        'reasons-label': 'Tell us why you are reporting it.',
+        reason: {
+          label: 'Reason',
+          spam: 'Spam',
+          harassment: 'Harassment or threats',
+          fraud: 'Impersonation or fraud',
+          activity: 'Harmful or illegal activity',
+          other: 'Other',
+        },
+        fieldsetLabel: 'This will disclose the contents of the reported message to the PrivacySafe abuse team.',
+        reportedMessage: 'Include the reported message?',
+        reportedAttachments: 'Include the reported message attachments?',
+        step2SubTitle: 'Your report message',
+        step2Preamble: 'I would like to report a PrivacySafe Inbox message or sender.',
+        step2Additional: 'Additional details',
+        step2Block: 'Would you also like to block this sender?',
+        // Who is being reported, and when their message came, are in every
+        // report: the toggle above discloses the contents of the message, and a
+        // complaint about nobody is one the abuse team can do nothing with.
+        reportedSender: 'Reported sender',
+        reportedReceivedAt: 'Received',
+        reportedMsgId: 'Message id',
+        reportedMessageTitle: 'Reported message',
+        attachmentsNote: 'The attachments of the reported message are attached to this report.',
+        attachmentsFailed: 'These attachments of the reported message could not be attached: {files}',
+      },
+      notif: {
+        noReportAddress: 'Error retrieving the address for sending the report',
+        reportAddressBlocked: 'You have blocked {mail}, the address reports of this domain go to. Unblock it to report.',
+        blocked: '{mail} has been blocked',
+        attachmentsError: 'Some attachments of the reported message could not be attached to the report',
+        sending: 'The report is being sent. Its progress is in the Outbox.',
+        sent: 'The report has been sent',
+        sendError: 'The report could not be sent',
+      },
     },
   },
 

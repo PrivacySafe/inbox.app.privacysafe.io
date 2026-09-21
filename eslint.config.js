@@ -50,7 +50,7 @@ export default [
     rules: {
       // The whole codebase is written this way already; the rule is here so that
       // it is the linter that keeps it so, and not everybody's memory.
-      'curly': ['error', 'all'],
+      curly: ['error', 'all'],
       'max-len': [
         'error',
         {
@@ -121,7 +121,7 @@ export default [
       },
     },
     rules: {
-      'curly': ['error', 'all'],
+      curly: ['error', 'all'],
       'no-undef': 'off',
       'no-unsafe-optional-chaining': ['error'],
 
@@ -151,6 +151,15 @@ export default [
         {
           allowCoexistClass: true,
           allowCoexistStyle: true,
+        },
+      ],
+
+      'prettier/prettier': 'off',
+      'vue/singleline-html-element-content-newline': [
+        'error',
+        {
+          ignoreWhenNoAttributes: false,
+          ignoreWhenEmpty: true,
         },
       ],
     },

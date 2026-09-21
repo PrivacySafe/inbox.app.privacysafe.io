@@ -3,7 +3,7 @@ import { useI18n } from 'vue-i18n';
 import get from 'lodash/get';
 import isEmpty from 'lodash/isEmpty';
 import size from 'lodash/size';
-import { NOTIFICATIONS_KEY, NotificationsPlugin, VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
+import { NOTIFICATIONS_KEY, NotificationsPlugin, VUEBUS_KEY, VueBusPlugin, DIALOGS_KEY, DialogsPlugin } from '@v1nt1248/3nclient-lib/plugins';
 import type {
   AppGlobalEvents,
   IncomingMessageView,
@@ -11,17 +11,24 @@ import type {
   MessageBulkActions,
   OutgoingMessageView,
 } from '@common/types';
-import { useContactsStore, useMessagesStore } from '@common/store';
+import { useAppStore, useContactsStore, useMessagesStore } from '@common/store';
 import { useCreateMsgActions } from '@common/composables/useCreateMsgActions';
+import { useContactBlocking } from '@common/composables/useContactBlocking';
+import { takeReportAwaitingOutcome } from '@common/composables/sent-reports';
 import { msgViewToPreparedMsgData } from '@common/utils';
+import { sameAddress } from '@shared/utils/address-utils';
 import { MARKED_MESSAGES_INJECTION_KEY } from '@common/constants';
+import ReportDialog from '@common/components/dialogs/report-dialog/report-dialog.vue';
 
 export function useFolderContent() {
-  const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
   const { t } = useI18n();
+  const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
+  const dialog = inject<DialogsPlugin>(DIALOGS_KEY)!;
   const $notifications = inject<NotificationsPlugin>(NOTIFICATIONS_KEY)!;
 
   const { getContactList, isBlacklisted } = useContactsStore();
+  const appStore = useAppStore();
+  const { runContactBlocking } = useContactBlocking();
   const messagesStore = useMessagesStore();
   const { moveToTrash, deleteMessagesUi, bulkMoveToTrash, bulkRestore, upsertMessage } = messagesStore;
   const { openSendMessageUI, runMessageSending, prepareReplyMsgBody, prepareForwardMsgBody } =
@@ -71,6 +78,19 @@ export function useFolderContent() {
       duration: 4000,
     });
     return true;
+  }
+
+  async function startCreateReport(message: IncomingMessageView) {
+    if (!message) {
+      return;
+    }
+
+    // The report that leaves puts itself among the ones awaiting an outcome:
+    // one place doing it for both form-factors, and the phone's page of a form
+    // is gone by the time the delivery ends.
+    await dialog.$openDialog<string>(ReportDialog, {
+      message,
+    });
   }
 
   async function handleMessageAction({
@@ -184,6 +204,26 @@ export function useFolderContent() {
         break;
       }
 
+      case 'block':
+      case 'unblock': {
+        // The buttons for these are hidden already, but hidden is not
+        // forbidden: they are drawn off a list another app changes under them,
+        // and one's own address must never reach the blacklist.
+        const sender = (message as IncomingMessageView).sender;
+        if (!sender || sameAddress(sender, appStore.user)) {
+          break;
+        }
+        // runContactBlocking() asks the user and is a no-op when the address is
+        // already in the asked-for state, so nothing is checked here twice.
+        await runContactBlocking(sender, action === 'block');
+        break;
+      }
+
+      case 'report': {
+        startCreateReport(message as IncomingMessageView);
+        break;
+      }
+
       // no default
     }
   }
@@ -219,9 +259,21 @@ export function useFolderContent() {
     }
   }
 
-  function onMsgSendingComplete({ id }: { id: string; status: 'ok' | 'error' }) {
+  function onMsgSendingComplete({ id, status }: { id: string; status: 'ok' | 'error' }) {
     if (markedMessages.value.includes(id)) {
       markMessage(id);
+    }
+
+    // Told about once: a report is one message, and its delivery ends once.
+    if (takeReportAwaitingOutcome(id)) {
+      $notifications.$createNotice({
+        type: status === 'ok' ? 'success' : 'error',
+        content:
+          status === 'ok'
+            ? t('dialog.report-dialog.notif.sent')
+            : t('dialog.report-dialog.notif.sendError'),
+        duration: 4000,
+      });
     }
   }
 
@@ -237,10 +289,10 @@ export function useFolderContent() {
   }
 
   onBeforeMount(async () => {
-    await getContactList();
-
     $bus.$emitter.on('sending-complete', onMsgSendingComplete);
     $bus.$emitter.on('open-inbox-msg', onOpenInboxMsg);
+
+    await getContactList();
   });
 
   onBeforeUnmount(() => {

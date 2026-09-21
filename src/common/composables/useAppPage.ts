@@ -1,8 +1,8 @@
-import { computed, inject, onBeforeMount, onBeforeUnmount, ref } from 'vue';
+import { computed, inject, onBeforeMount, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
-import { DIALOGS_KEY, DialogsPlugin, VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
+import { THEME_KEY, DIALOGS_KEY, DialogsPlugin, VUEBUS_KEY, VueBusPlugin } from '@v1nt1248/3nclient-lib/plugins';
 import { getRandomId } from '@v1nt1248/3nclient-lib/utils';
 import type { Ui3nDialogEvent } from '@v1nt1248/3nclient-lib';
 import type { AppGlobalEvents, AppMenuAction, PreparedMessageData } from '@common/types';
@@ -18,7 +18,6 @@ import {
 import { useBackupRestore } from '@common/composables/useBackupRestore';
 import { useCreateMsgActions } from '@common/composables/useCreateMsgActions';
 import { inboxSrv } from '@common/services/services-provider';
-import { SystemSettings } from '@common/utils';
 import { SingleProc } from '@shared/utils/processes/single';
 import { makeLogger } from '@shared/utils/logger';
 import CreateMsgDialog from '@common/components/dialogs/create-msg-dialog/create-msg-dialog.vue';
@@ -27,6 +26,7 @@ import ManageBlocksDialog from '@common/components/dialogs/manage-blocks-dialog/
 const log = makeLogger('AppPage');
 
 export function useAppPage(mobileMode?: boolean) {
+  const { setTheme } = inject(THEME_KEY)!;
   const $bus = inject<VueBusPlugin<AppGlobalEvents>>(VUEBUS_KEY)!;
   const $dialogs = inject<DialogsPlugin>(DIALOGS_KEY)!;
   const { t } = useI18n();
@@ -44,6 +44,7 @@ export function useAppPage(mobileMode?: boolean) {
     appVersion,
     user: me,
     connectivityStatus,
+    colorTheme,
     isMobileMode,
     commonLoading,
     customLogoSrc,
@@ -54,13 +55,11 @@ export function useAppPage(mobileMode?: boolean) {
     applyAppState,
     getSyncActivityState,
     applySyncActivity,
-    getAppConfig,
+    readAndStartWatchingAppConfig,
+    stopWatchingAppConfig,
     getAppVersion,
     getUser,
     getConnectivityStatus,
-    setLang,
-    setColorTheme,
-    setCustomLogo,
     setAppWindowSize,
     setMobileMode,
     setCommonLoading,
@@ -82,6 +81,12 @@ export function useAppPage(mobileMode?: boolean) {
 
   const { saveMsgToDraft } = useCreateMsgActions();
   const { startBackupWorkflow, runRestoreWorkflow } = useBackupRestore();
+
+  // The store holds what the setting says; the plugin puts it on the document.
+  // Declared in setup, so that the watcher belongs to the component's scope and
+  // ends with it - and `immediate`, because the first read of the config may
+  // land either before or after this page is set up.
+  watch(colorTheme, id => setTheme(id), { immediate: true });
 
   const connectivityStatusText = computed(() =>
     connectivityStatus.value === 'online' ? 'app.status.connected.online' : 'app.status.connected.offline',
@@ -329,7 +334,7 @@ export function useAppPage(mobileMode?: boolean) {
         getAppState(),
         getAppVersion(),
         getUser(),
-        getAppConfig(),
+        readAndStartWatchingAppConfig(),
         getConnectivityStatus(),
         // Asked for as well as subscribed to: the catch-up scan often finishes
         // before this page can subscribe, and a state nobody asked for would
@@ -368,16 +373,6 @@ export function useAppPage(mobileMode?: boolean) {
 
       $bus.$emitter.on('run-create-message', openCreateMsgDialog);
 
-      const config = await SystemSettings.makeResourceReader();
-      config.watchConfig({
-        next: appConfig => {
-          const { lang, colorTheme, customLogo } = appConfig;
-          setLang(lang);
-          setColorTheme(colorTheme);
-          setCustomLogo(customLogo);
-        },
-      });
-
       const startCmd = await w3n.shell!.getStartedCmd!();
       if (startCmd) {
         handleExternalCommand(startCmd);
@@ -406,6 +401,7 @@ export function useAppPage(mobileMode?: boolean) {
     unsubWatch.value && unsubWatch.value();
     unsubStartup.value && unsubStartup.value();
     stopBlacklistWatch();
+    stopWatchingAppConfig();
 
     $bus.$emitter.off('run-create-message', openCreateMsgDialog);
   });

@@ -6,6 +6,7 @@
     address: string;
     tooltipContent?: string;
     allowAdding?: boolean;
+    disabled?: boolean;
   }>();
   const emits = defineEmits<{
     (event: 'select'): void;
@@ -30,6 +31,7 @@
       height="32"
       max-width="100%"
       :class="allowAdding && $style.pointer"
+      :disabled="disabled"
       @click.stop.prevent="select"
     >
       <template #left>

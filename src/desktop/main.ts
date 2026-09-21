@@ -20,6 +20,7 @@ import { router } from './router';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
+  theme,
   dialogs,
   notifications,
   storeDialogs,
@@ -48,32 +49,42 @@ const log = makeLogger('MainWindow');
 setupGlobalReportingOfUnhandledErrors();
 
 const init = () => {
-  initializationServices().then(async () => {
-    initDebugLogging();
+  initializationServices()
+    .then(async () => {
+      initDebugLogging();
 
-    const pinia = createPinia();
-    pinia.use(piniaRouter);
-    pinia.use(storeVueBus);
-    pinia.use(storeDialogs);
-    pinia.use(storeNotifications);
+      const pinia = createPinia();
+      pinia.use(piniaRouter);
+      pinia.use(storeVueBus);
+      pinia.use(storeDialogs);
+      pinia.use(storeNotifications);
 
-    const app = createApp(App);
+      const app = createApp(App);
 
-    app.config.globalProperties.$router = router;
-    // app.config.globalProperties.$store = store
-    app.config.compilerOptions.isCustomElement = tag => {
-      return tag.startsWith('ui3n-');
-    };
+      app.config.globalProperties.$router = router;
+      // app.config.globalProperties.$store = store
+      app.config.compilerOptions.isCustomElement = tag => {
+        return tag.startsWith('ui3n-');
+      };
 
-    dayjs.extend(relativeTime);
+      dayjs.extend(relativeTime);
 
-    app.use(pinia).use(i18n).use(vueBus).use(dialogs).use(notifications).use(router).mount('#main');
-  }).catch(err => {
-    // Without this the failure is an unhandled rejection and a splash animating
-    // over a window that will never load: nothing on screen says why.
-    log.error(`App is not started, as its services could not be reached`, err);
-    showStartupFailure('main');
-  });
+      app
+        .use(theme, { theme: 'dark' })
+        .use(pinia)
+        .use(i18n)
+        .use(vueBus)
+        .use(dialogs)
+        .use(notifications)
+        .use(router)
+        .mount('#main');
+    })
+    .catch(err => {
+      // Without this the failure is an unhandled rejection and a splash animating
+      // over a window that will never load: nothing on screen says why.
+      log.error(`App is not started, as its services could not be reached`, err);
+      showStartupFailure('main');
+    });
 };
 
 init();

@@ -1,28 +1,35 @@
 /*
- Copyright (C) 2024 - 2025 3NSoft Inc.
+ Copyright (C) 2024-2025 3NSoft Inc.
 
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ This program is free software: you can redistribute it and/or modify it under
+ the terms of the GNU General Public License as published by the Free Software
+ Foundation, either version 3 of the License, or (at your option) any later
+ version.
 
- This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ See the GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License along with this program. If not, see <http://www.gnu.org/licenses/>.
+ You should have received a copy of the GNU General Public License along with
+ this program. If not, see <http://www.gnu.org/licenses/>.
 */
-
-import type { AppConfig, AvailableLanguage, AvailableColorTheme } from '@common/types';
+import type { ThemeId } from '@v1nt1248/3nclient-lib/plugins';
+import type { AppConfig, AvailableLanguage } from '@common/types';
 import { SingleProc } from '@v1nt1248/3nclient-lib/utils';
 
 export interface AppConfigsInternal {
   getAll: () => Promise<SettingsJSON>;
   saveSettingsFile: (data: AppConfig) => Promise<void>;
   getCurrentLanguage: () => Promise<AvailableLanguage>;
-  getCurrentColorTheme: () => Promise<AvailableColorTheme>;
+  getCurrentColorTheme: () => Promise<ThemeId>;
   getSystemFoldersDisplaying: () => Promise<boolean>;
   getAllowShowingDevtool: () => Promise<boolean>;
 }
 
 export interface AppConfigs {
   getCurrentLanguage: () => Promise<AvailableLanguage>;
-  getCurrentColorTheme: () => Promise<AvailableColorTheme>;
+  getCurrentColorTheme: () => Promise<ThemeId>;
   getSystemFoldersDisplaying: () => Promise<boolean>;
   getAllowShowingDevtool: () => Promise<boolean>;
   getAll: () => Promise<SettingsJSON>;
@@ -31,7 +38,7 @@ export interface AppConfigs {
 
 export interface SettingsJSON {
   lang: AvailableLanguage;
-  colorTheme: AvailableColorTheme;
+  colorTheme: ThemeId;
   systemFoldersDisplaying: boolean;
   allowShowingDevtool: boolean;
   customLogo: AppConfig['customLogo'];
@@ -44,6 +51,23 @@ export interface AppSettings {
 const resourceName = 'ui-settings';
 const resourceApp = 'launcher.app.privacysafe.io';
 const settingsPath = '/constants/settings.json';
+
+/**
+ * Maps what the launcher may have stored onto an id the theme plugin knows.
+ * The launcher still ships 'dark2' as the default in its settings.json, and
+ * the plugin ignores an id outside light/dark/midnight without a word.
+ */
+export function getActiveTheme(value: ThemeId | 'default' | 'dark1' | 'dark2'): ThemeId {
+  if (value === 'default') {
+    return 'light';
+  }
+
+  if (value === 'dark1' || value === 'dark2') {
+    return 'dark';
+  }
+
+  return value;
+}
 
 export class SystemSettings implements AppConfigs, AppConfigsInternal {
   private syncProc: SingleProc | undefined = undefined;
@@ -85,7 +109,6 @@ export class SystemSettings implements AppConfigs, AppConfigsInternal {
   }
 
   async saveSettingsFile(data: AppConfig): Promise<void> {
-    console.log(`@ saveSettingsFile data is`, data);
     const settingsJSON = data as SettingsJSON;
     const { file, syncProc } = this.writableFile;
     await syncProc.startOrChain(() => file.writeJSON(settingsJSON));
@@ -96,9 +119,9 @@ export class SystemSettings implements AppConfigs, AppConfigsInternal {
     return lang;
   }
 
-  async getCurrentColorTheme(): Promise<AvailableColorTheme> {
+  async getCurrentColorTheme(): Promise<ThemeId> {
     const { colorTheme } = await this.file.readJSON<SettingsJSON>();
-    return colorTheme;
+    return getActiveTheme(colorTheme);
   }
 
   async getSystemFoldersDisplaying(): Promise<boolean> {
