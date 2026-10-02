@@ -72,7 +72,6 @@ export const makeConfig = ({ mode }: ConfigEnv): UserConfig => {
     resolve: {
       alias: {
         vue: 'vue/dist/vue.esm-bundler.js',
-        'source-map-js': 'source-map',
         '@': _resolve('./src'),
         '@common': _resolve('./src/common'),
         '@desktop': _resolve('./src/desktop'),

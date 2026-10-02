@@ -1,6 +1,6 @@
 {
   "name": "inbox.app.privacysafe.io",
-  "version": "0.3.44",
+  "version": "0.3.45",
   "description": "Inbox App",
   "author": "3NSoft, Inc.",
   "license": "GPL-3.0",
@@ -8,8 +8,8 @@
   "scripts": {
     "clean:coverage": "rimraf coverage",
     "dev": "vite",
-    "build:deno": "bash ci/bundle-deno-code.sh",
-    "build:deno:dev": "bash ci/bundle-deno-code.sh --dev",
+    "build:deno": "bash bundle-deno-code.sh",
+    "build:deno:dev": "bash bundle-deno-code.sh --dev",
     "build": "vue-tsc --noEmit && vite build && pnpm run build:deno",
     "serve": "vite preview",
     "stylelint": "stylelint --config .stylelint.config.cjs 'src/**/*.{vue,scss}'",
@@ -30,16 +30,16 @@
     "test:report:view": "vite preview --outDir tests/report"
   },
   "dependencies": {
-    "@v1nt1248/3nclient-lib": "0.4.0",
+    "@v1nt1248/3nclient-lib": "0.4.3",
     "dayjs": "1.11.23",
     "fflate": "0.8.3",
     "lodash": "4.18.1",
-    "pdfjs-dist": "5.7.284",
+    "pdfjs-dist": "6.3.289",
     "pinia": "3.0.4",
-    "sanitize-html": "2.17.7",
+    "sanitize-html": "2.18.0",
     "squire-rte": "2.4.9",
-    "vue": "3.5.42",
-    "vue-i18n": "11.4.10",
+    "vue": "3.5.43",
+    "vue-i18n": "11.4.13",
     "vue-router": "5.3.1"
   },
   "devDependencies": {
@@ -50,15 +50,14 @@
     "@types/jasmine": "6.0.0",
     "@types/lodash": "4.17.25",
     "@types/node": "24.13.4",
-    "@types/sanitize-html": "2.16.1",
-    "@typescript-eslint/eslint-plugin": "8.70.0",
-    "@typescript-eslint/parser": "8.70.0",
+    "@types/sanitize-html": "2.16.2",
+    "@typescript-eslint/eslint-plugin": "8.71.0",
+    "@typescript-eslint/parser": "8.71.0",
     "@vitejs/plugin-vue": "6.0.9",
     "@vitest/ui": "4.1.11",
     "@vue/devtools": "8.2.1",
     "@vue/eslint-config-typescript": "14.9.0",
     "@vue/test-utils": "2.5.0",
-    "@vuedx/typescript-plugin-vue": "0.7.6",
     "eslint": "10.10.0",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-import": "2.32.0",
@@ -77,12 +76,12 @@
     "stylelint-config-standard": "39.0.1",
     "stylelint-scss": "7.2.0",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.70.0",
-    "vite": "8.3.0",
+    "typescript-eslint": "8.71.0",
+    "vite": "8.3.2",
     "vite-plugin-vue-devtools": "8.2.1",
     "vitest": "4.1.11",
     "vue-eslint-parser": "10.4.1",
-    "vue-tsc": "3.3.11"
+    "vue-tsc": "3.3.12"
   },
-  "packageManager": "pnpm@11.18.0"
+  "packageManager": "pnpm@12.6.0"
 }

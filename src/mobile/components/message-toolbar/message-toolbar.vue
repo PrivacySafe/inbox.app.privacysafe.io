@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-  import isEmpty from 'lodash/isEmpty'
+  import isEmpty from 'lodash/isEmpty';
   import { type Nullable, Ui3nButton } from '@v1nt1248/3nclient-lib';
   import type { IncomingMessageView, MessageAction, OutgoingMessageView } from '@common/types';
   import { SYSTEM_FOLDERS } from '@common/constants';

@@ -114,7 +114,7 @@
       return;
     }
 
-    pdfDoc = await pdfjs.getDocument(bytes).promise;
+    pdfDoc = await pdfjs.getDocument({ data: bytes }).promise;
     totalPage.value = pdfDoc.numPages;
     renderPage(currentPage.value);
   });
