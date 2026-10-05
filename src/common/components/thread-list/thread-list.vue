@@ -15,7 +15,7 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 -->
 <script lang="ts" setup>
-  import { computed } from 'vue';
+  import { computed, ref } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { storeToRefs } from 'pinia';
   import get from 'lodash/get';
@@ -35,6 +35,11 @@
 
   const { t } = useI18n();
 
+  // The scroll container itself, so that the phone's pull-to-refresh can tell a
+  // pull at the top from ordinary scrolling through older messages.
+  const listEl = ref<HTMLDivElement | null>(null);
+  defineExpose({ listEl });
+
   const folderEmptyText = computed(() => {
     const folderKey = FOLDER_KEY_BY_ID[props.folder];
     return folderKey ? t(`folder.empty.text.${folderKey}`) : '';
@@ -50,7 +55,10 @@
 </script>
 
 <template>
-  <div :class="$style.threadList">
+  <div
+    ref="listEl"
+    :class="$style.threadList"
+  >
     <div
       v-if="isEmpty(threads)"
       :class="$style.empty"

@@ -54,8 +54,12 @@
       >
 
       <div :class="$style.emptyText">
-        <p>{{ t('msg.text.no_selected.part1') }}</p>
-        <p>{{ t('msg.text.no_selected.part2') }}</p>
+        <p>
+          {{ t('msg.text.no_selected.part1') }}
+        </p>
+        <p>
+          {{ t('msg.text.no_selected.part2') }}
+        </p>
       </div>
     </div>
 

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-  import { computed, type ComputedRef } from 'vue';
+  import { computed, ref, type ComputedRef } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { storeToRefs } from 'pinia';
   import get from 'lodash/get';
@@ -25,10 +25,18 @@
     Record<string, IncomingMessageView | OutgoingMessageView>
   >;
   const messagesList = computed(() => Object.values(messages.value).sort((a, b) => a.deliveryTS - b.deliveryTS));
+
+  // The scroll container itself, so that the phone's pull-to-refresh can tell a
+  // pull at the top from ordinary scrolling through older messages.
+  const listEl = ref<HTMLDivElement | null>(null);
+  defineExpose({ listEl });
 </script>
 
 <template>
-  <div :class="$style.messageList">
+  <div
+    ref="listEl"
+    :class="$style.messageList"
+  >
     <div
       v-if="isEmpty(messages)"
       :class="$style.empty"

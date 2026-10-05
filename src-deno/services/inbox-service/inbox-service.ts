@@ -361,6 +361,12 @@ export async function inboxService(
       return db.getMessagesByThread(threadId);
     },
 
+    async forceRefreshData() {
+      const messagesBefore = db.getMessages().length;
+      await (rescan?.run() ?? Promise.resolve());
+      return { applied: Math.max(0, db.getMessages().length - messagesBefore) };
+    },
+
     upsertMessage,
 
     async moveToTrash(msgId) {

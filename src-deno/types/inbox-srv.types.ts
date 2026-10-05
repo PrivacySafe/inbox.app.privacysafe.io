@@ -183,6 +183,12 @@ export interface InboxSrv {
   getMessages(): Promise<Array<IncomingMessageView | OutgoingMessageView>>;
   getMessage(msgId: string): Promise<Nullable<IncomingMessageView | OutgoingMessageView>>;
   getMessagesByThread(threadId: string): Promise<Array<IncomingMessageView | OutgoingMessageView>>;
+  /**
+   * Replays the shared inbox from the watermark, the way a restore does after
+   * resetting it - the recovering pass for when the live subscription has gone
+   * quiet. Returns how many messages this pass actually added.
+   */
+  forceRefreshData(): Promise<{ applied: number }>;
 
   upsertMessage(msg: IncomingMessageView | OutgoingMessageView): Promise<void>;
   moveToTrash(msgId: string): Promise<void>;
@@ -274,8 +280,21 @@ export interface InboxSrv {
   /** @returns whether there was a backup to cancel. */
   cancelBackupArchive(): Promise<boolean>;
   /**
+   * Reads an archive far enough to tell the user what a restore would do, and
+   * refuses early the ones that cannot be read at all.
+   *
+   * Nothing is written: the archive is opened, its metadata and record counts
+   * are taken, and the attachment entries are only counted - never decompressed
+   * - so the answer comes before a destructive restore is confirmed. Failures
+   * this app understands (a corrupt or foreign archive, unreadable records)
+   * come back as `valid: false` with a reason rather than thrown.
+   *
+   * @param archiveBytes the whole archive, already decrypted by the GUI when it
+   *        was protected.
    * @param outerMetadata the metadata of an ENCRYPTED archive, which lives in
    *        the container the GUI opened rather than inside the archive itself.
+   * @returns what the archive holds, whether this build can restore it, and a
+   *          warning when its provenance or format does not match.
    */
   validateBackupArchive(
     archiveBytes: Uint8Array,
@@ -284,9 +303,23 @@ export interface InboxSrv {
   /**
    * Applies an archive, already decrypted by the GUI when it was protected.
    *
-   * @param mode `replace` lets the archive state what the mailbox is; `merge`
-   *        only fills gaps. Both go through one function, which is also the one
-   *        a receiving device runs on the snapshot - see applyRestoreSnapshot().
+   * Also announces the same archive, under the same mode, to the user's other
+   * devices, and starts the pass over the shared inbox that the watermark reset
+   * calls for. The receiving tract is held off for the whole run, so mail that
+   * arrives while the archive is applied is taken on by that pass instead of
+   * being lost; the pass itself is deliberately not awaited, the outcome of the
+   * restore being final before it.
+   *
+   * @param archiveBytes the whole archive.
+   * @param mode `replace` lets the archive state what the mailbox is, with a
+   *        newer local change still winning; `merge` only fills gaps. Both go
+   *        through one function, which is also the one a receiving device runs
+   *        on the snapshot - see applyRestoreSnapshot().
+   * @param outerMetadata the metadata of an ENCRYPTED archive, which lives in
+   *        the container the GUI opened rather than inside the archive itself.
+   * @returns how many records were created, updated, skipped and deleted, how
+   *          much mail now lives only in the archive, and whether the inbox
+   *          listing failed.
    */
   restoreBackupArchive(
     archiveBytes: Uint8Array,
@@ -310,6 +343,7 @@ export const INBOX_SRV_REQ_REPLY_METHODS: (keyof InboxSrv)[] = [
   'getMessages',
   'getMessage',
   'getMessagesByThread',
+  'forceRefreshData',
   'upsertMessage',
   'moveToTrash',
   'bulkMoveToTrash',

@@ -1,13 +1,14 @@
 <script lang="ts" setup>
-  import { computed, watch } from 'vue';
+  import { computed, useTemplateRef, watch } from 'vue';
   import { useRoute } from 'vue-router';
   import { storeToRefs } from 'pinia';
   import get from 'lodash/get';
   import size from 'lodash/size';
   import uniq from 'lodash/uniq';
-  import { useMessagesStore } from '@common/store';
+  import { useAppStore, useMessagesStore } from '@common/store';
   import { MAIL_FOLDERS_DEFAULT, SYSTEM_FOLDERS } from '@common/constants';
   import { useFolderContent } from '@common/composables/useFolderContent';
+  import { useInboxPullToRefresh } from '@mobile/composables/useInboxPullToRefresh';
   import ThreadList from '@common/components/thread-list/thread-list.vue';
   import MessageList from '@common/components/message-list/message-list.vue';
   import MessageBulkActionsToolbar
@@ -18,6 +19,7 @@
 
   const messagesStore = useMessagesStore();
   const { messagesByFolders, messageThreadsByFolder, messageThreadsFromTrash } = storeToRefs(messagesStore);
+  const { commonLoading } = storeToRefs(useAppStore());
 
   const {
     markedMessages,
@@ -25,6 +27,12 @@
     resetMarkMessages,
     handleMessageBulkActions,
   } = useFolderContent();
+
+  // Pull-to-refresh, Gmail-style: the rendered list is the scroll container and
+  // owns the gesture, so the composable gets its element straight from it.
+  const listRef = useTemplateRef<{ listEl: HTMLElement | null }>('listRef');
+  const listEl = computed(() => listRef.value?.listEl ?? null);
+  useInboxPullToRefresh(listEl, computed(() => commonLoading.value));
 
   const currentMailFolder = computed(() => {
     const { folderId } = route.params as { folderId: string };
@@ -81,11 +89,13 @@
     <template v-if="currentMailFolder?.id">
       <message-list
         v-if="currentMailFolder!.id === SYSTEM_FOLDERS.outbox || currentMailFolder!.id === SYSTEM_FOLDERS.draft"
+        ref="listRef"
         :folder="currentMailFolder!.id"
       />
 
       <thread-list
         v-else
+        ref="listRef"
         :folder="currentMailFolder!.id"
       />
     </template>

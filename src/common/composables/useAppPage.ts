@@ -17,6 +17,7 @@ import {
 } from '@common/store';
 import { useBackupRestore } from '@common/composables/useBackupRestore';
 import { useCreateMsgActions } from '@common/composables/useCreateMsgActions';
+import { useForceRefreshData } from '@common/composables/useForceRefreshData';
 import { inboxSrv } from '@common/services/services-provider';
 import { SingleProc } from '@shared/utils/processes/single';
 import { makeLogger } from '@shared/utils/logger';
@@ -81,6 +82,7 @@ export function useAppPage(mobileMode?: boolean) {
 
   const { saveMsgToDraft } = useCreateMsgActions();
   const { startBackupWorkflow, runRestoreWorkflow } = useBackupRestore();
+  const { forceRefreshData } = useForceRefreshData();
 
   // The store holds what the setting says; the plugin puts it on the document.
   // Declared in setup, so that the watcher belongs to the component's scope and
@@ -166,6 +168,8 @@ export function useAppPage(mobileMode?: boolean) {
 
   async function runMenuAction(action: AppMenuAction) {
     switch (action) {
+      case 'refresh':
+        return forceRefreshData();
       case 'manage-blocks':
         return openManageBlocksDialog();
       case 'make-backup':

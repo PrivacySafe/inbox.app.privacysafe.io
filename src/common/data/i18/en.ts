@@ -28,10 +28,14 @@ export const en = {
       mail: 'New Mail',
     },
     menu: {
+      refresh: 'Force-refresh data',
       manageBlocks: 'Manage blocks',
       makeBackup: 'Create a backup',
       restoreBackup: 'Restore from a backup',
       exit: 'Exit',
+    },
+    notification: {
+      noNewMessages: 'No new messages',
     },
     btn: {
       cancel: 'Cancel',
@@ -420,7 +424,8 @@ export const en = {
       },
       notif: {
         noReportAddress: 'Error retrieving the address for sending the report',
-        reportAddressBlocked: 'You have blocked {mail}, the address reports of this domain go to. Unblock it to report.',
+        reportAddressBlocked:
+          'You have blocked {mail}, the address reports of this domain go to. Unblock it to report.',
         blocked: '{mail} has been blocked',
         attachmentsError: 'Some attachments of the reported message could not be attached to the report',
         sending: 'The report is being sent. Its progress is in the Outbox.',

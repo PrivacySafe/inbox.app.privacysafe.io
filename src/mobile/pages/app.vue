@@ -299,17 +299,19 @@
     z-index: 2;
   }
 
+  // Full-screen and blocking: besides the start-up, this covers the window for
+  // an action that must not be interrupted, such as Force-refresh data. Without
+  // covering the drawer/toolbar the menu behind it would still be clickable.
   .loader {
-    position: absolute;
+    position: fixed;
     inset: 0;
-    z-index: 10;
+    z-index: 4000;
     background-color: var(--black-12);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     row-gap: var(--spacing-m);
-    pointer-events: none;
   }
 
   .loaderText {
