@@ -17,11 +17,51 @@
 import { LOGO_ICON_AS_ARRAY } from '../../../../src/common/constants/files.ts';
 import { makeLogger } from '../../../../shared/utils/logger.ts';
 
+type NotificationOpts = web3n.shell.notifications.NotificationOpts;
+
 const log = makeLogger('InboxNotify');
+
+let lastNotificationId: number | undefined;
+let queue: Promise<void> = Promise.resolve();
+
+/**
+ * Shows an OS notification in place of the previous one, so that the app keeps
+ * at most one notification in the OS notification center instead of piling
+ * them up.
+ *
+ * Calls are serialized: two notifications coming almost at once would
+ * otherwise both remove the same previous one, and one of them would stay.
+ *
+ * The id of the shown notification lives in memory only, so after a restart of
+ * the background component the notification shown before it stays in place.
+ */
+export function replaceSystemNotification(opts: NotificationOpts): Promise<void> {
+  const step = queue.then(async () => {
+    const userNotifications = w3n.shell?.userNotifications;
+    if (!userNotifications) {
+      return;
+    }
+
+    if (lastNotificationId !== undefined) {
+      const prevId = lastNotificationId;
+      lastNotificationId = undefined;
+      try {
+        await userNotifications.removeNotification(prevId);
+      } catch (err) {
+        // The user may have already dismissed or clicked it - nothing to remove.
+        log.warn(`Failed to remove OS notification ${prevId}`, err);
+      }
+    }
+
+    lastNotificationId = await userNotifications.addNotification(opts);
+  });
+  queue = step.catch(() => {});
+  return step;
+}
 
 export async function notifyNewIncomingMail(sender: string, subject: string, msgId: string): Promise<void> {
   try {
-    await w3n.shell?.userNotifications?.addNotification({
+    await replaceSystemNotification({
       icon: Uint8Array.from(LOGO_ICON_AS_ARRAY),
       title: sender,
       body: (subject || '').slice(0, 50),

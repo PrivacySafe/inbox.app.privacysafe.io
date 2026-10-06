@@ -1,7 +1,7 @@
 {
   "name": "Inbox",
   "appDomain": "inbox.app.privacysafe.io",
-  "version": "0.3.46",
+  "version": "0.3.47",
   "description": "Send and receive encrypted messages with an improved version of email.",
   "icon": "logo.png",
 

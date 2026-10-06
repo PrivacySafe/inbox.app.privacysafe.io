@@ -81,6 +81,21 @@ flowchart TD
 ```
 
 
+#### OS notifications
+
+Deno shows an OS notification only for live mail, i.e. a message that arrives through the inbox subscription and is new to the database. There is no notification for mail found by the startup catch-up scan, for messages applied by multi-device sync or restored from a backup, for a message that is already in the database, or for mail from a blocked sender.
+
+A notification has the sender as its title, the first 50 characters of the subject as its body, and the app logo as its icon. It carries the `open-inbox-msg` command with the message id, so a click opens that message in the UI.
+
+The app keeps **at most one** notification in the OS notification center: the latest one. `replaceSystemNotification()` in [notifications.ts](../src-deno/services/inbox-service/utils/notifications.ts) remembers the id that `addNotification` returned and, before showing the next notification, removes the previous one with `removeNotification(id)`. Chat does the same.
+
+- Calls are serialized. Otherwise two messages arriving almost at once would both remove the same previous notification, and one of the new ones would stay.
+- A failed removal is only logged: the user may have already dismissed or clicked that notification. A failed `addNotification` is logged and leaves no id to remove later.
+- The id is kept in memory only. After a restart of the Deno component, the notification shown before the restart stays in place.
+
+The removal relies on the platform. At the time of writing, the platform's `removeNotification` resolves without closing anything (core 0.52.3 on macOS), so notifications still pile up there until the platform is fixed. The app needs no change for that.
+
+
 ## Testing (approach, code will follow)
 
 In making tests there is always a tension between scope/usefulness and cost of testing. The best test suite is testing system end to end without any mocks. End to end requires emulation of human that clicks/swipes/scrolls and observes graphics. Although doable with webdrivers, this is costly, and 3NWeb platform is not a usual browser, which we also want to implicitly test by running test app.
