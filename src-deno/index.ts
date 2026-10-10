@@ -25,7 +25,7 @@ import { createBlacklistTracker } from './services/contacts-service/contacts-bla
 import { makeLabelledFileStoreIn } from './services/file-store/labelled-file-store.ts';
 import { createStartupEvents } from './services/inbox-service/events.ts';
 import { inboxService } from './services/inbox-service/inbox-service.ts';
-import { exposeInboxServiceOnIPC } from './services/inbox-service/ipc-expose.ts';
+import { exposeInboxServiceOnIPC, exposeInboxServiceToOtherApps } from './services/inbox-service/ipc-expose.ts';
 import { mailService } from './services/mail-service/mail-service.ts';
 import { makeSyncActivityTracker } from './services/sync/sync-activity.ts';
 import { runSyncMaintenance } from './services/sync/sync-maintenance.ts';
@@ -51,6 +51,7 @@ const startup = createStartupEvents();
 const inboxSrvDeferred = defer<InboxSrv>();
 inboxSrvDeferred.promise.catch(() => {});
 exposeInboxServiceOnIPC(inboxSrvDeferred.promise, { watchStartup: startup.watch });
+exposeInboxServiceToOtherApps(inboxSrvDeferred.promise);
 
 // The address is needed by the synchronization outbox - a phantom's one
 // recipient is the user themself - so it is a promise of its own rather than a

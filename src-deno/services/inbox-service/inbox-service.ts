@@ -29,6 +29,7 @@ import { inboxBackupSrv } from '../../inbox-backup-srv.ts';
 import type { SyncAspect } from '../../types/sync-types.ts';
 import type { BlacklistTracker } from '../contacts-service/contacts-blacklist.ts';
 import type { LabelledFileStore } from '../file-store/labelled-file-store.ts';
+import { externalDrafts } from './external-drafts.ts';
 import {
   applyPlacement,
   diffMsgAspects,
@@ -328,6 +329,11 @@ export async function inboxService(
     rescanInbox: () => rescan?.run() ?? Promise.resolve(),
   });
 
+  const drafts = externalDrafts({
+    addFile: (file, info) => fileStore.addFile(file, info),
+    deleteFile: id => fileStore.delete(id),
+  });
+
   const srv: InboxSrv = {
     async getAppState() {
       return db.getAppState();
@@ -454,6 +460,8 @@ export async function inboxService(
 
     addFile: (file, info) => fileStore.addFile(file, info),
     addLink: (file, info) => fileStore.addLink(file, info),
+    prepareDraft: drafts.prepareDraft,
+    takePreparedDraft: drafts.takePreparedDraft,
 
     async storeIncomingAttachment(incomingMsgId, fileName, msgId) {
       const file = await srv.getIncomingAttachment(incomingMsgId, fileName);

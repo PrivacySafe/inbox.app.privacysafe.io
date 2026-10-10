@@ -15,6 +15,7 @@
  this program. If not, see <http://www.gnu.org/licenses/>.
 */
 import type { InboxSrv } from '../../types/inbox-srv.types.ts';
+import type { AppInboxExternalSrv } from '../../../src/common/types/external-inbox.types.ts';
 import {
   INBOX_SRV_EAGER_METHODS,
   INBOX_SRV_OBSERVABLE_METHODS,
@@ -74,6 +75,19 @@ export function exposeInboxServiceOnIPC(
   srvWrapInternal.exposeObservableMethods(facade, INBOX_SRV_OBSERVABLE_METHODS);
 
   return srvWrapInternal.startIPC();
+}
+
+/**
+ * Exposes, under the name 'AppInbox', the few methods that other apps may
+ * call (see allowed callers in manifest.json). Like the internal one, it is
+ * exposed at the very start of the component, over a facade.
+ */
+export function exposeInboxServiceToOtherApps(inbox: Promise<InboxSrv>): () => void {
+  const methods: (keyof AppInboxExternalSrv)[] = ['prepareDraft'];
+  const srvWrap = new MultiConnectionIPCWrap('AppInbox');
+  const facade = facadeOver(inbox, methods, []) as AppInboxExternalSrv;
+  srvWrap.exposeReqReplyMethods(facade, methods);
+  return srvWrap.startIPC();
 }
 
 export { facadeOver };

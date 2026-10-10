@@ -20,7 +20,9 @@ import type {
   IncomingMessageView,
   MailFolder,
   OutgoingMessageView,
+  PreparedMessageData,
 } from '../../src/common/types/mail.types.ts';
+import type { AppInboxExternalSrv } from '../../src/common/types/external-inbox.types.ts';
 import type { SyncActivityView } from '../services/sync/sync-activity.ts';
 import type {
   BackupCreationResult,
@@ -212,6 +214,16 @@ export interface InboxSrv {
    */
   addLink(file: web3n.files.ReadonlyFile, info?: ItemAttrs): Promise<string>;
   /**
+   * Copies files given by another app into the store, and keeps them as a
+   * draft of a new message. Exposed to other apps in service 'AppInbox'.
+   */
+  prepareDraft: AppInboxExternalSrv['prepareDraft'];
+  /**
+   * Hands a draft prepared by prepareDraft over to the window, and forgets it.
+   * The stored files then belong to the message creation dialog.
+   */
+  takePreparedDraft(draftId: string): Promise<PreparedMessageData | undefined>;
+  /**
    * Copies an attachment of an incoming message into the store, so that a
    * forward of that message carries the file itself rather than a pointer into a
    * message the user may delete. The bytes stay inside this component.
@@ -355,6 +367,7 @@ export const INBOX_SRV_REQ_REPLY_METHODS: (keyof InboxSrv)[] = [
   'preFlight',
   'addFile',
   'addLink',
+  'takePreparedDraft',
   'storeIncomingAttachment',
   'hasAttachment',
   'getFile',

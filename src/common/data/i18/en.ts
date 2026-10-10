@@ -240,6 +240,7 @@ export const en = {
         download: 'Download the file',
         download_all: 'Download all files',
         view: 'View the file',
+        import_contacts: 'Import contacts',
         make_preview: 'Show a preview (reads the whole file)',
         reply: 'Reply',
         replyAll: 'Reply All',
@@ -317,6 +318,12 @@ export const en = {
       partially_downloaded: '{done} of {total} files saved; the rest are on another of your devices.',
     },
     attachment: {
+      import_contacts: {
+        title: 'Contacts Export File',
+        count: '{n} contact | {n} contacts',
+        not_found: 'The file {fileName} is not found',
+        error: 'Contacts could not be passed to the Contacts app',
+      },
       writing: {
         success: 'The file {fileName} has saved',
         error: 'Error writing the file {fileName}',

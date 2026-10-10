@@ -1,7 +1,7 @@
 {
   "name": "Inbox",
   "appDomain": "inbox.app.privacysafe.io",
-  "version": "0.3.47",
+  "version": "0.3.48",
   "description": "Send and receive encrypted messages with an improved version of email.",
   "icon": "logo.png",
 
@@ -28,6 +28,11 @@
         "shell": {
           "fileDialog": "all",
           "userNotifications": true,
+          "startAppCmds": {
+            "otherApps": {
+              "contacts.app.privacysafe.io": ["import-contacts"]
+            }
+          },
           "fsResource": {
             "otherApps": {
               "launcher.app.privacysafe.io": "ui-settings"
@@ -74,6 +79,11 @@
         "shell": {
           "fileDialog": "all",
           "userNotifications": true,
+          "startAppCmds": {
+            "otherApps": {
+              "contacts.app.privacysafe.io": ["import-contacts"]
+            }
+          },
           "fsResource": {
             "otherApps": {
               "launcher.app.privacysafe.io": "ui-settings"
@@ -112,6 +122,9 @@
       "services": {
         "AppInboxInternal": {
           "thisAppComponents": ["/index.html", "/index-mobile.html"]
+        },
+        "AppInbox": {
+          "otherApps": ["contacts.app.privacysafe.io"]
         }
       },
       "capsRequested": {

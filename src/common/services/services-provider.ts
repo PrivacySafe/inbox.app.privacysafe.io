@@ -50,6 +50,7 @@ async function connectToContactsApp(): Promise<AppContacts> {
           'upsertContact',
           'getContactBlacklist',
           'changeContactBlockingSettings',
+          'prepareSharedContactsImport',
         ],
         ['watchContactBlacklistChanging'],
       ) as AppContacts;

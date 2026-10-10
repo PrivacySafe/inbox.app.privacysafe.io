@@ -40,6 +40,13 @@ export interface AppContacts {
 
   getContactList(withImage?: boolean): Promise<PersonView[]>;
 
+  /**
+   * Reads a file with contacts shared by another user (.w3nec), for the
+   * contacts app to import them when it is opened with the returned id in its
+   * 'import-contacts' command.
+   */
+  prepareSharedContactsImport(file: web3n.files.ReadonlyFile): Promise<{ importId: string; contactsCount: number }>;
+
   upsertContact(value: Person): Promise<Person | ContactsSrvError>;
 
   /** Contacts whose `settings.blockUser` is set, as of right now. */

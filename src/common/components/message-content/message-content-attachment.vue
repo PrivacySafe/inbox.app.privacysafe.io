@@ -23,6 +23,7 @@
   import { createThumbnail } from '@/common/utils/create-thumbnail';
   import { THUMBNAIL_AUTO_PREVIEW_LIMIT } from '@shared/constants/attachment-limits';
   import { attachmentAvailabilityOf } from '@shared/utils/attachment-availability';
+  import { SHARED_CONTACTS_FILE_EXT, sharedContactsCountOf } from '@/common/composables/useImportSharedContacts';
   import type { AttachmentInfo } from '@common/types';
 
   const props = defineProps<{
@@ -36,6 +37,7 @@
   const emits = defineEmits<{
     (event: 'download', value: AttachmentInfo): void;
     (event: 'view', value: AttachmentInfo): void;
+    (event: 'import', value: AttachmentInfo): void;
     (event: 'thumbnail', value: { fileName: string; dataUrl: string }): void;
   }>();
 
@@ -93,9 +95,31 @@
    */
   const isPreviewPossible = computed(() => isThumbnailAvailable.value && !isOnAnotherDevice.value);
 
+  /** A file with contacts shared by the contacts app. */
+  const isSharedContacts = computed(() => fileExt.value === SHARED_CONTACTS_FILE_EXT);
+  const sharedContactsCount = computed(() =>
+    (isSharedContacts.value ? sharedContactsCountOf(props.attachment.fileName) : undefined),
+  );
+  /**
+   * Only received contacts are offered for import: the sender's own copy holds
+   * contacts the sender already has.
+   */
+  const isImportAvailable = computed(
+    () =>
+      isSharedContacts.value &&
+      !!props.isIncomingMessage &&
+      !isOnAnotherDevice.value &&
+      !isFileMissing.value &&
+      !!props.attachment.size,
+  );
+
   const iconName = computed(() => {
     if (isPreviewPossible.value) {
       return '';
+    }
+
+    if (isSharedContacts.value) {
+      return 'document-share-outline';
     }
 
     if (
@@ -163,7 +187,7 @@
    * offer nothing.
    */
   const hasActions = computed(
-    () => isDownloadable.value || isPreviewOnDemand.value || isViewAvailable.value,
+    () => isDownloadable.value || isPreviewOnDemand.value || isViewAvailable.value || isImportAvailable.value,
   );
 
   async function makeThumbnail() {
@@ -215,8 +239,19 @@
       :class="[$style.thumbnail, !imageViewStyle && isPreviewPossible && $style.empty]"
       :style="imageViewStyle"
     >
+      <div
+        v-if="isSharedContacts"
+        :class="$style.sharedContactsIcon"
+      >
+        <ui3n-icon
+          :icon="iconName"
+          color="#fff"
+          :size="iconSize / 2 - 8"
+        />
+      </div>
+
       <ui3n-icon
-        v-if="!isPreviewPossible"
+        v-else-if="!isPreviewPossible"
         :icon="iconName"
         color="var(--color-icon-block-secondary-default)"
         :size="iconSize - 16"
@@ -262,7 +297,21 @@
         position-strategy="fixed"
         max-content-width="160"
       >
-        <span>{{ attachment.fileName }}</span>
+        <!-- Shared contacts are named by what they are, and counted; the file
+             keeps its own name for the tooltip and for a download. -->
+        <span
+          v-if="isSharedContacts"
+          :class="$style.sharedContactsName"
+        >
+          <span :class="$style.sharedContactsTitle">{{ t('msg.attachment.import_contacts.title') }}</span>
+          <span
+            v-if="sharedContactsCount !== undefined"
+            :class="$style.sharedContactsCount"
+          >
+            {{ t('msg.attachment.import_contacts.count', sharedContactsCount) }}
+          </span>
+        </span>
+        <span v-else>{{ attachment.fileName }}</span>
       </ui3n-tooltip>
     </div>
 
@@ -325,11 +374,38 @@
           @click.stop.prevent="emits('view', attachment)"
         />
       </ui3n-tooltip>
+
+      <ui3n-tooltip
+        v-if="isImportAvailable"
+        :content="t('msg.content.tooltip.import_contacts')"
+        placement="top"
+        position-strategy="fixed"
+        max-content-width="160"
+      >
+        <ui3n-button
+          type="icon"
+          color="color(from var(--color-bg-block-primary-default) srgb 75% 75% 75% / 0.5)"
+          icon="outline-person-add"
+          icon-size="24"
+          icon-color="var(--color-icon-button-tritery-default)"
+          @click.stop.prevent="emits('import', attachment)"
+        />
+      </ui3n-tooltip>
     </div>
   </div>
 </template>
 
 <style lang="scss" module>
+  .sharedContactsIcon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: calc(var(--msg-attachment-icon-size) - 16px);
+    height: calc(var(--msg-attachment-icon-size) - 16px);
+    border-radius: 50%;
+    background-color: var(--files-word-primary);
+  }
+
   .msgAttachment {
     --msg-attachment-width: 128px;
     --msg-attachment-height: 128px;
@@ -455,6 +531,26 @@
       -webkit-line-clamp: 2;
       text-overflow: ellipsis;
       text-align: center;
+    }
+
+    .sharedContactsName {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .sharedContactsTitle,
+    .sharedContactsCount {
+      display: block;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sharedContactsCount {
+      font-weight: 400;
+      color: var(--color-text-control-secondary-default);
     }
   }
 </style>

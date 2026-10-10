@@ -27,6 +27,7 @@
   import { inboxSrv } from '@common/services/services-provider';
   import { makeLogger } from '@shared/utils/logger';
   import { useDownloadAttachments } from '@/common/composables/useDownloadAttachments';
+  import { useImportSharedContacts } from '@/common/composables/useImportSharedContacts';
   import type { AppGlobalEvents, AttachmentInfo, IncomingMessageView, OutgoingMessageView } from '@common/types';
   import MessageContentAttachment from './message-content-attachment.vue';
   import MessageViewAttachment from '@common/components/dialogs/view-attachment/view-attachment.vue';
@@ -49,6 +50,11 @@
     msgId: props.message.msgId,
     isIncomingMessage: isIncomingMessage.value,
     t,
+  });
+
+  const { importSharedContacts } = useImportSharedContacts({
+    msgId: props.message.msgId,
+    isIncomingMessage: isIncomingMessage.value,
   });
 
   const wrapperEl = ref<Nullable<HTMLDivElement>>(null);
@@ -218,6 +224,7 @@
           :cached-thumbnail="thumbnails[attachment.fileName]"
           @download="downloadAttachment"
           @view="viewAttachment"
+          @import="importSharedContacts"
           @thumbnail="onThumbnailMade"
         />
       </template>

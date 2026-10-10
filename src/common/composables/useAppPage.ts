@@ -244,11 +244,23 @@ export function useAppPage(mobileMode?: boolean) {
 
   async function handleExternalCommand({ cmd, params }: web3n.shell.commands.CmdParams) {
     if (cmd === 'open-inbox-with') {
-      const cmdArg = params[0] as { peerAddress?: unknown };
+      const cmdArg = params[0] as { peerAddress?: unknown; draftId?: unknown };
       const address = cmdArg?.peerAddress;
       if (!address || typeof address !== 'string') {
         await w3n.log('error', 'Invalid peer address passed in open inbox command');
         return;
+      }
+
+      // A draft prepared by another app (see AppInbox in manifest.json), with
+      // attachments already copied into the file store.
+      if (cmdArg.draftId && typeof cmdArg.draftId === 'string') {
+        const draft = await inboxSrv.takePreparedDraft(cmdArg.draftId);
+        if (draft) {
+          await openCreateMsgDialog({ data: draft });
+          return;
+        }
+
+        await w3n.log('error', `External draft ${cmdArg.draftId} is not found, or is already taken`);
       }
 
       await openCreateMsgDialog({
