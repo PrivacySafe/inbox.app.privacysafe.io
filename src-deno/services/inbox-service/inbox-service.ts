@@ -26,6 +26,9 @@ import type { InboxSrv } from '../../types/inbox-srv.types.ts';
 import type { DBProvider } from '../../dataset/index.ts';
 import { sameStoredMsgRow } from '../../dataset/utils.ts';
 import { inboxBackupSrv } from '../../inbox-backup-srv.ts';
+import { INBOX_SCAN_FLOOR_MS } from '../../../shared/constants/sync.ts';
+import { autoBackupService, type AutoBackupSrv } from '../auto-backup/auto-backup.ts';
+import { syncedAutoBackupStorage } from '../auto-backup/auto-backup-storage.ts';
 import type { SyncAspect } from '../../types/sync-types.ts';
 import type { BlacklistTracker } from '../contacts-service/contacts-blacklist.ts';
 import type { LabelledFileStore } from '../file-store/labelled-file-store.ts';
@@ -45,6 +48,7 @@ import { syncedRecordOf } from '../sync/record-mapping.ts';
 import { drainOrphansFor } from '../sync/orphan-buffer.ts';
 import {
   dispatchSync,
+  ensureSnapshotRecordFor,
   handleIncomingSyncEnvelope,
   type IncomingSyncCtx,
 } from '../sync/handle-incoming-sync.ts';
@@ -159,6 +163,12 @@ export async function inboxService(
   persistMail: (msg: IncomingMessage, opts?: { notify?: boolean }) => Promise<void>;
   /** Where the mail service hands a message of the synchronization type. */
   handleSync: (msg: web3n.asmail.IncomingMessage) => Promise<boolean>;
+  /**
+   * The automatic backup, built here and started by index.ts once the start-up
+   * replay is over - so that a new installation restores on top of what the
+   * shared inbox gave it (see services/auto-backup/auto-backup.ts).
+   */
+  autoBackup: AutoBackupSrv;
 }> {
   const { emit, watch, beginBulkReplay, endBulkReplay } = createInboxEvents();
 
@@ -327,6 +337,27 @@ export async function inboxService(
     beginBulkReplay,
     endBulkReplay,
     rescanInbox: () => rescan?.run() ?? Promise.resolve(),
+    ensureIncomingRecord: (msgId, entry, origin) => ensureSnapshotRecordFor(
+      msgId,
+      entry,
+      { v: 2, sourceDeviceId: origin.sourceDeviceId, timestamp: origin.timestamp, event: origin.event },
+      origin.event,
+      syncCtx,
+    ),
+  });
+
+  const autoBackup = autoBackupService({
+    db,
+    storage: syncedAutoBackupStorage(),
+    getAppVersion: async () => (await w3n.myVersion()) || '0.0.1',
+    listServerMsgIds: async () => {
+      // The floor is obligatory - see INBOX_SCAN_FLOOR_MS. A failure is thrown:
+      // the file would otherwise say every incoming message is gone.
+      const listed = await w3n.mail!.inbox.listMsgs(INBOX_SCAN_FLOOR_MS);
+      return new Set(listed.filter(item => item.msgType === 'mail').map(item => item.msgId));
+    },
+    restoreFiles: files => backup.restoreFromAutoBackupFiles(files),
+    emitInfo: info => emit({ entity: 'auto-backup', event: 'changed', info }),
   });
 
   const drafts = externalDrafts({
@@ -570,6 +601,11 @@ export async function inboxService(
     restoreBackupArchive: (bytes, mode, outerMetadata) =>
       backup.restoreBackupArchive(bytes, mode, outerMetadata),
 
+    getAutoBackupInfo: async () => autoBackup.getInfo(),
+    setAppSettings: patch => autoBackup.setSettings(patch),
+    listAutoBackups: () => autoBackup.listAutoBackups(),
+    restoreFromAutoBackups: deviceIds => autoBackup.restoreFromAutoBackups(deviceIds),
+
     watch,
     watchStartup,
   };
@@ -608,7 +644,7 @@ export async function inboxService(
 
   log.debug(`inbox service built for device ${db.getAppDeviceId()}`);
 
-  return { inboxSrv: srv, emit, beginBulkReplay, endBulkReplay, persistMail, handleSync };
+  return { inboxSrv: srv, emit, beginBulkReplay, endBulkReplay, persistMail, handleSync, autoBackup };
 }
 
 export { createInboxEvents };
