@@ -58,6 +58,7 @@ import { createInboxEvents, type InboxEmit } from './events.ts';
 import { sendOutgoingMessage, cancelOutgoingMessage } from './utils/send.ts';
 import { deleteMessagesWithGc } from './utils/delete.ts';
 import { persistIncomingMail } from './utils/receive.ts';
+import { hasAppDataOnSynced } from '../../utils/migrate-to-local-fs.ts';
 
 const log = makeLogger('InboxService');
 
@@ -348,7 +349,9 @@ export async function inboxService(
 
   const autoBackup = autoBackupService({
     db,
-    storage: syncedAutoBackupStorage(),
+    storage: syncedAutoBackupStorage({
+      mayClearRoot: async fs => !(await hasAppDataOnSynced(fs)),
+    }),
     getAppVersion: async () => (await w3n.myVersion()) || '0.0.1',
     listServerMsgIds: async () => {
       // The floor is obligatory - see INBOX_SCAN_FLOOR_MS. A failure is thrown:
